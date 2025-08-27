@@ -1,6 +1,6 @@
 class SpotifyService {
   constructor() {
-    this.baseUrl = 'http://localhost:3001';
+    this.baseUrl = 'https://ksync.onrender.com';
     this.isInitialized = false;
   }
 
@@ -11,6 +11,40 @@ class SpotifyService {
       console.log('Spotify service initialized');
     } catch (error) {
       console.error('Failed to initialize Spotify service:', error);
+    }
+  }
+
+  async request(path, { method = 'GET', body, headers = {} } = {}, retry = true) {
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          Pragma: 'no-cache',
+          ...headers,
+        },
+        cache: 'no-store',
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+
+      if (response.status === 401 && retry) {
+        await this.authenticate();
+        return this.request(path, { method, body, headers }, false);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      try {
+        return await response.json();
+      } catch (_) {
+        return null;
+      }
+    } catch (error) {
+      console.error(`Request error for ${path}:`, error);
+      throw error;
     }
   }
 
@@ -40,19 +74,8 @@ class SpotifyService {
 
   async getCurrentTrack() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/current-track`);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Not authenticated, redirect to auth
-          await this.authenticate();
-          return null;
-        }
-        return null;
-      }
-
-      const data = await response.json();
-      return data;
+      const data = await this.request('/api/current-track');
+      return data || null;
     } catch (error) {
       console.error('Error getting current track:', error);
       return null;
@@ -61,20 +84,11 @@ class SpotifyService {
 
   async getQueue() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/queue`);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          return [];
-        }
-        return [];
-      }
-
-      const data = await response.json();
-      return data;
+      const data = await this.request('/api/queue').catch(() => ({ items: [] }));
+      return data && data.items ? data : { items: [] };
     } catch (error) {
       console.error('Error getting queue:', error);
-      return [];
+      return { items: [] };
     }
   }
 
@@ -82,40 +96,20 @@ class SpotifyService {
     try {
       if (!trackId) return [];
 
-      const response = await fetch(`${this.baseUrl}/api/lyrics/${trackId}`);
-      
-      if (!response.ok) {
-        return this.getMockLyrics();
-      }
-
-      const data = await response.json();
-      return data;
+      // cache-bust param to avoid any upstream caching
+      const data = await this.request(`/api/lyrics/${encodeURIComponent(trackId)}?ts=${Date.now()}`).catch(() => []);
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error getting lyrics:', error);
-      return this.getMockLyrics();
+      return [];
     }
   }
 
-  getMockLyrics() {
-    // Mock lyrics for demonstration
-    return [
-      { text: "I'd be your last love, everlasting, you and me", startTime: 0 },
-      { text: "Mm, that was what you told me", startTime: 4 },
-      { text: "I'm giving you up", startTime: 8 },
-      { text: "But I'm still holding on", startTime: 12 },
-      { text: "To the memories we made", startTime: 16 },
-      { text: "And the promises we kept", startTime: 20 }
-    ];
-  }
+  getMockLyrics() { return []; }
 
   async play() {
     try {
-      await fetch(`${this.baseUrl}/api/play`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      await this.request('/api/play', { method: 'POST' });
     } catch (error) {
       console.error('Error playing:', error);
     }
@@ -123,12 +117,7 @@ class SpotifyService {
 
   async pause() {
     try {
-      await fetch(`${this.baseUrl}/api/pause`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      await this.request('/api/pause', { method: 'POST' });
     } catch (error) {
       console.error('Error pausing:', error);
     }
@@ -136,12 +125,7 @@ class SpotifyService {
 
   async skipNext() {
     try {
-      await fetch(`${this.baseUrl}/api/skip-next`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      await this.request('/api/skip-next', { method: 'POST' });
     } catch (error) {
       console.error('Error skipping next:', error);
     }
@@ -149,12 +133,7 @@ class SpotifyService {
 
   async skipPrevious() {
     try {
-      await fetch(`${this.baseUrl}/api/skip-previous`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      await this.request('/api/skip-previous', { method: 'POST' });
     } catch (error) {
       console.error('Error skipping previous:', error);
     }
@@ -162,13 +141,7 @@ class SpotifyService {
 
   async setVolume(volume) {
     try {
-      await fetch(`${this.baseUrl}/api/volume`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ volume })
-      });
+      await this.request('/api/volume', { method: 'POST', body: { volume } });
     } catch (error) {
       console.error('Error setting volume:', error);
     }
@@ -176,13 +149,7 @@ class SpotifyService {
 
   async seek(position) {
     try {
-      await fetch(`${this.baseUrl}/api/seek`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ position })
-      });
+      await this.request('/api/seek', { method: 'POST', body: { position } });
     } catch (error) {
       console.error('Error seeking:', error);
     }

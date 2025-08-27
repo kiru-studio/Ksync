@@ -127,25 +127,34 @@ app.get('/api/current-track', async (req, res) => {
 app.get('/api/queue', async (req, res) => {
   try {
     const userId = 'default';
-    const tokens = accessTokens.get(userId);
+    let tokens = accessTokens.get(userId);
     
     if (!tokens) {
       return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Refresh token if expired
+    if (Date.now() > tokens.expires_in) {
+      await refreshAccessToken(userId, tokens.refresh_token);
+      tokens = accessTokens.get(userId);
     }
 
     // Always fetch playback state first to know context and current item
     const playback = await spotifyApi.getMyCurrentPlaybackState();
     const currentUri = playback.body?.item?.uri || null;
     const ctx = playback.body?.context;
+    const shuffle = !!playback.body?.shuffle_state;
+    const repeat = playback.body?.repeat_state || 'off';
 
     // Try official queue endpoint
-    const resp = await fetch('https://api.spotify.com/v1/me/player/queue', {
+    const resp = await axios.get('https://api.spotify.com/v1/me/player/queue', {
       headers: { Authorization: `Bearer ${tokens.access_token}` }
     });
 
     let result = [];
-    if (resp.ok) {
-      const data = await resp.json();
+    let source = 'queue';
+    if (resp && resp.status === 200) {
+      const data = resp.data || {};
       const items = Array.isArray(data.queue) ? data.queue : [];
       result = items.slice(0, 5).map(track => ({
         id: track.id,
@@ -159,23 +168,12 @@ app.get('/api/queue', async (req, res) => {
     // Fallback/augment: if queue empty and we are in a playlist context, compute next tracks from playlist
     if (result.length === 0 && ctx?.type === 'playlist' && ctx.uri) {
       const playlistId = ctx.uri.split(':').pop();
-      const plist = await spotifyApi.getPlaylist(playlistId);
-      const all = (plist.body?.tracks?.items || [])
-        .map(it => it.track)
-        .filter(Boolean);
-      // Find by URI (more reliable than id across markets)
-      const idx = all.findIndex(t => t?.uri === currentUri);
-      const next = all.slice(idx + 1, idx + 4).map(track => ({
-        id: track.id,
-        title: track.name,
-        artist: (track.artists || []).map(a => a.name).join(', '),
-        albumArt: track.album?.images?.[0]?.url,
-        playlistName: plist.body?.name || 'Playlist'
-      }));
-      result = next;
+      const next = await getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, 7);
+      result = next.items;
+      source = 'playlist';
     }
 
-    return res.json(result);
+    return res.json({ items: result, shuffle, repeat, source, context: ctx?.type || null });
   } catch (error) {
     console.error('Error getting queue:', error);
     res.status(500).json({ error: 'Failed to get queue' });
@@ -374,6 +372,34 @@ function parseLrc(lrc) {
   // Ensure sorted by time
   out.sort((a, b) => a.startTime - b.startTime);
   return out;
+}
+
+// Helper to compute upcoming tracks from playlist respecting shuffle
+async function getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, take = 3) {
+  const plist = await spotifyApi.getPlaylist(playlistId);
+  const all = (plist.body?.tracks?.items || [])
+    .map(it => it.track)
+    .filter(Boolean);
+  const idx = all.findIndex(t => t?.uri === currentUri);
+  let candidates = [];
+  if (shuffle) {
+    const rest = all.filter((t, i) => i !== idx);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    candidates = rest.slice(0, take);
+  } else {
+    candidates = all.slice(idx + 1, idx + 1 + take);
+  }
+  const items = candidates.map(track => ({
+    id: track.id,
+    title: track.name,
+    artist: (track.artists || []).map(a => a.name).join(', '),
+    albumArt: track.album?.images?.[0]?.url,
+    playlistName: plist.body?.name || 'Playlist'
+  }));
+  return { items };
 }
 
 // Start server - bind to 0.0.0.0 for hosting platforms

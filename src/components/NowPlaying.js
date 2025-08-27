@@ -5,9 +5,7 @@ import {
   SkipBack, 
   SkipForward, 
   Shuffle, 
-  Repeat, 
-  Volume2,
-  Heart
+  Repeat
 } from 'lucide-react';
 
 const NowPlaying = ({ 
@@ -44,6 +42,9 @@ const NowPlaying = ({
     onVolumeChange(newVolume);
   };
 
+  const progressPercent = duration ? Math.max(0, Math.min(100, (progress / duration) * 100)) : 0;
+  const remaining = Math.max(0, (duration || 0) - (progress || 0));
+
   return (
     <div className="now-playing">
       <div className="album-art-container">
@@ -66,29 +67,29 @@ const NowPlaying = ({
         </div>
         
         <div className="controls">
-          <button className="control-button">
-            <Shuffle size={16} />
+          <button className="control-button shuffle" aria-label="Shuffle">
+            <Shuffle />
           </button>
           <button 
-            className="control-button"
+            className="control-button prev" aria-label="Previous"
             onClick={() => onSkip('previous')}
           >
-            <SkipBack size={16} />
+            <SkipBack />
           </button>
           <button 
-            className="play-button"
+            className="play-button" aria-label="Play/Pause"
             onClick={onPlayPause}
           >
-            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            {isPlaying ? <Pause /> : <Play />}
           </button>
           <button 
-            className="control-button"
+            className="control-button next" aria-label="Next"
             onClick={() => onSkip('next')}
           >
-            <SkipForward size={16} />
+            <SkipForward />
           </button>
-          <button className="control-button">
-            <Repeat size={16} />
+          <button className="control-button repeat" aria-label="Repeat">
+            <Repeat />
           </button>
         </div>
         
@@ -100,29 +101,16 @@ const NowPlaying = ({
           >
             <div 
               className="progress-fill"
-              style={{ width: `${(progress / duration) * 100}%` }}
+              style={{ width: `${progressPercent}%` }}
+            />
+            <div
+              className="progress-knob"
+              style={{ left: `${progressPercent}%` }}
             />
           </div>
-          <span className="time-display">{formatTime(duration)}</span>
+          <span className="time-display time-remaining">-{formatTime(remaining)}</span>
         </div>
       </div>
-      
-      <div className="volume-control">
-        <Volume2 size={16} color="#b3b3b3" />
-        <div 
-          className="volume-slider"
-          onClick={handleVolumeClick}
-        >
-          <div 
-            className="volume-fill"
-            style={{ width: `${volume}%` }}
-          />
-        </div>
-      </div>
-      
-      <button className="control-button">
-        <Heart size={16} />
-      </button>
     </div>
   );
 };
