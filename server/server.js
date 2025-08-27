@@ -139,6 +139,9 @@ app.get('/api/queue', async (req, res) => {
       tokens = accessTokens.get(userId);
     }
 
+    // Ensure SpotifyWebApi uses a valid token for subsequent calls
+    spotifyApi.setAccessToken(tokens.access_token);
+
     // Always fetch playback state first to know context and current item
     const playback = await spotifyApi.getMyCurrentPlaybackState();
     const currentUri = playback.body?.item?.uri || null;
