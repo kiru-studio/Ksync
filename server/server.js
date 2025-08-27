@@ -39,7 +39,6 @@ app.get('/auth/spotify', (req, res) => {
     'user-modify-playback-state',
     'user-read-currently-playing',
     'user-read-playback-position',
-    'user-read-volume',
     'playlist-read-private',
     'playlist-read-collaborative'
   ];
