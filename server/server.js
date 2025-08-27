@@ -133,43 +133,49 @@ app.get('/api/queue', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Use Web API queue endpoint directly (not exposed in old SDKs)
+    // Always fetch playback state first to know context and current item
+    const playback = await spotifyApi.getMyCurrentPlaybackState();
+    const currentUri = playback.body?.item?.uri || null;
+    const ctx = playback.body?.context;
+
+    // Try official queue endpoint
     const resp = await fetch('https://api.spotify.com/v1/me/player/queue', {
       headers: { Authorization: `Bearer ${tokens.access_token}` }
     });
-    if (!resp.ok) {
-      console.error('Spotify queue api error', await resp.text());
-      // Fallback: use current playback context (playlist) and next tracks
-      const playback = await spotifyApi.getMyCurrentPlaybackState();
-      const ctx = playback.body?.context;
-      if (ctx?.type === 'playlist' && ctx.uri) {
-        const playlistId = ctx.uri.split(':').pop();
-        const plist = await spotifyApi.getPlaylist(playlistId);
-        const allTracks = (plist.body?.tracks?.items || []).map(t => t.track).filter(Boolean);
-        // find current position in playlist by track id, then take next few tracks
-        const currentId = playback.body?.item?.id;
-        const idx = allTracks.findIndex(t => t.id === currentId);
-        const next = allTracks.slice(idx + 1, idx + 4).map(track => ({
-          id: track.id,
-          title: track.name,
-          artist: (track.artists || []).map(a => a.name).join(', '),
-          albumArt: track.album?.images?.[0]?.url,
-          playlistName: plist.body?.name || 'Playlist'
-        }));
-        return res.json(next);
-      }
-      return res.json([]);
+
+    let result = [];
+    if (resp.ok) {
+      const data = await resp.json();
+      const items = Array.isArray(data.queue) ? data.queue : [];
+      result = items.slice(0, 5).map(track => ({
+        id: track.id,
+        title: track.name,
+        artist: (track.artists || []).map(a => a.name).join(', '),
+        albumArt: track.album?.images?.[0]?.url,
+        playlistName: 'Queue'
+      }));
     }
-    const data = await resp.json();
-    const items = Array.isArray(data.queue) ? data.queue.slice(0, 5) : [];
-    const mapped = items.map(track => ({
-      id: track.id,
-      title: track.name,
-      artist: (track.artists || []).map(a => a.name).join(', '),
-      albumArt: track.album?.images?.[0]?.url,
-      playlistName: 'Queue'
-    }));
-    res.json(mapped);
+
+    // Fallback/augment: if queue empty and we are in a playlist context, compute next tracks from playlist
+    if (result.length === 0 && ctx?.type === 'playlist' && ctx.uri) {
+      const playlistId = ctx.uri.split(':').pop();
+      const plist = await spotifyApi.getPlaylist(playlistId);
+      const all = (plist.body?.tracks?.items || [])
+        .map(it => it.track)
+        .filter(Boolean);
+      // Find by URI (more reliable than id across markets)
+      const idx = all.findIndex(t => t?.uri === currentUri);
+      const next = all.slice(idx + 1, idx + 4).map(track => ({
+        id: track.id,
+        title: track.name,
+        artist: (track.artists || []).map(a => a.name).join(', '),
+        albumArt: track.album?.images?.[0]?.url,
+        playlistName: plist.body?.name || 'Playlist'
+      }));
+      result = next;
+    }
+
+    return res.json(result);
   } catch (error) {
     console.error('Error getting queue:', error);
     res.status(500).json({ error: 'Failed to get queue' });
