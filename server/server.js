@@ -97,10 +97,7 @@ app.get('/api/current-track', async (req, res) => {
 
     spotifyApi.setAccessToken(accessTokens.get(userId).access_token);
     
-    const [currentTrack, queue] = await Promise.all([
-      spotifyApi.getMyCurrentPlaybackState(),
-      spotifyApi.getMyCurrentPlaybackState()
-    ]);
+    const currentTrack = await spotifyApi.getMyCurrentPlaybackState();
 
     if (currentTrack.body && currentTrack.body.item) {
       const track = currentTrack.body.item;
@@ -112,8 +109,11 @@ app.get('/api/current-track', async (req, res) => {
         albumArt: track.album.images[0]?.url,
         duration: track.duration_ms / 1000,
         progress: currentTrack.body.progress_ms / 1000,
+        progressMs: currentTrack.body.progress_ms,
         isPlaying: currentTrack.body.is_playing,
-        volume: currentTrack.body.device?.volume_percent || 50
+        volume: currentTrack.body.device?.volume_percent || 50,
+        contextUri: currentTrack.body.context?.uri || null,
+        serverTimestamp: Date.now()
       });
     } else {
       res.json(null);
@@ -139,6 +139,25 @@ app.get('/api/queue', async (req, res) => {
     });
     if (!resp.ok) {
       console.error('Spotify queue api error', await resp.text());
+      // Fallback: use current playback context (playlist) and next tracks
+      const playback = await spotifyApi.getMyCurrentPlaybackState();
+      const ctx = playback.body?.context;
+      if (ctx?.type === 'playlist' && ctx.uri) {
+        const playlistId = ctx.uri.split(':').pop();
+        const plist = await spotifyApi.getPlaylist(playlistId);
+        const allTracks = (plist.body?.tracks?.items || []).map(t => t.track).filter(Boolean);
+        // find current position in playlist by track id, then take next few tracks
+        const currentId = playback.body?.item?.id;
+        const idx = allTracks.findIndex(t => t.id === currentId);
+        const next = allTracks.slice(idx + 1, idx + 4).map(track => ({
+          id: track.id,
+          title: track.name,
+          artist: (track.artists || []).map(a => a.name).join(', '),
+          albumArt: track.album?.images?.[0]?.url,
+          playlistName: plist.body?.name || 'Playlist'
+        }));
+        return res.json(next);
+      }
       return res.json([]);
     }
     const data = await resp.json();
