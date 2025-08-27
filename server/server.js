@@ -27,6 +27,16 @@ const spotifyApi = new SpotifyWebApi({
 // Store tokens (in production, use a proper database)
 let accessTokens = new Map();
 
+// Simple in-memory caches to avoid Spotify rate limits
+const CACHE_TTL = {
+  currentTrack: 3000, // 3s
+  queue: 12000 // 12s
+};
+const cacheStore = {
+  currentTrack: { value: null, ts: 0 },
+  queue: { value: { items: [] }, ts: 0 }
+};
+
 // Routes
 app.get('/', (req, res) => {
   res.json({ message: 'Spotiffy Backend API' });
@@ -97,11 +107,16 @@ app.get('/api/current-track', async (req, res) => {
 
     spotifyApi.setAccessToken(accessTokens.get(userId).access_token);
     
+    // Serve cached value if fresh
+    if (Date.now() - cacheStore.currentTrack.ts < CACHE_TTL.currentTrack && cacheStore.currentTrack.value) {
+      return res.json(cacheStore.currentTrack.value);
+    }
+
     const currentTrack = await spotifyApi.getMyCurrentPlaybackState();
 
     if (currentTrack.body && currentTrack.body.item) {
       const track = currentTrack.body.item;
-      res.json({
+      const payload = {
         id: track.id,
         title: track.name,
         artist: track.artists.map(a => a.name).join(', '),
@@ -114,12 +129,15 @@ app.get('/api/current-track', async (req, res) => {
         volume: currentTrack.body.device?.volume_percent || 50,
         contextUri: currentTrack.body.context?.uri || null,
         serverTimestamp: Date.now()
-      });
+      };
+      cacheStore.currentTrack = { value: payload, ts: Date.now() };
+      res.json(payload);
     } else {
-      res.json(null);
+      res.json(cacheStore.currentTrack.value || null);
     }
   } catch (error) {
     console.error('Error getting current track:', error);
+    if (cacheStore.currentTrack.value) return res.json(cacheStore.currentTrack.value);
     res.status(500).json({ error: 'Failed to get current track' });
   }
 });
@@ -149,6 +167,11 @@ app.get('/api/queue', async (req, res) => {
     const shuffle = !!playback.body?.shuffle_state;
     const repeat = playback.body?.repeat_state || 'off';
 
+    // Serve cached value if fresh
+    if (Date.now() - cacheStore.queue.ts < CACHE_TTL.queue && cacheStore.queue.value) {
+      return res.json(cacheStore.queue.value);
+    }
+
     // Try official queue endpoint (best source for manual queue)
     let result = [];
     let source = 'queue';
@@ -174,23 +197,34 @@ app.get('/api/queue', async (req, res) => {
 
     // Fallback/augment: if queue empty and we are in a playlist context, compute next tracks from playlist
     if (result.length === 0 && ctx?.type === 'playlist' && ctx.uri) {
-      const playlistId = ctx.uri.split(':').pop();
-      const next = await getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, 7);
-      result = next.items;
-      source = 'playlist';
+      try {
+        const playlistId = ctx.uri.split(':').pop();
+        const next = await getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, 7);
+        result = next.items;
+        source = 'playlist';
+      } catch (e) {
+        console.error('Playlist fallback error:', e.response?.status || e.message);
+      }
     }
 
     // Album context fallback
     if (result.length === 0 && ctx?.type === 'album' && ctx.uri) {
-      const albumId = ctx.uri.split(':').pop();
-      const next = await getNextFromAlbum(spotifyApi, albumId, currentUri, shuffle, 7);
-      result = next.items;
-      source = 'album';
+      try {
+        const albumId = ctx.uri.split(':').pop();
+        const next = await getNextFromAlbum(spotifyApi, albumId, currentUri, shuffle, 7);
+        result = next.items;
+        source = 'album';
+      } catch (e) {
+        console.error('Album fallback error:', e.response?.status || e.message);
+      }
     }
 
-    return res.json({ items: result, shuffle, repeat, source, context: ctx?.type || null });
+    const payload = { items: result, shuffle, repeat, source, context: ctx?.type || null };
+    cacheStore.queue = { value: payload, ts: Date.now() };
+    return res.json(payload);
   } catch (error) {
     console.error('Error getting queue:', error);
+    if (cacheStore.queue.value) return res.json(cacheStore.queue.value);
     res.status(500).json({ error: 'Failed to get queue' });
   }
 });
