@@ -149,23 +149,27 @@ app.get('/api/queue', async (req, res) => {
     const shuffle = !!playback.body?.shuffle_state;
     const repeat = playback.body?.repeat_state || 'off';
 
-    // Try official queue endpoint
-    const resp = await axios.get('https://api.spotify.com/v1/me/player/queue', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` }
-    });
-
+    // Try official queue endpoint (best source for manual queue)
     let result = [];
     let source = 'queue';
-    if (resp && resp.status === 200) {
-      const data = resp.data || {};
-      const items = Array.isArray(data.queue) ? data.queue : [];
-      result = items.slice(0, 5).map(track => ({
-        id: track.id,
-        title: track.name,
-        artist: (track.artists || []).map(a => a.name).join(', '),
-        albumArt: track.album?.images?.[0]?.url,
-        playlistName: 'Queue'
-      }));
+    try {
+      const resp = await axios.get('https://api.spotify.com/v1/me/player/queue', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` }
+      });
+      if (resp && resp.status === 200) {
+        const data = resp.data || {};
+        const items = Array.isArray(data.queue) ? data.queue : [];
+        result = items.slice(0, 7).map(track => ({
+          id: track.id,
+          title: track.name,
+          artist: (track.artists || []).map(a => a.name).join(', '),
+          albumArt: track.album?.images?.[0]?.url,
+          playlistName: 'Queue'
+        }));
+      }
+    } catch (e) {
+      console.error('Queue endpoint error:', e.response?.status || e.message);
+      // continue with fallbacks
     }
 
     // Fallback/augment: if queue empty and we are in a playlist context, compute next tracks from playlist
@@ -174,6 +178,14 @@ app.get('/api/queue', async (req, res) => {
       const next = await getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, 7);
       result = next.items;
       source = 'playlist';
+    }
+
+    // Album context fallback
+    if (result.length === 0 && ctx?.type === 'album' && ctx.uri) {
+      const albumId = ctx.uri.split(':').pop();
+      const next = await getNextFromAlbum(spotifyApi, albumId, currentUri, shuffle, 7);
+      result = next.items;
+      source = 'album';
     }
 
     return res.json({ items: result, shuffle, repeat, source, context: ctx?.type || null });
@@ -401,6 +413,37 @@ async function getNextFromPlaylist(spotifyApi, playlistId, currentUri, shuffle, 
     artist: (track.artists || []).map(a => a.name).join(', '),
     albumArt: track.album?.images?.[0]?.url,
     playlistName: plist.body?.name || 'Playlist'
+  }));
+  return { items };
+}
+
+async function getNextFromAlbum(spotifyApi, albumId, currentUri, shuffle, take = 3) {
+  const album = await spotifyApi.getAlbum(albumId);
+  const all = (album.body?.tracks?.items || []).map(t => ({
+    id: t.id,
+    name: t.name,
+    uri: t.uri,
+    artists: t.artists,
+    album: album.body
+  }));
+  const idx = all.findIndex(t => t?.uri === currentUri);
+  let candidates = [];
+  if (shuffle) {
+    const rest = all.filter((t, i) => i !== idx);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    candidates = rest.slice(0, take);
+  } else {
+    candidates = all.slice(idx + 1, idx + 1 + take);
+  }
+  const items = candidates.map(track => ({
+    id: track.id,
+    title: track.name,
+    artist: (track.artists || []).map(a => a.name).join(', '),
+    albumArt: album.body?.images?.[0]?.url,
+    playlistName: album.body?.name || 'Album'
   }));
   return { items };
 }
