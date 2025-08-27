@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotiffy Dock - Authentication</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #1db954;
+        }
+        .message {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        .status {
+            font-size: 0.9rem;
+            color: #b3b3b3;
+        }
+        .spinner {
+            border: 2px solid #333;
+            border-top: 2px solid #1db954;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎵 Spotiffy Dock</div>
+        <div class="message">Authenticating with Spotify...</div>
+        <div class="spinner"></div>
+        <div class="status">Please wait while we complete the authentication process.</div>
+    </div>
+
+    <script>
+        // Handle Spotify OAuth callback
+        const urlParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = urlParams.get('access_token');
+        const error = urlParams.get('error');
+
+        if (accessToken) {
+            // Store the token
+            localStorage.setItem('spotify_access_token', accessToken);
+            
+            // Close the window and notify the main app
+            window.opener.postMessage({ type: 'SPOTIFY_AUTH_SUCCESS', token: accessToken }, '*');
+            window.close();
+        } else if (error) {
+            document.querySelector('.message').textContent = 'Authentication failed';
+            document.querySelector('.status').textContent = `Error: ${error}`;
+            document.querySelector('.spinner').style.display = 'none';
+        } else {
+            document.querySelector('.message').textContent = 'Invalid callback';
+            document.querySelector('.status').textContent = 'Please try again';
+            document.querySelector('.spinner').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
