@@ -332,8 +332,8 @@ async function fetchLyricsFromGenius(trackName, artistName) {
   }
 }
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Spotiffy Backend running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}`);
+// Start server - bind to 0.0.0.0 for hosting platforms
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Spotiffy Backend running on port ${PORT} (host 0.0.0.0)`);
+  console.log(`📡 Health: GET /health`);
 });
