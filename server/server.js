@@ -133,21 +133,24 @@ app.get('/api/queue', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    spotifyApi.setAccessToken(tokens.access_token);
-    const queue = await spotifyApi.getMyCurrentPlaybackState();
-    
-    if (queue.body && queue.body.queue) {
-      const queueItems = queue.body.queue.slice(0, 5).map(track => ({
-        id: track.id,
-        title: track.name,
-        artist: track.artists.map(a => a.name).join(', '),
-        albumArt: track.album.images[0]?.url,
-        playlistName: 'Queue'
-      }));
-      res.json(queueItems);
-    } else {
-      res.json([]);
+    // Use Web API queue endpoint directly (not exposed in old SDKs)
+    const resp = await fetch('https://api.spotify.com/v1/me/player/queue', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+    if (!resp.ok) {
+      console.error('Spotify queue api error', await resp.text());
+      return res.json([]);
     }
+    const data = await resp.json();
+    const items = Array.isArray(data.queue) ? data.queue.slice(0, 5) : [];
+    const mapped = items.map(track => ({
+      id: track.id,
+      title: track.name,
+      artist: (track.artists || []).map(a => a.name).join(', '),
+      albumArt: track.album?.images?.[0]?.url,
+      playlistName: 'Queue'
+    }));
+    res.json(mapped);
   } catch (error) {
     console.error('Error getting queue:', error);
     res.status(500).json({ error: 'Failed to get queue' });
@@ -167,15 +170,32 @@ app.get('/api/lyrics/:trackId', async (req, res) => {
 
     spotifyApi.setAccessToken(tokens.access_token);
     
-    // Get track info
+    // Get track info (title/artist) from Spotify
     const track = await spotifyApi.getTrack(trackId);
     const trackName = track.body.name;
-    const artistName = track.body.artists[0].name;
-    
-    // Fetch lyrics from Genius (you can replace with other services)
-    const lyrics = await fetchLyricsFromGenius(trackName, artistName);
-    
-    res.json(lyrics);
+    const artistName = track.body.artists?.[0]?.name || '';
+    const albumName = track.body.album?.name || '';
+
+    // Try LRCLIB for synced lyrics (free, public)
+    const lrclibUrl = `https://lrclib.net/api/search?track_name=${encodeURIComponent(trackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=${encodeURIComponent(albumName)}`;
+    const lr = await fetch(lrclibUrl);
+    if (lr.ok) {
+      const arr = await lr.json();
+      const first = Array.isArray(arr) ? arr[0] : null;
+      if (first && first.syncedLyrics) {
+        const parsed = parseLrc(first.syncedLyrics);
+        return res.json(parsed);
+      }
+      if (first && first.plainLyrics) {
+        const unsynced = first.plainLyrics.split(/\r?\n/).filter(Boolean).map((text, i) => ({ text, startTime: i * 3 }));
+        return res.json(unsynced);
+      }
+    }
+
+    // Fallback to mock
+    return res.json([
+      { text: "Lyrics unavailable", startTime: 0 }
+    ]);
   } catch (error) {
     console.error('Error getting lyrics:', error);
     res.status(500).json({ error: 'Failed to get lyrics' });
@@ -311,22 +331,24 @@ async function refreshAccessToken(userId, refreshToken) {
   }
 }
 
-async function fetchLyricsFromGenius(trackName, artistName) {
-  try {
-    // This is a simplified example - you might want to use a proper lyrics API
-    // For now, we'll return mock lyrics
-    return [
-      { text: "I'd be your last love, everlasting, you and me", startTime: 0 },
-      { text: "Mm, that was what you told me", startTime: 4 },
-      { text: "I'm giving you up", startTime: 8 },
-      { text: "But I'm still holding on", startTime: 12 },
-      { text: "To the memories we made", startTime: 16 },
-      { text: "And the promises we kept", startTime: 20 }
-    ];
-  } catch (error) {
-    console.error('Error fetching lyrics:', error);
-    return [];
+// LRC parser: converts "[mm:ss.xx] line" to { text, startTime }
+function parseLrc(lrc) {
+  const lines = lrc.split(/\r?\n/);
+  const out = [];
+  const timeTag = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/;
+  for (const line of lines) {
+    const m = timeTag.exec(line);
+    if (!m) continue;
+    const min = parseInt(m[1], 10);
+    const sec = parseInt(m[2], 10);
+    const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
+    const startTime = min * 60 + sec + ms / 1000;
+    const text = line.replace(timeTag, '').trim();
+    if (text) out.push({ text, startTime });
   }
+  // Ensure sorted by time
+  out.sort((a, b) => a.startTime - b.startTime);
+  return out;
 }
 
 // Start server - bind to 0.0.0.0 for hosting platforms
