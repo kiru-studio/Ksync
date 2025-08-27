@@ -34,13 +34,11 @@ app.get('/', (req, res) => {
 
 // Spotify OAuth endpoints
 app.get('/auth/spotify', (req, res) => {
+  // Minimal, broadly allowed scopes needed for playback control and status
   const scopes = [
     'user-read-playback-state',
     'user-modify-playback-state',
-    'user-read-currently-playing',
-    'user-read-playback-position',
-    'playlist-read-private',
-    'playlist-read-collaborative'
+    'user-read-currently-playing'
   ];
 
   const authUrl = spotifyApi.createAuthorizeURL(scopes);
