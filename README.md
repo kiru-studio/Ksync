@@ -21,59 +21,62 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
 2. **Center Panel** - Synced lyrics with karaoke-style highlighting
 3. **Right Panel** - Queue/upcoming tracks preview
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- Spotify Premium account (required for Web Playback SDK)
-- Spotify app running on your computer
+- Spotify account (Premium recommended for best experience)
+- Spotify desktop app running
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and install**
    ```bash
    git clone <repository-url>
-   cd spotiffy-dock
-   ```
-
-2. **Install dependencies**
-   ```bash
+   cd ksync
    npm install
    ```
 
-3. **Set up Spotify Developer App**
+2. **Create a Spotify app (PKCE – no client secret needed)**
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Create a new app
-   - Add `http://localhost:3000/callback` to Redirect URIs
-   - Copy your Client ID
+   - In **Settings**, add this Redirect URI: `http://127.0.0.1:8888/callback`
+   - In **Settings → User Management**, add the Spotify email you will use to log in (required in Development Mode; otherwise you get 403 Forbidden)
+   - Copy your **Client ID**
 
-4. **Configure Spotify Client ID**
-   - Open `src/services/SpotifyService.js`
-   - Replace `YOUR_SPOTIFY_CLIENT_ID` with your actual Client ID
+3. **Configure the app**
+   - Open `config.js` in the project root
+   - Set `SPOTIFY_CLIENT_ID` (or replace `YOUR_SPOTIFY_CLIENT_ID` in the `spotify.clientId` field) with your Client ID
+   - Redirect URI is already set to `http://127.0.0.1:8888/callback`
 
-5. **Build and run**
+4. **Build and run**
    ```bash
    npm run build
    npm start
    ```
 
+5. **Use the dock**
+   - Move your mouse to the **top edge** of the screen to show the dock
+   - Click **Connect with Spotify** and sign in in your browser
+   - After authorizing, the dock will show your current track, lyrics, and queue. No backend server required.
+
 ### Development
 
-For development with hot reloading:
 ```bash
 npm run dev
 ```
 
-## 🔧 Configuration
+## Configuration
 
-### Spotify Authentication
+### Spotify (PKCE)
 
-The app uses Spotify's Web Playback SDK for real-time control. You'll need:
+The app uses Spotify’s **PKCE** flow: only your **Client ID** is needed (no client secret). Tokens are stored locally and refreshed automatically.
 
-1. **Spotify Premium account** - Required for Web Playback SDK
-2. **Spotify app running** - The dock controls the desktop app
-3. **Valid Client ID** - From Spotify Developer Dashboard
+1. **Spotify app running** – The dock controls the active Spotify device.
+2. **Client ID** – From your app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+3. **Redirect URI** – Must be exactly `http://127.0.0.1:8888/callback` in both `config.js` and your Spotify app settings.
+4. **403 Forbidden** – In Development Mode, only users added in **Settings → User Management** can use the app. Add the Spotify email you log in with.
 
 ### Customization
 

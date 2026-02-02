@@ -2,17 +2,27 @@ import React, { useState, useEffect, useRef } from 'react';
 import NowPlaying from './components/NowPlaying';
 import LyricsPanel from './components/LyricsPanel';
 import QueuePanel from './components/QueuePanel';
+import LoginScreen from './components/LoginScreen';
+import UserProfile from './components/UserProfile';
 import SpotifyService from './services/SpotifyService';
 
 function App() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const [user, setUser] = useState(null);
   const [currentTrack, setCurrentTrack] = useState(null);
+  const [apiError, setApiError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(50);
   const [queue, setQueue] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [shuffleState, setShuffleState] = useState(false);
+  const [repeatState, setRepeatState] = useState('off');
   const [lyrics, setLyrics] = useState([]);
+  const [lyricsProvider, setLyricsProvider] = useState(null);
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0);
   const [lyricsOffsetMs, setLyricsOffsetMs] = useState(0); // user-adjustable
   const tickRef = useRef(null);
@@ -20,6 +30,20 @@ function App() {
   const baseProgressSecRef = useRef(0);
   const baseTimestampMsRef = useRef(Date.now());
   const isPlayingRef = useRef(false);
+
+  const handleLogin = async () => {
+    try {
+      setAuthError(null);
+      await SpotifyService.authenticate();
+      setIsAuthenticated(true);
+      const profile = await SpotifyService.getCurrentUser();
+      setUser(profile || null);
+      updateSpotifyData();
+    } catch (error) {
+      setAuthError(error.message || 'Login failed. Check your Spotify Client ID in config.');
+      console.error('Login error:', error);
+    }
+  };
 
   useEffect(() => {
     // Listen for dock visibility changes from Electron
@@ -30,9 +54,25 @@ function App() {
       });
     }
 
-    // Initialize Spotify service
     SpotifyService.init();
-    
+    const checkAuth = async () => {
+      try {
+        const hasTokens = window.electronAPI ? await window.electronAPI.spotifyHasTokens() : false;
+        setIsAuthenticated(!!hasTokens);
+        if (hasTokens) {
+          const profile = await SpotifyService.getCurrentUser();
+          setUser(profile || null);
+          updateSpotifyData();
+        }
+      } catch (e) {
+        console.warn('checkAuth failed:', e);
+      }
+    };
+    checkAuth();
+    try {
+      SpotifyService.onLogoutDone(() => setIsAuthenticated(false));
+    } catch (_) {}
+
     // Set up event listeners for mouse enter/leave
     const handleMouseEnter = () => {
       if (window.electronAPI) {
@@ -62,83 +102,86 @@ function App() {
   }, []);
 
   const updateSpotifyData = async () => {
+    let trackData = null;
+    const maxRetries = 3;
+    const backoffMs = [2000, 4000, 8000];
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        trackData = await SpotifyService.getCurrentTrack();
+        setApiError(null);
+        break;
+      } catch (err) {
+        if (err.message === 'Not authenticated') {
+          setIsAuthenticated(false);
+          setApiError(null);
+          return;
+        }
+        if (attempt === maxRetries) {
+          setApiError(err.message || 'Connection error');
+        } else {
+          await new Promise((r) => setTimeout(r, backoffMs[attempt]));
+        }
+      }
+    }
+
+    if (trackData) {
+      setIsAuthenticated(true);
+      setAuthError(null);
+      setCurrentTrack(trackData);
+      setIsPlaying(!!trackData.isPlaying);
+      isPlayingRef.current = !!trackData.isPlaying;
+
+      let durationSec = trackData.durationMs ?? trackData.duration ?? 0;
+      durationSec = durationSec > 10000 ? durationSec / 1000 : durationSec;
+      let progressSec = trackData.progressMs ?? trackData.progress ?? 0;
+      progressSec = progressSec > 10000 ? progressSec / 1000 : progressSec;
+      if (trackData.serverTimestamp && trackData.isPlaying) {
+        const serverTs = new Date(trackData.serverTimestamp).getTime();
+        if (!Number.isNaN(serverTs)) {
+          progressSec += Math.max(0, (Date.now() - serverTs) / 1000);
+        }
+      }
+      if (durationSec > 0) progressSec = Math.max(0, Math.min(progressSec, durationSec));
+      baseProgressSecRef.current = progressSec;
+      baseTimestampMsRef.current = Date.now();
+      setProgress(progressSec);
+      setDuration(durationSec);
+      if (typeof trackData.volume === 'number') setVolume(trackData.volume);
+      if (typeof trackData.shuffleState === 'boolean') setShuffleState(trackData.shuffleState);
+      if (trackData.repeatState) setRepeatState(trackData.repeatState);
+    }
+
     try {
-      const trackData = await SpotifyService.getCurrentTrack();
-      if (trackData) {
-        setCurrentTrack(trackData);
-        setIsPlaying(!!trackData.isPlaying);
-        isPlayingRef.current = !!trackData.isPlaying;
-
-        // Normalize units (ms vs seconds)
-        let durationSec = trackData.durationMs ?? trackData.duration ?? 0;
-        durationSec = durationSec > 10000 ? durationSec / 1000 : durationSec;
-
-        let progressSec = trackData.progressMs ?? trackData.progress ?? 0;
-        progressSec = progressSec > 10000 ? progressSec / 1000 : progressSec;
-
-        // Drift correction using serverTimestamp if provided
-        if (trackData.serverTimestamp) {
-          const serverTs = new Date(trackData.serverTimestamp).getTime();
-          if (!Number.isNaN(serverTs) && trackData.isPlaying) {
-            const driftSec = (Date.now() - serverTs) / 1000;
-            progressSec += Math.max(0, driftSec);
-          }
-        }
-
-        // Clamp
-        if (durationSec > 0) {
-          progressSec = Math.max(0, Math.min(progressSec, durationSec));
-        }
-        // Save base for smooth ticking
-        baseProgressSecRef.current = progressSec;
-        baseTimestampMsRef.current = Date.now();
-
-        setProgress(progressSec);
-        setDuration(durationSec);
-        if (typeof trackData.volume === 'number') setVolume(trackData.volume);
-      }
-
       const queueData = await SpotifyService.getQueue();
-      if (queueData) {
-        setQueue(queueData);
-      }
+      if (queueData) setQueue(queueData);
+    } catch (_) {}
 
-      // Handle lyric refresh on track change
-      const newTrackId = trackData?.id || trackData?.trackId || trackData?.track?.id || null;
-      if (newTrackId !== lastTrackIdRef.current) {
-        lastTrackIdRef.current = newTrackId;
-        setLyrics([]);
-        setCurrentLyricIndex(0);
-        if (newTrackId) {
-          let lyricsData = await SpotifyService.getLyrics(newTrackId);
-          // Normalize lyric start times to seconds
-          if (Array.isArray(lyricsData)) {
-            lyricsData = lyricsData.map(l => ({
-              ...l,
-              startTime: (l.startTime ?? l.time ?? 0) > 10000 ? (l.startTime ?? l.time) / 1000 : (l.startTime ?? l.time ?? 0)
-            }));
-          }
-          if (lyricsData) {
-            setLyrics(lyricsData);
-            updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
-          }
-        }
-      } else if ((!lyrics || lyrics.length === 0) && newTrackId) {
-        // If lyrics somehow empty, fetch once
-        let lyricsData = await SpotifyService.getLyrics(newTrackId);
-        if (Array.isArray(lyricsData)) {
-          lyricsData = lyricsData.map(l => ({
-            ...l,
-            startTime: (l.startTime ?? l.time ?? 0) > 10000 ? (l.startTime ?? l.time) / 1000 : (l.startTime ?? l.time ?? 0)
-          }));
-        }
-        if (lyricsData) {
+    try {
+      const deviceList = await SpotifyService.getDevices();
+      if (deviceList && deviceList.length) setDevices(deviceList);
+    } catch (_) {}
+
+    const newTrackId = trackData?.id || trackData?.trackId || trackData?.track?.id || null;
+    if (newTrackId !== lastTrackIdRef.current) {
+      lastTrackIdRef.current = newTrackId;
+      setLyrics([]);
+      setLyricsProvider(null);
+      setCurrentLyricIndex(0);
+      if (newTrackId) {
+        const { lines: lyricsData, provider } = await SpotifyService.getLyrics(newTrackId, trackData);
+        if (lyricsData && lyricsData.length) {
           setLyrics(lyricsData);
+          setLyricsProvider(provider);
           updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
         }
       }
-    } catch (error) {
-      console.error('Error updating Spotify data:', error);
+    } else if ((!lyrics || lyrics.length === 0) && newTrackId) {
+      const { lines: lyricsData, provider } = await SpotifyService.getLyrics(newTrackId, trackData);
+      if (lyricsData && lyricsData.length) {
+        setLyrics(lyricsData);
+        setLyricsProvider(provider);
+        updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
+      }
     }
   };
 
@@ -227,8 +270,53 @@ function App() {
     }
   };
 
-  console.log('Current isVisible state:', isVisible);
+  const handleLogout = () => {
+    SpotifyService.logout();
+    setIsAuthenticated(false);
+  };
+
+  const handleShuffle = async (state) => {
+    try {
+      await SpotifyService.setShuffle(state);
+      setShuffleState(state);
+    } catch (err) {
+      console.error('Error setting shuffle:', err);
+    }
+  };
+
+  const handleRepeat = async (state) => {
+    try {
+      await SpotifyService.setRepeat(state);
+      setRepeatState(state);
+    } catch (err) {
+      console.error('Error setting repeat:', err);
+    }
+  };
+
+  const handleDeviceChange = async (deviceId) => {
+    try {
+      await SpotifyService.transferPlayback([deviceId], true);
+    } catch (err) {
+      console.error('Error transferring playback:', err);
+    }
+  };
   
+  if (!isAuthenticated) {
+    return (
+      <div 
+        className={`app ${isVisible ? 'slide-down' : 'slide-up'}`}
+        style={{ 
+          opacity: isVisible ? 1 : 0,
+          visibility: isVisible ? 'visible' : 'hidden'
+        }}
+      >
+        <div className="dock-container login-container">
+          <LoginScreen onLogin={handleLogin} error={authError} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className={`app ${isVisible ? 'slide-down' : 'slide-up'}`}
@@ -238,6 +326,10 @@ function App() {
       }}
     >
       <div className="dock-container">
+        <div className="dock-header">
+          {apiError && <span className="api-error">Open Spotify or check connection</span>}
+          <UserProfile user={user} onLogout={handleLogout} />
+        </div>
         <div className="panel-left">
           <NowPlaying
             track={currentTrack}
@@ -245,16 +337,26 @@ function App() {
             progress={progress}
             duration={duration}
             volume={volume}
+            shuffleState={shuffleState}
+            repeatState={repeatState}
+            devices={devices}
+            currentDeviceId={currentTrack?.device?.id}
             onPlayPause={handlePlayPause}
             onSkip={handleSkip}
             onVolumeChange={handleVolumeChange}
             onProgressChange={handleProgressChange}
+            onShuffle={handleShuffle}
+            onRepeat={handleRepeat}
+            onDeviceChange={handleDeviceChange}
           />
         </div>
         <div className="panel-center">
           <LyricsPanel
             lyrics={lyrics}
             currentIndex={currentLyricIndex}
+            provider={lyricsProvider}
+            lyricsOffsetMs={lyricsOffsetMs}
+            onOffsetChange={setLyricsOffsetMs}
           />
         </div>
         <div className="panel-right">

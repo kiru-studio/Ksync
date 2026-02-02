@@ -1,7 +1,69 @@
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 
+// Avoid Windows "Unable to create cache" / "Gpu Cache Creation failed" errors
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+const tokenStore = require(path.join(__dirname, 'src', 'utils', 'tokenStore.js'));
+const SpotifyAuth = require(path.join(__dirname, 'src', 'services', 'SpotifyAuth.js'));
+const SpotifyAPI = require(path.join(__dirname, 'src', 'services', 'SpotifyAPI.js'));
+const config = require(path.join(__dirname, 'config.js'));
+
+const spotifyConfig = {
+  clientId: config.spotify?.clientId || config.SPOTIFY_CLIENT_ID || '',
+  redirectUri: config.spotify?.redirectUri || config.REDIRECT_URI || 'http://127.0.0.1:8888/callback',
+};
+
+function normalizePlayerState(body) {
+  if (!body) return null;
+  const item = body.item;
+  // Spotify can return 200 with device but item null (e.g. ad, or no content)
+  if (!item) return null;
+  const isEpisode = item.type === 'episode' || item.show != null;
+  const title = item.name || null;
+  const artist = isEpisode
+    ? (item.show?.name || 'Podcast')
+    : (item.artists || []).map((a) => a.name).join(', ');
+  const album = isEpisode ? item.show?.name : item.album?.name;
+  const albumArt = isEpisode
+    ? (item.images?.[0]?.url || item.show?.images?.[0]?.url)
+    : item.album?.images?.[0]?.url;
+  return {
+    id: item.id,
+    title,
+    artist: artist || 'Unknown Artist',
+    album,
+    albumArt,
+    duration: (item.duration_ms || 0) / 1000,
+    durationMs: item.duration_ms || 0,
+    progress: (body.progress_ms || 0) / 1000,
+    progressMs: body.progress_ms || 0,
+    isPlaying: !!body.is_playing,
+    volume: body.device?.volume_percent ?? 50,
+    contextUri: body.context?.uri,
+    serverTimestamp: Date.now(),
+    shuffleState: !!body.shuffle_state,
+    repeatState: body.repeat_state || 'off',
+    device: body.device,
+  };
+}
+
+function normalizeQueue(body) {
+  if (!body) return { items: [] };
+  const queue = body.queue || [];
+  const items = queue.slice(0, 7).map((track) => ({
+    id: track.id,
+    title: track.name,
+    artist: (track.artists || []).map((a) => a.name).join(', '),
+    albumArt: track.album?.images?.[0]?.url,
+  }));
+  return { items, source: 'queue' };
+}
+
 let mainWindow;
+let last403Log = 0;
 const DOCK_WIDTH = 3000; // CSS pixels
 const DOCK_HEIGHT = 450; // CSS pixels
 let deviceScaleFactor = 1;
@@ -13,6 +75,7 @@ app.commandLine.appendSwitch('force-device-scale-factor', '1');
 // Ensure single instance (prevents multiple dock windows)
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
+  console.log('[Main] Another instance is running, quitting.');
   app.quit();
 } else {
   app.on('second-instance', () => {
@@ -34,6 +97,7 @@ function createWindow() {
   scaledHeight = Math.max(1, Math.round(DOCK_HEIGHT / deviceScaleFactor));
   console.log('[Dock DPI]', { deviceScaleFactor, workArea: primary.workAreaSize, scaledWidth, scaledHeight });
 
+  try {
   mainWindow = new BrowserWindow({
     width: scaledWidth,
     height: scaledHeight,
@@ -41,6 +105,7 @@ function createWindow() {
     y: -scaledHeight, // Start just above the screen
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000', // Fully transparent so no black band at top on Windows
     useContentSize: false, // Changed to false to use exact pixel dimensions
     alwaysOnTop: false, // Changed to false to prevent blocking
     resizable: false,
@@ -71,12 +136,7 @@ function createWindow() {
   mainWindow.setSize(scaledWidth, scaledHeight, false); // Force exact size
 
   // Load the app
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
-  }
+  mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
 
   // Auto-hide functionality
   let mouseY = 0;
@@ -123,6 +183,87 @@ function createWindow() {
       hideDock();
     }
   });
+
+  // Spotify PKCE login
+  ipcMain.handle('spotify-login', async () => {
+    try {
+      await SpotifyAuth.login(spotifyConfig, tokenStore);
+      return { ok: true };
+    } catch (err) {
+      console.error('[main] Spotify login error:', err);
+      return { ok: false, error: err.message || 'Login failed' };
+    }
+  });
+
+  ipcMain.handle('spotify-has-tokens', () => tokenStore.hasTokens());
+
+  ipcMain.on('spotify-logout', () => {
+    tokenStore.clearTokens();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('spotify-logout-done');
+    }
+  });
+
+  function log403Once(err) {
+    if (err.status === 403 && Date.now() - last403Log > 60000) {
+      last403Log = Date.now();
+      console.error('[Spotify] 403:', err.message);
+    }
+  }
+
+  ipcMain.handle('spotify-get-player', async () => {
+    try {
+      const body = await SpotifyAPI.getPlayer(tokenStore, spotifyConfig);
+      return normalizePlayerState(body);
+    } catch (err) {
+      log403Once(err);
+      if (err.status === 204 || err.status === 404) return null;
+      if (err.status === 401) throw new Error('Not authenticated');
+      throw err;
+    }
+  });
+
+  ipcMain.handle('spotify-get-queue', async () => {
+    try {
+      const body = await SpotifyAPI.getQueue(tokenStore, spotifyConfig);
+      return normalizeQueue(body);
+    } catch (err) {
+      if (err.status === 401) throw new Error('Not authenticated');
+      return { items: [] };
+    }
+  });
+
+  ipcMain.handle('spotify-play', () => SpotifyAPI.play(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-pause', () => SpotifyAPI.pause(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-skip-next', () => SpotifyAPI.skipNext(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-skip-previous', () => SpotifyAPI.skipPrevious(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-set-volume', (_, volume) => SpotifyAPI.setVolume(tokenStore, spotifyConfig, volume));
+  ipcMain.handle('spotify-seek', (_, positionMs) => SpotifyAPI.seek(tokenStore, spotifyConfig, positionMs));
+  ipcMain.handle('spotify-set-shuffle', (_, state) => SpotifyAPI.setShuffle(tokenStore, spotifyConfig, state));
+  ipcMain.handle('spotify-set-repeat', (_, state) => SpotifyAPI.setRepeat(tokenStore, spotifyConfig, state));
+  ipcMain.handle('spotify-get-current-user', () => SpotifyAPI.getCurrentUser(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-get-devices', () => SpotifyAPI.getDevices(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-transfer-playback', (_, deviceIds, play) =>
+    SpotifyAPI.transferPlayback(tokenStore, spotifyConfig, deviceIds, play)
+  );
+
+  mainWindow.on('closed', () => {
+    console.log('[Main] Window closed');
+    mainWindow = null;
+  });
+
+  mainWindow.webContents.on('render-process-gone', (_, details) => {
+    console.error('[Main] Renderer crashed:', details.reason, details.exitCode);
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_, code, desc, url) => {
+    console.error('[Main] Load failed:', code, desc, url);
+  });
+
+  } catch (err) {
+    console.error('[Main] createWindow error:', err);
+    throw err;
+  }
 }
 
 function showDock() {
@@ -154,12 +295,25 @@ function hideDock() {
   }
 }
 
-app.whenReady().then(createWindow);
+process.on('uncaughtException', (err) => {
+  console.error('[Fatal]', err);
+});
+
+app.whenReady().then(() => {
+  createWindow();
+}).catch((err) => {
+  console.error('[App ready error]', err);
+});
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  console.log('[Main] window-all-closed – recreating window in 1s');
+  mainWindow = null;
+  // Recreate window so app keeps running (e.g. after renderer crash)
+  setTimeout(() => {
+    if (!mainWindow && !app.isQuiting) {
+      createWindow();
+    }
+  }, 1000);
 });
 
 app.on('activate', () => {

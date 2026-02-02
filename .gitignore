@@ -1,3 +1,6 @@
+# Legacy backend (no longer used; app uses PKCE + main process API)
+server/
+
 # Dependencies
 node_modules/
 npm-debug.log*
