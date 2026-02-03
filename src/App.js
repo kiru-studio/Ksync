@@ -153,7 +153,18 @@ function App() {
 
     try {
       const queueData = await SpotifyService.getQueue();
-      if (queueData) setQueue(queueData);
+      if (queueData) {
+        const raw = queueData.items || [];
+        const seen = new Set();
+        const unique = raw.filter((t) => {
+          const id = t.id || t.uri;
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        const limitedQueue = { ...queueData, items: unique.slice(0, 4) };
+        setQueue(limitedQueue);
+      }
     } catch (_) {}
 
     try {
@@ -355,13 +366,14 @@ function App() {
             lyrics={lyrics}
             currentIndex={currentLyricIndex}
             provider={lyricsProvider}
-            lyricsOffsetMs={lyricsOffsetMs}
-            onOffsetChange={setLyricsOffsetMs}
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
           />
         </div>
         <div className="panel-right">
           <QueuePanel
             queue={queue}
+            onPlayTrack={(uri) => SpotifyService.playTrack(uri)}
           />
         </div>
       </div>

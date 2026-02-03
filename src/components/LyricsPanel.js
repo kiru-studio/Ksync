@@ -1,9 +1,25 @@
 import React from 'react';
 
-const LyricsPanel = ({ lyrics, currentIndex, provider, lyricsOffsetMs = 0, onOffsetChange }) => {
+const LyricsPanel = ({ lyrics, currentIndex, provider, volume = 50, onVolumeChange }) => {
   if (!lyrics || lyrics.length === 0) {
     return (
       <div className="lyrics-panel">
+        {typeof onVolumeChange === 'function' && (
+          <div className="lyrics-toolbar">
+            <div className="lyrics-volume">
+              <label className="lyrics-volume-label">Volume</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => onVolumeChange(parseInt(e.target.value, 10))}
+                className="lyrics-volume-slider"
+              />
+              <span className="lyrics-volume-value">{volume}%</span>
+            </div>
+          </div>
+        )}
         <div className="lyrics-container">
           <div className="lyrics-line">No lyrics available</div>
           <p className="lyrics-hint">Lyrics may appear for supported tracks from Spotify or LRCLIB.</p>
@@ -29,22 +45,20 @@ const LyricsPanel = ({ lyrics, currentIndex, provider, lyricsOffsetMs = 0, onOff
 
   return (
     <div className="lyrics-panel">
-      {(provider || onOffsetChange) && (
+      {typeof onVolumeChange === 'function' && (
         <div className="lyrics-toolbar">
-          {provider && <span className="lyrics-provider">Source: {provider}</span>}
-          {typeof onOffsetChange === 'function' && (
-            <div className="lyrics-offset">
-              <label className="lyrics-offset-label">Sync offset (s):</label>
+          {typeof onVolumeChange === 'function' && (
+            <div className="lyrics-volume">
+              <label className="lyrics-volume-label">Volume</label>
               <input
                 type="range"
-                min="-5"
-                max="5"
-                step="0.5"
-                value={lyricsOffsetMs / 1000}
-                onChange={(e) => onOffsetChange(parseFloat(e.target.value) * 1000)}
-                className="lyrics-offset-slider"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => onVolumeChange(parseInt(e.target.value, 10))}
+                className="lyrics-volume-slider"
               />
-              <span className="lyrics-offset-value">{lyricsOffsetMs / 1000}s</span>
+              <span className="lyrics-volume-value">{volume}%</span>
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const QueuePanel = ({ queue }) => {
+const QueuePanel = ({ queue, onPlayTrack }) => {
   const items = Array.isArray(queue?.items) ? queue.items : (Array.isArray(queue) ? queue : []);
   const meta = queue && !Array.isArray(queue) ? queue : {};
 
@@ -18,15 +18,22 @@ const QueuePanel = ({ queue }) => {
     );
   }
 
-  const displayItems = items.slice(0, 7);
+  const displayItems = (items || []).slice(0, 4);
   return (
     <div className="queue-panel">
       <div className="queue-header">
-        Next from: {items[0]?.playlistName || meta.source || meta.context || 'Queue'}
+        Next from: {displayItems[0]?.playlistName || meta.source || meta.context || 'Queue'}
       </div>
       <div className="queue-list">
         {displayItems.map((track, index) => (
-          <div key={track.id || index} className="queue-item">
+          <div
+            key={track.id || index}
+            className="queue-item"
+            role="button"
+            tabIndex={0}
+            onClick={() => track.uri && onPlayTrack && onPlayTrack(track.uri)}
+            onKeyDown={(e) => e.key === 'Enter' && track.uri && onPlayTrack && onPlayTrack(track.uri)}
+          >
             <img
               src={track.albumArt || '/default-album-art.png'}
               alt=""

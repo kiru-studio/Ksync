@@ -76,6 +76,15 @@ export default {
     }
   },
 
+  async playTrack(uri) {
+    if (!api || !uri) return;
+    try {
+      await api.spotifyPlayTrack(uri);
+    } catch (err) {
+      console.error('Error playing track:', err);
+    }
+  },
+
   async pause() {
     if (!api) return;
     try {

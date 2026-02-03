@@ -1,5 +1,6 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, nativeImage, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // Avoid Windows "Unable to create cache" / "Gpu Cache Creation failed" errors
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -53,8 +54,19 @@ function normalizePlayerState(body) {
 function normalizeQueue(body) {
   if (!body) return { items: [] };
   const queue = body.queue || [];
-  const items = queue.slice(0, 7).map((track) => ({
+  const seen = new Set();
+  const unique = [];
+  for (const track of queue) {
+    if (unique.length >= 4) break;
+    const id = track.id || track.uri;
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      unique.push(track);
+    }
+  }
+  const items = unique.map((track) => ({
     id: track.id,
+    uri: track.uri,
     title: track.name,
     artist: (track.artists || []).map((a) => a.name).join(', '),
     albumArt: track.album?.images?.[0]?.url,
@@ -63,6 +75,7 @@ function normalizeQueue(body) {
 }
 
 let mainWindow;
+let tray = null;
 let last403Log = 0;
 const DOCK_WIDTH = 3000; // CSS pixels
 const DOCK_HEIGHT = 450; // CSS pixels
@@ -234,6 +247,9 @@ function createWindow() {
   });
 
   ipcMain.handle('spotify-play', () => SpotifyAPI.play(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-play-track', (_, uri) =>
+    SpotifyAPI.play(tokenStore, spotifyConfig, uri ? { uris: [uri] } : {})
+  );
   ipcMain.handle('spotify-pause', () => SpotifyAPI.pause(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-next', () => SpotifyAPI.skipNext(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-previous', () => SpotifyAPI.skipPrevious(tokenStore, spotifyConfig));
@@ -278,6 +294,7 @@ function showDock() {
     mainWindow.setSize(scaledWidth, scaledHeight, false); // Force exact size
     mainWindow.show(); // Ensure window is shown
     mainWindow.webContents.send('dock-visible', true);
+    updateTrayMenu();
   }
 }
 
@@ -291,8 +308,47 @@ function hideDock() {
       mainWindow.setOpacity(0); // Make completely transparent
       mainWindow.setPosition(0, -scaledHeight); // Move just above the screen
       mainWindow.webContents.send('dock-visible', false);
+      updateTrayMenu();
     }, 300); // Small delay to prevent flickering
   }
+}
+
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: isVisible ? 'Hide dock' : 'Show dock',
+      click: () => {
+        if (isVisible) hideDock();
+        else showDock();
+      },
+    },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } },
+  ]);
+}
+
+function updateTrayMenu() {
+  if (tray && !tray.isDestroyed()) tray.setContextMenu(buildTrayMenu());
+}
+
+function createTray() {
+  const logoPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
+  const fallbackPath = path.join(__dirname, 'assets', 'tray-icon.png');
+  let iconPath = fs.existsSync(logoPath) ? logoPath : null;
+  if (!iconPath && !fs.existsSync(fallbackPath)) {
+    const assetsDir = path.join(__dirname, 'assets');
+    if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
+    const iconBase64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOklEQVQ4T2NkYGD4z0ABYBzVMKoBBQMMAwz/Gf4z/Gf8z8jAwMTAwMTAwMTAwMTAwMTAwAAAohIHf2R0d3MAAAAASUVORK5CYII=';
+    fs.writeFileSync(fallbackPath, Buffer.from(iconBase64, 'base64'));
+  }
+  if (!iconPath) iconPath = fallbackPath;
+  let icon = nativeImage.createFromPath(iconPath);
+  if (icon.isEmpty()) {
+    icon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOklEQVQ4T2NkYGD4z0ABYBzVMKoBBQMMAwz/Gf4z/Gf8z8jAwMTAwMTAwMTAwMTAwMTAwAAAohIHf2R0d3MAAAAASUVORK5CYII=');
+  }
+  tray = new Tray(icon);
+  tray.setToolTip('Spotiffy Dock');
+  tray.setContextMenu(buildTrayMenu());
 }
 
 process.on('uncaughtException', (err) => {
@@ -301,6 +357,7 @@ process.on('uncaughtException', (err) => {
 
 app.whenReady().then(() => {
   createWindow();
+  createTray();
 }).catch((err) => {
   console.error('[App ready error]', err);
 });

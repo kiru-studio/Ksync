@@ -8,7 +8,9 @@
     "dev": "concurrently \"npm run start\" \"npm run watch\"",
     "watch": "webpack --mode development --watch",
     "build": "webpack --mode production",
-    "dist": "electron-builder",
+    "build:icon": "node build-icon.js",
+    "dist": "npm run build && npm run build:icon && electron-builder",
+    "pack": "npm run build && npm run build:icon && electron-builder --dir",
     "setup": "node setup.js"
   },
   "keywords": [
@@ -32,7 +34,8 @@
     "html-webpack-plugin": "^5.5.3",
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "png-to-ico": "^2.1.8"
   },
   "dependencies": {
     "framer-motion": "^10.16.5",
@@ -44,15 +47,30 @@
     "appId": "com.spotiffy.dock",
     "productName": "Spotiffy Dock",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
       "main.js",
+      "preload.js",
+      "config.js",
+      "Untitled_design__1_-removebg-preview.png",
       "dist/**/*",
+      "src/**/*",
+      "assets/**/*",
       "node_modules/**/*"
     ],
+    "extraResources": [],
     "win": {
-      "target": "nsis"
+      "signAndEditExecutable": false,
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

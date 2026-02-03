@@ -7,7 +7,8 @@ A beautiful, auto-hiding Spotify dock that behaves like the Windows taskbar but 
 - **Auto-hide functionality** - Slides down when you move your mouse to the top edge
 - **Real-time Spotify control** - Play/pause, skip, volume, and progress control
 - **Synced lyrics display** - Karaoke-style lyrics with current line highlighting
-- **Queue preview** - See upcoming tracks at a glance
+- **Queue preview** - See upcoming tracks at a glance (unique items, no duplicates)
+- **System tray** - Run in background; right-click tray icon to Show/Hide dock or Quit
 - **Modern UI** - Beautiful dark theme with smooth animations
 - **Always on top** - Stays accessible without interfering with your work
 
@@ -56,7 +57,15 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
    npm start
    ```
 
-5. **Use the dock**
+5. **Run as a standalone app (no terminal needed)**
+   To create an app you can double-click and keep running after closing the terminal:
+   ```bash
+   npm run build
+   npm run dist
+   ```
+   Then open the `release` folder and run **Spotiffy Dock 1.0.0.exe** (or use the installer). The app will stay in the system tray; right-click the tray icon to **Show dock**, **Hide dock**, or **Quit**.
+
+6. **Use the dock**
    - Move your mouse to the **top edge** of the screen to show the dock
    - Click **Connect with Spotify** and sign in in your browser
    - After authorizing, the dock will show your current track, lyrics, and queue. No backend server required.
@@ -90,21 +99,32 @@ You can customize the dock by modifying:
 ## 📁 Project Structure
 
 ```
-spotiffy-dock/
-├── main.js                 # Electron main process
-├── preload.js             # Preload script for security
+ksync/
+├── main.js                 # Electron main process (tray, window, IPC)
+├── preload.js              # Preload script for secure renderer API
+├── config.js               # Spotify Client ID and redirect URI
+├── build-icon.js           # Converts PNG to ICO for Windows build
 ├── src/
-│   ├── App.js             # Main React component
-│   ├── components/        # React components
-│   │   ├── NowPlaying.js  # Left panel - controls
-│   │   ├── LyricsPanel.js # Center panel - lyrics
-│   │   └── QueuePanel.js  # Right panel - queue
+│   ├── App.js              # Main React component
+│   ├── components/
+│   │   ├── LoginScreen.js  # Spotify connect / login UI
+│   │   ├── NowPlaying.js   # Left panel – controls, progress, volume
+│   │   ├── LyricsPanel.js  # Center panel – synced lyrics + volume
+│   │   ├── QueuePanel.js   # Right panel – queue (unique items)
+│   │   └── UserProfile.js  # User avatar/display
 │   ├── services/
-│   │   └── SpotifyService.js # Spotify API integration
-│   ├── styles.css         # Main stylesheet
-│   └── index.js           # React entry point
-├── webpack.config.js      # Webpack configuration
-└── package.json           # Dependencies and scripts
+│   │   ├── SpotifyAuth.js  # PKCE OAuth and token refresh
+│   │   ├── SpotifyAPI.js   # Web API calls (player, queue, playback)
+│   │   ├── SpotifyService.js # High-level Spotify logic
+│   │   └── LyricsService.js   # Multi-provider lyrics (fallbacks)
+│   ├── utils/
+│   │   └── tokenStore.js   # Secure token storage (Electron safeStorage)
+│   ├── styles.css
+│   ├── index.js
+│   └── index.html
+├── assets/                 # Tray icon and other assets
+├── webpack.config.js
+└── package.json
 ```
 
 ## 🎨 UI Features
@@ -165,14 +185,15 @@ The app integrates with Spotify using:
 
 ## 🚀 Building for Distribution
 
-To create a distributable package:
+To create a distributable package (installer + portable exe):
 
 ```bash
 npm run build
+npm run build:icon   # optional; generates build/icon.ico from PNG
 npm run dist
 ```
 
-This creates an installer in the `dist` folder.
+Output is in the **`release`** folder: `Spotiffy Dock Setup 1.0.0.exe` (installer) and `Spotiffy Dock 1.0.0.exe` (portable). The app runs from the system tray; right-click the tray icon to show/hide the dock or quit.
 
 ## 📝 License
 

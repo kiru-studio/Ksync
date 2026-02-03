@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   spotifyGetPlayer: () => ipcRenderer.invoke('spotify-get-player'),
   spotifyGetQueue: () => ipcRenderer.invoke('spotify-get-queue'),
   spotifyPlay: () => ipcRenderer.invoke('spotify-play'),
+  spotifyPlayTrack: (uri) => ipcRenderer.invoke('spotify-play-track', uri),
   spotifyPause: () => ipcRenderer.invoke('spotify-pause'),
   spotifySkipNext: () => ipcRenderer.invoke('spotify-skip-next'),
   spotifySkipPrevious: () => ipcRenderer.invoke('spotify-skip-previous'),
