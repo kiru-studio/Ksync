@@ -4,6 +4,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onDockVisibilityChange: (callback) => {
     ipcRenderer.on('dock-visible', (event, isVisible) => callback(isVisible));
   },
+  onDockDimensions: (callback) => {
+    ipcRenderer.on('dock-dimensions', (event, dimensions) => callback(dimensions));
+  },
+  onLyricsColorChanged: (callback) => {
+    ipcRenderer.on('lyrics-color-changed', (event, color) => callback(color));
+  },
   onMouseEnter: () => ipcRenderer.send('mouse-enter'),
   onMouseLeave: () => ipcRenderer.send('mouse-leave'),
   spotifyLogin: () => ipcRenderer.invoke('spotify-login'),

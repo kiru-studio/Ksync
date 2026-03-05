@@ -12,8 +12,7 @@ body {
 }
 
 .app {
-  width: 3000px;
-  height: 450px;
+  /* Width and height set dynamically via inline styles */
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -25,16 +24,19 @@ body {
 
 .dock-container {
   position: relative;
-  width: 3000px;
-  height: 450px;
+  /* Width and height set dynamically via inline styles */
   overflow: hidden;
   background: transparent;
+  display: flex;
+  flex-direction: row;
 }
 
 .dock-container.login-container {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .dock-header {
@@ -143,52 +145,67 @@ body {
 }
 
 .panel-left {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 1000px;
-  height: 450px;
-}
-
-.panel-center {
-  position: absolute;
-  left: 1000px;
-  top: 0px;
-  width: 1300px;
-  height: 450px;
+  /* 2:3:2 layout -> left is 2/7 ≈ 28.6% */
+  flex: 0 0 28.571%;
+  min-width: 0;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.panel-center {
+  /* center is 3/7 ≈ 42.9% */
+  flex: 0 0 42.857%;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /*background: rgba(255, 255, 255, 0.03);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);*/
 }
 
 /* Ensure queue content fits full height panel */
 .panel-right {
-  position: absolute;
-  left: 2300px;
-  top: 0px;
-  width: 700px;
-  height: 450px;
+  /* right is 2/7 ≈ 28.6% */
+  flex: 0 0 28.571%;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 /* Left Panel - Now Playing */
 .now-playing {
   position: relative;
-  width: 1000px;
-  height: 450px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  gap: 25px;
+  max-width: 100%;
 }
+
 .album-art-container {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  position: absolute;
-  left: 118px;
-  top: 100px;
+  flex-shrink: 0;
   width: 250px;
   height: 250px;
+  min-width: 200px;
 }
 
 .album-art {
-  width: 250px;
-  height: 250px;
+  width: 100%;
+  height: 100%;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -202,37 +219,27 @@ body {
 .song-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  flex: 1;
   min-width: 0;
-  position: absolute;
-  left: calc(118px + 250px + 25px);
-  top: 120px;
-  width: 560px;
-  height: 230px;
+  max-width: 100%;
+  justify-content: center;
 }
 
 .song-title {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 560px; /* allow full group width */
-  height: 40px;
-  font-size: 36px;
+  width: 100%;
+  font-size: clamp(24px, 2.5vw, 36px);
   font-weight: 700;
   color: #ffffff;
-  line-height: 36px;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .song-artist {
-  position: absolute;
-  left: 0;
-  top: 52px;
-  width: 560px;
-  height: 28px;
-  font-size: 18px;
+  width: 100%;
+  font-size: clamp(14px, 1.5vw, 18px);
   color: #b3b3b3;
   white-space: nowrap;
   overflow: hidden;
@@ -240,13 +247,11 @@ body {
 }
 
 .controls {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 560px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: 8px;
 }
 
 .control-button {
@@ -350,11 +355,11 @@ body {
 .volume-control, .like-button { display: none !important; }
 
 .progress-container {
-  position: absolute;
-  left: 0;
-  top: 90px;
-  width: 560px;
-  height: 60px;
+  width: 100%;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .volume-control {
   grid-column: 3;
@@ -377,10 +382,9 @@ body {
 }
 
 .progress-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 26px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
   height: 4px;
   background: rgba(255, 255, 255, 0.18);
   border-radius: 2px;
@@ -406,13 +410,14 @@ body {
 }
 
 .time-display {
-  position: absolute;
-  top: 8px;
   font-size: 12px;
   color: #b3b3b3;
+  flex-shrink: 0;
+  min-width: 45px;
 }
-.progress-container .time-display:first-child { left: 0; }
-.progress-container .time-remaining { right: 0; position: absolute; }
+.progress-container .time-remaining {
+  text-align: right;
+}
 
 .time-remaining {
   color: #9ad1a5;
@@ -497,24 +502,43 @@ body {
 }
 
 .lyrics-line {
-  font-size: 28px;
-  color: #b3b3b3;
-  margin: 6px 0;
+  font-size: 32px;
+  margin: 8px 0;
   transition: all 0.3s ease;
   opacity: 0.6;
+  padding: 0 40px;
+}
+
+.lyrics-panel.lyrics-white .lyrics-line:not(.current):not(.past) {
+  color: #b3b3b3;
+}
+
+.lyrics-panel.lyrics-black .lyrics-line:not(.current):not(.past) {
+  color: #4a4a4a;
 }
 
 .lyrics-line.current {
-  color: #ffffff;
-  font-weight: 800;
+  font-weight: 900;
   opacity: 1;
-  transform: none;
-  font-size: 64px;
+  transform: scale(1.05);
+  font-size: 72px;
+  letter-spacing: 1px;
+}
+
+.lyrics-line.current.lyrics-white {
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.lyrics-line.current.lyrics-black {
+  color: #000000;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .lyrics-line.past {
   color: #777777;
   opacity: 0.35;
+  font-size: 24px;
 }
 
 /* Right Panel - Queue (4 songs, no scroll) */
@@ -523,8 +547,9 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding-top: 8px;
+  padding: 40px 30px 8px 30px;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .queue-list {

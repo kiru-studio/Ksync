@@ -1,6 +1,6 @@
 {
-  "name": "spotiffy-dock",
-  "version": "1.0.0",
+  "name": "ksync",
+  "version": "1.2.7",
   "description": "A Spotify dock with auto-hide and lyrics display",
   "main": "main.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "lyrics",
     "music"
   ],
-  "author": "Your Name",
+  "author": "Kiruthik Kumar M",
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.23.5",
@@ -44,19 +44,22 @@
     "react-dom": "^18.2.0"
   },
   "build": {
-    "appId": "com.spotiffy.dock",
-    "productName": "Spotiffy Dock",
+    "appId": "com.ksync",
+    "productName": "ksync",
     "directories": {
       "output": "release"
     },
+    "electronLanguages": ["en-US"],
+    "afterPack": "scripts/strip-locales.js",
+    "asar": true,
     "files": [
       "main.js",
       "preload.js",
       "config.js",
-      "Untitled_design__1_-removebg-preview.png",
       "dist/**/*",
       "src/**/*",
       "assets/**/*",
+      "Untitled_design__1_-removebg-preview.png",
       "node_modules/**/*"
     ],
     "extraResources": [],
@@ -70,7 +73,9 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }

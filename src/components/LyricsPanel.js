@@ -1,9 +1,9 @@
 import React from 'react';
 
-const LyricsPanel = ({ lyrics, currentIndex, provider, volume = 50, onVolumeChange }) => {
+const LyricsPanel = ({ lyrics, currentIndex, volume = 50, onVolumeChange, lyricsColor = 'white' }) => {
   if (!lyrics || lyrics.length === 0) {
     return (
-      <div className="lyrics-panel">
+      <div className={`lyrics-panel lyrics-${lyricsColor}`}>
         {typeof onVolumeChange === 'function' && (
           <div className="lyrics-toolbar">
             <div className="lyrics-volume">
@@ -34,8 +34,12 @@ const LyricsPanel = ({ lyrics, currentIndex, provider, volume = 50, onVolumeChan
   for (let i = startIndex; i < endIndex; i++) {
     const lyric = lyrics[i];
     let className = 'lyrics-line';
-    if (i === currentIndex) className += ' current';
-    else if (i < currentIndex) className += ' past';
+    if (i === currentIndex) {
+      className += ' current';
+      className += ` lyrics-${lyricsColor}`;
+    } else if (i < currentIndex) {
+      className += ' past';
+    }
     visibleLyrics.push(
       <div key={i} className={className}>
         {lyric.text}
@@ -44,11 +48,10 @@ const LyricsPanel = ({ lyrics, currentIndex, provider, volume = 50, onVolumeChan
   }
 
   return (
-    <div className="lyrics-panel">
+    <div className={`lyrics-panel lyrics-${lyricsColor}`}>
       {typeof onVolumeChange === 'function' && (
         <div className="lyrics-toolbar">
-          {typeof onVolumeChange === 'function' && (
-            <div className="lyrics-volume">
+          <div className="lyrics-volume">
               <label className="lyrics-volume-label">Volume</label>
               <input
                 type="range"
@@ -60,7 +63,6 @@ const LyricsPanel = ({ lyrics, currentIndex, provider, volume = 50, onVolumeChan
               />
               <span className="lyrics-volume-value">{volume}%</span>
             </div>
-          )}
         </div>
       )}
       <div className="lyrics-container">{visibleLyrics}</div>

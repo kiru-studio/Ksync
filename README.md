@@ -1,4 +1,4 @@
-# 🎵 Spotiffy Dock
+# 🎵 ksync
 
 A beautiful, auto-hiding Spotify dock that behaves like the Windows taskbar but at the top of your screen. Control Spotify, view synced lyrics, and see your queue without opening the main app.
 
@@ -63,7 +63,7 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
    npm run build
    npm run dist
    ```
-   Then open the `release` folder and run **Spotiffy Dock 1.0.0.exe** (or use the installer). The app will stay in the system tray; right-click the tray icon to **Show dock**, **Hide dock**, or **Quit**.
+   Then open the `release` folder and run **ksync 1.2.4.exe** (or use the installer). The app will stay in the system tray; right-click the tray icon to **Show dock**, **Hide dock**, change lyrics color, or **Quit**.
 
 6. **Use the dock**
    - Move your mouse to the **top edge** of the screen to show the dock
@@ -193,7 +193,7 @@ npm run build:icon   # optional; generates build/icon.ico from PNG
 npm run dist
 ```
 
-Output is in the **`release`** folder: `Spotiffy Dock Setup 1.0.0.exe` (installer) and `Spotiffy Dock 1.0.0.exe` (portable). The app runs from the system tray; right-click the tray icon to show/hide the dock or quit.
+Output is in the **`release`** folder: `ksync Setup 1.2.4.exe` (installer) and `ksync 1.2.4.exe` (portable). The app runs from the system tray; right-click the tray icon to show/hide the dock, change lyrics color, or quit.
 
 ## 📝 License
 

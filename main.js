@@ -77,11 +77,12 @@ function normalizeQueue(body) {
 let mainWindow;
 let tray = null;
 let last403Log = 0;
-const DOCK_WIDTH = 3000; // CSS pixels
 const DOCK_HEIGHT = 450; // CSS pixels
 let deviceScaleFactor = 1;
-let scaledWidth = DOCK_WIDTH;
+let dockWidth = 3000; // Will be calculated based on display
+let scaledWidth = dockWidth;
 let scaledHeight = DOCK_HEIGHT;
+let lyricsColor = 'white'; // 'white' or 'black'
 
 // Force Chromium to use scale factor 1 so 1 CSS px == 1 device px (helps avoid Windows zoom)
 app.commandLine.appendSwitch('force-device-scale-factor', '1');
@@ -105,10 +106,22 @@ let hideTimeout;
 function createWindow() {
   const primary = screen.getPrimaryDisplay();
   deviceScaleFactor = primary.scaleFactor || 1;
-  // Scale window size to device-independent pixels so full 3000xH CSS fits on high-DPI screens
-  scaledWidth = Math.max(1, Math.round(DOCK_WIDTH / deviceScaleFactor));
+  
+  // Calculate dock width based on display width (use full width, or max 4000px for very wide displays)
+  const displayWidth = primary.workAreaSize.width * deviceScaleFactor; // Convert to CSS pixels
+  dockWidth = Math.min(displayWidth, 4000); // Cap at 4000px for very wide displays
+  console.log('[Dock DPI]', { 
+    deviceScaleFactor, 
+    workArea: primary.workAreaSize, 
+    displayWidthCSS: displayWidth,
+    dockWidth,
+    scaledWidth: Math.round(dockWidth / deviceScaleFactor),
+    scaledHeight: Math.round(DOCK_HEIGHT / deviceScaleFactor)
+  });
+  
+  // Scale window size to device-independent pixels
+  scaledWidth = Math.max(1, Math.round(dockWidth / deviceScaleFactor));
   scaledHeight = Math.max(1, Math.round(DOCK_HEIGHT / deviceScaleFactor));
-  console.log('[Dock DPI]', { deviceScaleFactor, workArea: primary.workAreaSize, scaledWidth, scaledHeight });
 
   try {
   mainWindow = new BrowserWindow({
@@ -150,6 +163,12 @@ function createWindow() {
 
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  
+  // Send dock dimensions and lyrics color to renderer when ready
+  mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.webContents.send('dock-dimensions', { width: dockWidth, height: DOCK_HEIGHT });
+    mainWindow.webContents.send('lyrics-color-changed', lyricsColor);
+  });
 
   // Auto-hide functionality
   let mouseY = 0;
@@ -227,11 +246,26 @@ function createWindow() {
   ipcMain.handle('spotify-get-player', async () => {
     try {
       const body = await SpotifyAPI.getPlayer(tokenStore, spotifyConfig);
-      return normalizePlayerState(body);
+      const normalized = normalizePlayerState(body);
+      // Log when we get a response but no track (for debugging)
+      if (body && !body.item) {
+        console.log('[Spotify] Got player state but item is null. Device:', body.device?.name, 'Playing:', body.is_playing);
+      }
+      return normalized;
     } catch (err) {
       log403Once(err);
-      if (err.status === 204 || err.status === 404) return null;
+      if (err.status === 204 || err.status === 404) {
+        console.log('[Spotify] No active device (204/404)');
+        return null;
+      }
+      if (err.status === 429) {
+        // Rate limited - return null gracefully, don't spam logs
+        const retryAfter = err.retryAfter ? Math.ceil(err.retryAfter / 1000) : 'unknown';
+        console.log(`[Spotify] Rate limited (429). Retry after ${retryAfter}s`);
+        return null; // Return null instead of throwing so UI doesn't break
+      }
       if (err.status === 401) throw new Error('Not authenticated');
+      console.error('[Spotify] getPlayer error:', err.status, err.message);
       throw err;
     }
   });
@@ -242,6 +276,10 @@ function createWindow() {
       return normalizeQueue(body);
     } catch (err) {
       if (err.status === 401) throw new Error('Not authenticated');
+      if (err.status === 429) {
+        // Rate limited - return empty queue gracefully
+        return { items: [] };
+      }
       return { items: [] };
     }
   });
@@ -258,7 +296,19 @@ function createWindow() {
   ipcMain.handle('spotify-set-shuffle', (_, state) => SpotifyAPI.setShuffle(tokenStore, spotifyConfig, state));
   ipcMain.handle('spotify-set-repeat', (_, state) => SpotifyAPI.setRepeat(tokenStore, spotifyConfig, state));
   ipcMain.handle('spotify-get-current-user', () => SpotifyAPI.getCurrentUser(tokenStore, spotifyConfig));
-  ipcMain.handle('spotify-get-devices', () => SpotifyAPI.getDevices(tokenStore, spotifyConfig));
+  ipcMain.handle('spotify-get-devices', async () => {
+    try {
+      return await SpotifyAPI.getDevices(tokenStore, spotifyConfig);
+    } catch (err) {
+      if (err.status === 429) {
+        // Rate limited - return empty array gracefully
+        console.log('[Spotify] Rate limited (429) on getDevices');
+        return { devices: [] };
+      }
+      if (err.status === 401) throw new Error('Not authenticated');
+      throw err;
+    }
+  });
   ipcMain.handle('spotify-transfer-playback', (_, deviceIds, play) =>
     SpotifyAPI.transferPlayback(tokenStore, spotifyConfig, deviceIds, play)
   );
@@ -284,8 +334,23 @@ function createWindow() {
 
 function showDock() {
   if (!isVisible) {
+    // Recalculate dimensions in case display changed
+    const primary = screen.getPrimaryDisplay();
+    const currentScaleFactor = primary.scaleFactor || 1;
+    const displayWidth = primary.workAreaSize.width * currentScaleFactor;
+    const newDockWidth = Math.min(displayWidth, 4000);
+    const newScaledWidth = Math.round(newDockWidth / currentScaleFactor);
+    
+    // Update if dimensions changed
+    if (newDockWidth !== dockWidth || currentScaleFactor !== deviceScaleFactor) {
+      dockWidth = newDockWidth;
+      deviceScaleFactor = currentScaleFactor;
+      scaledWidth = newScaledWidth;
+      mainWindow.webContents.send('dock-dimensions', { width: dockWidth, height: DOCK_HEIGHT });
+    }
+    
     isVisible = true;
-    console.log('Showing dock...');
+    console.log('Showing dock...', { dockWidth, scaledWidth, deviceScaleFactor });
     mainWindow.setAlwaysOnTop(true); // Make it top when visible
     mainWindow.setIgnoreMouseEvents(false); // Allow mouse events when visible
     mainWindow.setOpacity(1); // Make fully visible
@@ -323,6 +388,36 @@ function buildTrayMenu() {
       },
     },
     { type: 'separator' },
+    {
+      label: 'Lyrics Color',
+      submenu: [
+        {
+          label: 'White',
+          type: 'radio',
+          checked: lyricsColor === 'white',
+          click: () => {
+            lyricsColor = 'white';
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('lyrics-color-changed', 'white');
+            }
+            updateTrayMenu();
+          },
+        },
+        {
+          label: 'Black',
+          type: 'radio',
+          checked: lyricsColor === 'black',
+          click: () => {
+            lyricsColor = 'black';
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('lyrics-color-changed', 'black');
+            }
+            updateTrayMenu();
+          },
+        },
+      ],
+    },
+    { type: 'separator' },
     { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } },
   ]);
 }
@@ -346,8 +441,11 @@ function createTray() {
   if (icon.isEmpty()) {
     icon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOklEQVQ4T2NkYGD4z0ABYBzVMKoBBQMMAwz/Gf4z/Gf8z8jAwMTAwMTAwMTAwMTAwMTAwAAAohIHf2R0d3MAAAAASUVORK5CYII=');
   }
-  tray = new Tray(icon);
-  tray.setToolTip('Spotiffy Dock');
+  // Windows tray needs a small icon (16x16) or it may not show
+  const size = process.platform === 'win32' ? 16 : 22;
+  const resized = icon.getSize().width > size ? icon.resize({ width: size, height: size }) : icon;
+  tray = new Tray(resized.isEmpty() ? icon : resized);
+  tray.setToolTip('ksync');
   tray.setContextMenu(buildTrayMenu());
 }
 

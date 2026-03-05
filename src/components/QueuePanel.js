@@ -18,7 +18,7 @@ const QueuePanel = ({ queue, onPlayTrack }) => {
     );
   }
 
-  const displayItems = (items || []).slice(0, 4);
+  const displayItems = (items || []).slice(0, 3);
   return (
     <div className="queue-panel">
       <div className="queue-header">

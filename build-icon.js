@@ -22,7 +22,9 @@ if (!fs.existsSync(outDir)) {
 pngToIco(pngPath)
   .then((buf) => {
     fs.writeFileSync(icoPath, buf);
-    console.log('[build-icon] Written', icoPath);
+    fs.writeFileSync(path.join(outDir, 'installerIcon.ico'), buf);
+    fs.writeFileSync(path.join(outDir, 'uninstallerIcon.ico'), buf);
+    console.log('[build-icon] Written', icoPath, '+ installer/uninstaller icons');
   })
   .catch((err) => {
     console.error('[build-icon] Failed:', err.message);

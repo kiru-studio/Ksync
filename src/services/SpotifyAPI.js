@@ -6,6 +6,10 @@ const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // refresh if expires in < 5 min
 
+// Rate limit tracking
+let rateLimitUntil = 0; // Timestamp when rate limit expires
+let lastSuccessfulRequest = 0; // Track last successful request time
+
 /**
  * Refresh access token using refresh_token (PKCE: no client_secret).
  * @param {{ refresh_token: string }} tokens
@@ -61,6 +65,16 @@ async function getValidToken(tokenStore, config) {
  * @param options - { method?, body? }
  */
 async function request(tokenStore, config, path, options = {}) {
+  // Check if we're rate limited
+  const now = Date.now();
+  if (now < rateLimitUntil) {
+    const waitMs = rateLimitUntil - now;
+    const err = new Error(`Rate limited. Retry after ${Math.ceil(waitMs / 1000)}s`);
+    err.status = 429;
+    err.retryAfter = waitMs;
+    throw err;
+  }
+
   const token = await getValidToken(tokenStore, config);
   const url = path.startsWith('http') ? path : `${SPOTIFY_API_BASE}${path}`;
   const init = {
@@ -74,9 +88,23 @@ async function request(tokenStore, config, path, options = {}) {
     init.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
   }
   const res = await fetch(url, init);
-  if (res.status === 204) return null;
+  if (res.status === 204) {
+    lastSuccessfulRequest = now;
+    return null;
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // Handle rate limiting (429)
+    if (res.status === 429) {
+      // Check Retry-After header (seconds) or default to exponential backoff
+      const retryAfterHeader = res.headers.get('Retry-After');
+      const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+      rateLimitUntil = now + (retryAfterSeconds * 1000);
+      const err = new Error(`Rate limited. Retry after ${retryAfterSeconds}s`);
+      err.status = 429;
+      err.retryAfter = retryAfterSeconds * 1000;
+      throw err;
+    }
     let message = data.error?.message || `HTTP ${res.status}`;
     if (res.status === 403) {
       message =
@@ -88,6 +116,7 @@ async function request(tokenStore, config, path, options = {}) {
     err.body = data;
     throw err;
   }
+  lastSuccessfulRequest = now;
   return data;
 }
 

@@ -9,6 +9,7 @@ import SpotifyService from './services/SpotifyService';
 function App() {
   const [isVisible, setIsVisible] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [dockDimensions, setDockDimensions] = useState({ width: 3000, height: 450 });
   const [authError, setAuthError] = useState(null);
   const [user, setUser] = useState(null);
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -24,12 +25,21 @@ function App() {
   const [lyrics, setLyrics] = useState([]);
   const [lyricsProvider, setLyricsProvider] = useState(null);
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0);
-  const [lyricsOffsetMs, setLyricsOffsetMs] = useState(0); // user-adjustable
+  const [lyricsOffsetMs, setLyricsOffsetMs] = useState(0); // user-adjustable offset from smooth version
+  const [lyricsColor, setLyricsColor] = useState('white'); // Keep from original
   const tickRef = useRef(null);
   const lastTrackIdRef = useRef(null);
   const baseProgressSecRef = useRef(0);
   const baseTimestampMsRef = useRef(Date.now());
   const isPlayingRef = useRef(false);
+  const lastValidTrackRef = useRef(null);
+  const nullResponseTimeRef = useRef(null);
+  const NULL_GRACE_PERIOD_MS = 10000;
+  const playerPollIntervalRef = useRef(null);
+  const queuePollIntervalRef = useRef(null);
+  const devicesPollIntervalRef = useRef(null);
+  const lastQueueFetchRef = useRef(0);
+  const lastDevicesFetchRef = useRef(0);
 
   const handleLogin = async () => {
     try {
@@ -49,8 +59,12 @@ function App() {
     // Listen for dock visibility changes from Electron
     if (window.electronAPI) {
       window.electronAPI.onDockVisibilityChange((visible) => {
-        console.log('Dock visibility changed:', visible);
         setIsVisible(visible);
+      });
+      
+      // Listen for dock dimensions from Electron
+      window.electronAPI.onDockDimensions((dimensions) => {
+        setDockDimensions(dimensions);
       });
     }
 
@@ -89,19 +103,52 @@ function App() {
     document.addEventListener('mouseenter', handleMouseEnter);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Start polling for Spotify data
-    const interval = setInterval(() => {
-      updateSpotifyData();
-    }, 1000);
+    // Adaptive polling strategy (keeping original advanced features)
+    const startPolling = () => {
+      // Player state polling - adaptive based on playing state
+      const pollPlayer = () => {
+        updatePlayerState();
+        const nextInterval = isPlayingRef.current ? 1500 : 3000;
+        playerPollIntervalRef.current = setTimeout(pollPlayer, nextInterval);
+      };
+      pollPlayer();
+
+      // Queue polling - every 10 seconds
+      const pollQueue = () => {
+        updateQueue();
+        queuePollIntervalRef.current = setTimeout(pollQueue, 10000);
+      };
+      setTimeout(pollQueue, 2000);
+
+      // Devices polling - every 15 seconds
+      const pollDevices = () => {
+        updateDevices();
+        devicesPollIntervalRef.current = setTimeout(pollDevices, 15000);
+      };
+      setTimeout(pollDevices, 3000);
+    };
+
+    startPolling();
+
+    // When internet comes back online, refetch immediately
+    const handleOnline = () => {
+      setApiError(null);
+      updatePlayerState();
+    };
+    window.addEventListener('online', handleOnline);
 
     return () => {
-      clearInterval(interval);
+      if (playerPollIntervalRef.current) clearTimeout(playerPollIntervalRef.current);
+      if (queuePollIntervalRef.current) clearTimeout(queuePollIntervalRef.current);
+      if (devicesPollIntervalRef.current) clearTimeout(devicesPollIntervalRef.current);
+      window.removeEventListener('online', handleOnline);
       document.removeEventListener('mouseenter', handleMouseEnter);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, []);
 
-  const updateSpotifyData = async () => {
+  // Separate function for player state (keeping advanced retry logic)
+  const updatePlayerState = async () => {
     let trackData = null;
     const maxRetries = 3;
     const backoffMs = [2000, 4000, 8000];
@@ -117,17 +164,20 @@ function App() {
           return;
         }
         if (attempt === maxRetries) {
+          console.error('[App] Failed to get track after retries:', err.message);
           setApiError(err.message || 'Connection error');
         } else {
           await new Promise((r) => setTimeout(r, backoffMs[attempt]));
         }
       }
     }
-
+    
     if (trackData) {
       setIsAuthenticated(true);
       setAuthError(null);
       setCurrentTrack(trackData);
+      lastValidTrackRef.current = trackData;
+      nullResponseTimeRef.current = null;
       setIsPlaying(!!trackData.isPlaying);
       isPlayingRef.current = !!trackData.isPlaying;
 
@@ -149,7 +199,60 @@ function App() {
       if (typeof trackData.volume === 'number') setVolume(trackData.volume);
       if (typeof trackData.shuffleState === 'boolean') setShuffleState(trackData.shuffleState);
       if (trackData.repeatState) setRepeatState(trackData.repeatState);
+    } else {
+      // Grace period logic (keeping original advanced feature)
+      const now = Date.now();
+      if (nullResponseTimeRef.current === null) {
+        nullResponseTimeRef.current = now;
+      }
+      const timeSinceNull = now - nullResponseTimeRef.current;
+      
+      if (lastValidTrackRef.current && timeSinceNull < NULL_GRACE_PERIOD_MS) {
+        return;
+      }
+      
+      if (!lastValidTrackRef.current || timeSinceNull >= NULL_GRACE_PERIOD_MS) {
+        setCurrentTrack(null);
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        setProgress(0);
+        setDuration(0);
+      }
     }
+
+    // SMOOTH LYRICS LOGIC from second file - handles both new tracks AND missing lyrics
+    const newTrackId = trackData?.id || trackData?.trackId || trackData?.track?.id || null;
+    if (newTrackId !== lastTrackIdRef.current) {
+      lastTrackIdRef.current = newTrackId;
+      setLyrics([]);
+      setLyricsProvider(null);
+      setCurrentLyricIndex(0);
+      if (newTrackId) {
+        SpotifyService.getLyrics(newTrackId, trackData).then(({ lines: lyricsData, provider }) => {
+          if (lyricsData && lyricsData.length) {
+            setLyrics(lyricsData);
+            setLyricsProvider(provider);
+            updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
+          }
+        }).catch(() => {});
+      }
+    } else if ((!lyrics || lyrics.length === 0) && newTrackId) {
+      // KEY IMPROVEMENT: Retry lyrics fetch if we have track but no lyrics yet
+      SpotifyService.getLyrics(newTrackId, trackData).then(({ lines: lyricsData, provider }) => {
+        if (lyricsData && lyricsData.length) {
+          setLyrics(lyricsData);
+          setLyricsProvider(provider);
+          updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
+        }
+      }).catch(() => {});
+    }
+  };
+
+  // Keep original queue and devices functions
+  const updateQueue = async () => {
+    const now = Date.now();
+    if (now - lastQueueFetchRef.current < 8000) return;
+    lastQueueFetchRef.current = now;
 
     try {
       const queueData = await SpotifyService.getQueue();
@@ -166,40 +269,23 @@ function App() {
         setQueue(limitedQueue);
       }
     } catch (_) {}
+  };
+
+  const updateDevices = async () => {
+    const now = Date.now();
+    if (now - lastDevicesFetchRef.current < 12000) return;
+    lastDevicesFetchRef.current = now;
 
     try {
       const deviceList = await SpotifyService.getDevices();
       if (deviceList && deviceList.length) setDevices(deviceList);
     } catch (_) {}
-
-    const newTrackId = trackData?.id || trackData?.trackId || trackData?.track?.id || null;
-    if (newTrackId !== lastTrackIdRef.current) {
-      lastTrackIdRef.current = newTrackId;
-      setLyrics([]);
-      setLyricsProvider(null);
-      setCurrentLyricIndex(0);
-      if (newTrackId) {
-        const { lines: lyricsData, provider } = await SpotifyService.getLyrics(newTrackId, trackData);
-        if (lyricsData && lyricsData.length) {
-          setLyrics(lyricsData);
-          setLyricsProvider(provider);
-          updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
-        }
-      }
-    } else if ((!lyrics || lyrics.length === 0) && newTrackId) {
-      const { lines: lyricsData, provider } = await SpotifyService.getLyrics(newTrackId, trackData);
-      if (lyricsData && lyricsData.length) {
-        setLyrics(lyricsData);
-        setLyricsProvider(provider);
-        updateCurrentLyric(baseProgressSecRef.current || 0, lyricsData);
-      }
-    }
   };
 
   const updateCurrentLyric = (currentTime, lyricsArray) => {
     if (!lyricsArray || lyricsArray.length === 0) return;
 
-    // Apply offset (ms or s agnostic)
+    // Smooth offset logic from second file
     const offsetSec = Math.abs(lyricsOffsetMs) > 100 ? lyricsOffsetMs / 1000 : lyricsOffsetMs;
     const t = Math.max(0, currentTime + offsetSec);
 
@@ -213,7 +299,7 @@ function App() {
     }
   };
 
-  // Smooth ticking for better lyric sync between polls
+  // Smooth ticking (same in both files)
   useEffect(() => {
     if (tickRef.current) {
       clearInterval(tickRef.current);
@@ -221,7 +307,6 @@ function App() {
     }
     if (isPlaying) {
       tickRef.current = setInterval(() => {
-        // compute elapsed since last server tick
         const elapsedSec = (Date.now() - baseTimestampMsRef.current) / 1000;
         const computed = Math.min((baseProgressSecRef.current || 0) + elapsedSec, duration || 0);
         setProgress(computed);
@@ -238,6 +323,7 @@ function App() {
     };
   }, [isPlaying, duration, lyrics]);
 
+  // All original control handlers (keeping all features)
   const handlePlayPause = async () => {
     try {
       if (isPlaying) {
@@ -318,10 +404,12 @@ function App() {
         className={`app ${isVisible ? 'slide-down' : 'slide-up'}`}
         style={{ 
           opacity: isVisible ? 1 : 0,
-          visibility: isVisible ? 'visible' : 'hidden'
+          visibility: isVisible ? 'visible' : 'hidden',
+          width: `${dockDimensions.width}px`,
+          height: `${dockDimensions.height}px`
         }}
       >
-        <div className="dock-container login-container">
+        <div className="dock-container login-container" style={{ width: `${dockDimensions.width}px`, height: `${dockDimensions.height}px` }}>
           <LoginScreen onLogin={handleLogin} error={authError} />
         </div>
       </div>
@@ -333,10 +421,12 @@ function App() {
       className={`app ${isVisible ? 'slide-down' : 'slide-up'}`}
       style={{ 
         opacity: isVisible ? 1 : 0,
-        visibility: isVisible ? 'visible' : 'hidden'
+        visibility: isVisible ? 'visible' : 'hidden',
+        width: `${dockDimensions.width}px`,
+        height: `${dockDimensions.height}px`
       }}
     >
-      <div className="dock-container">
+      <div className="dock-container" style={{ width: `${dockDimensions.width}px`, height: `${dockDimensions.height}px` }}>
         <div className="dock-header">
           {apiError && <span className="api-error">Open Spotify or check connection</span>}
           <UserProfile user={user} onLogout={handleLogout} />
@@ -365,9 +455,12 @@ function App() {
           <LyricsPanel
             lyrics={lyrics}
             currentIndex={currentLyricIndex}
-            provider={lyricsProvider}
             volume={volume}
             onVolumeChange={handleVolumeChange}
+            lyricsColor={lyricsColor}
+            provider={lyricsProvider}           // Added from smooth version
+            lyricsOffsetMs={lyricsOffsetMs}     // Added from smooth version
+            onOffsetChange={setLyricsOffsetMs}  // Added from smooth version
           />
         </div>
         <div className="panel-right">

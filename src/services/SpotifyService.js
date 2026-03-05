@@ -34,9 +34,11 @@ export default {
   async getCurrentTrack() {
     if (!api) return null;
     try {
-      return await api.spotifyGetPlayer();
+      const result = await api.spotifyGetPlayer();
+      return result;
     } catch (err) {
       if (err.message === 'Not authenticated') throw err;
+      console.error('[SpotifyService] getCurrentTrack error:', err.message);
       return null;
     }
   },

@@ -3,7 +3,7 @@ import React from 'react';
 function LoginScreen({ onLogin, error }) {
   return (
     <div className="login-panel">
-      <h1 className="login-title">Spotiffy Dock</h1>
+      <h1 className="login-title">ksync</h1>
       <p className="login-subtitle">Connect to Spotify to control playback, view lyrics, and see your queue.</p>
       {error && <p className="login-error">{error}</p>}
       <button type="button" className="login-button" onClick={onLogin}>
