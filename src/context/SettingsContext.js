@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS = {
     sidebarWidth: 340,
     islandWidth: 1180,
     triggerDistance: 1,
-    targetDisplay: 'primary',
+    targetDisplay: 'all',
   },
   layout: {
     showNowPlaying: true,
@@ -138,7 +138,9 @@ export const DEFAULT_SETTINGS = {
     mouseWheelVolume: true,
     scrubWheel: true,
     autoHideDelay: '300ms',
+    trackChangePeek: true,
     discordRPC: true,
+    discordPartySync: true,
     discordClientId: '1565344513881411667',
     discordPublicKey: '830403cc06e95f9d1cd3ef64cb4e1eac37327e5a819b6aeca518cc020e8528f7',
   },
