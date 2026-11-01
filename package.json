@@ -1,17 +1,24 @@
 {
   "name": "ksync",
-  "version": "1.2.7",
+  "version": "2.4.0",
   "description": "A Spotify dock with auto-hide and lyrics display",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node scripts/patch-electron.js && electron .",
+    "patch:electron": "node scripts/patch-electron.js",
+    "postinstall": "node scripts/patch-electron.js",
     "dev": "concurrently \"npm run start\" \"npm run watch\"",
     "watch": "webpack --mode development --watch",
     "build": "webpack --mode production",
     "build:icon": "node build-icon.js",
     "dist": "npm run build && npm run build:icon && electron-builder",
     "pack": "npm run build && npm run build:icon && electron-builder --dir",
+    "release": "npm run build && npm run build:icon && electron-builder --publish always",
     "setup": "node setup.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KiruthikKumar16/ksync.git"
   },
   "keywords": [
     "spotify",
@@ -31,44 +38,72 @@
     "css-loader": "^6.8.1",
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4",
+    "framer-motion": "^10.16.5",
     "html-webpack-plugin": "^5.5.3",
+    "lucide-react": "^0.294.0",
+    "playwright": "^1.64.1",
+    "png-to-ico": "^2.1.8",
+    "rcedit": "^5.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4",
-    "png-to-ico": "^2.1.8"
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "framer-motion": "^10.16.5",
-    "lucide-react": "^0.294.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "electron-updater": "^6.8.11"
   },
   "build": {
     "appId": "com.ksync",
     "productName": "ksync",
+    "compression": "maximum",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KiruthikKumar16",
+        "repo": "ksync"
+      }
+    ],
     "directories": {
       "output": "release"
     },
-    "electronLanguages": ["en-US"],
+    "electronLanguages": [
+      "en-US"
+    ],
     "afterPack": "scripts/strip-locales.js",
     "asar": true,
     "files": [
       "main.js",
       "preload.js",
       "config.js",
+      "package.json",
       "dist/**/*",
       "src/**/*",
       "assets/**/*",
-      "Untitled_design__1_-removebg-preview.png",
-      "node_modules/**/*"
+      "build/**/*",
+      "Untitled_design__1_-removebg-preview.png"
     ],
-    "extraResources": [],
+    "extraResources": [
+      {
+        "from": "smtc-bridge/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish_compressed/smtc-bridge.exe",
+        "to": "smtc-bridge.exe"
+      }
+    ],
     "win": {
-      "signAndEditExecutable": false,
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {

@@ -87,3 +87,10 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# gstack (global install)
+.amazonq/rules/gstack.md
+
+# .NET Build outputs
+smtc-bridge/bin/
+smtc-bridge/obj/

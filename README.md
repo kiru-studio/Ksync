@@ -27,8 +27,8 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- Spotify account (Premium recommended for best experience)
-- Spotify desktop app running
+- Spotify account (Free or Premium)
+- Spotify desktop app running (Windows required for playback control)
 
 ### Installation
 
@@ -57,7 +57,15 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
    npm start
    ```
 
-5. **Run as a standalone app (no terminal needed)**
+5. **Build the SMTC Bridge (for playback control on Free accounts)**
+   ksync uses a Windows-native sidecar to control playback without requiring Spotify Premium. You need the .NET SDK to build it.
+   ```bash
+   cd smtc-bridge
+   dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true
+   cd ..
+   ```
+
+6. **Run as a standalone app (no terminal needed)**
    To create an app you can double-click and keep running after closing the terminal:
    ```bash
    npm run build
@@ -140,22 +148,21 @@ ksync/
 
 The app integrates with Spotify using:
 
-- **Web Playback SDK** - For real-time control
-- **Spotify Web API** - For track info and queue data
+- **Windows SMTC** - For real-time playback control (no Premium required)
+- **Spotify Web API** - For track info and recently played data
 - **OAuth 2.0** - For secure authentication
 
 ### Supported Actions
 
 - ✅ Play/Pause
 - ✅ Skip Next/Previous
-- ✅ Volume Control
-- ✅ Progress Seeking
-- ✅ Queue Viewing
+- ✅ Progress Seeking (if supported by active session)
+- ✅ Recently Played Viewing
 - ✅ Real-time Track Info
 
 ### Limitations
 
-- Requires Spotify Premium
+- Playback control is **Windows-only** (relies on System Media Transport Controls)
 - Lyrics require third-party service integration
 - Must have Spotify desktop app running
 
@@ -166,12 +173,10 @@ The app integrates with Spotify using:
 1. **"Authentication failed"**
    - Ensure your Client ID is correct
    - Check that redirect URI matches exactly
-   - Make sure you have Spotify Premium
 
 2. **"No track playing"**
    - Ensure Spotify desktop app is running
    - Check that you're playing music in Spotify
-   - Verify your account has Premium
 
 3. **Dock not appearing**
    - Check that the app is running

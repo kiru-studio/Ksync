@@ -1,6 +1,40 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, nativeImage, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, nativeImage, Menu, globalShortcut, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
+
+if (!app) {
+  console.log('[ksync] Please launch with electron: npm start or start-ksync.bat');
+  process.exit(0);
+}
+
+const packageJson = require('./package.json');
+app.name = packageJson.name || 'ksync';
+if (app.setName) app.setName(packageJson.name || 'ksync');
+if (app.setVersion) {
+  try { app.setVersion(packageJson.version); } catch (_) {}
+}
+app.getVersion = () => packageJson.version;
+app.setAppUserModelId('com.ksync');
+
+if (app.isPackaged) {
+  app.setAppUserModelId('com.ksync');
+} else {
+  // During development, use process.execPath so Windows Taskbar binds directly to the running executable's icon
+  app.setAppUserModelId(process.execPath);
+}
+
+function getAppIcon() {
+  const icoPath = path.join(__dirname, 'build', 'icon.ico');
+  const brandedPng = path.join(__dirname, 'assets', 'app-icon.png');
+  const pngPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
+  // On Windows, passing the raw string path to the .ico preserves multi-resolution Win32 icon frames (16x16, 32x32, 48x48, 256x256)
+  // On Windows, passing the raw string path to the .ico preserves multi-resolution Win32 icon frames (16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256)
+  if (fs.existsSync(icoPath)) return icoPath;
+  if (fs.existsSync(brandedPng)) return brandedPng;
+  if (fs.existsSync(pngPath)) return pngPath;
+  return undefined;
+}
 
 // Avoid Windows "Unable to create cache" / "Gpu Cache Creation failed" errors
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -8,12 +42,27 @@ app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
 const tokenStore = require(path.join(__dirname, 'src', 'utils', 'tokenStore.js'));
+const settingsStore = require(path.join(__dirname, 'src', 'utils', 'settingsStore.js'));
 const SpotifyAuth = require(path.join(__dirname, 'src', 'services', 'SpotifyAuth.js'));
 const SpotifyAPI = require(path.join(__dirname, 'src', 'services', 'SpotifyAPI.js'));
 const config = require(path.join(__dirname, 'config.js'));
+const updateService = require(path.join(__dirname, 'src', 'services', 'UpdateService.js'));
+const DiscordRPCService = require(path.join(__dirname, 'src', 'services', 'DiscordRPCService.js'));
+
+const initialSettings = settingsStore.loadSettings();
+if (initialSettings.behavior?.discordClientId === '1300812903823474708') {
+  initialSettings.behavior.discordClientId = '1565344513881411667';
+  try { settingsStore.saveSettings(initialSettings); } catch (_) {}
+}
+const discordRPC = new DiscordRPCService({
+  enabled: initialSettings.behavior?.discordRPC !== false,
+  partySync: initialSettings.behavior?.discordPartySync !== false,
+  clientId: initialSettings.behavior?.discordClientId || '1565344513881411667',
+});
 
 const spotifyConfig = {
   clientId: config.spotify?.clientId || config.SPOTIFY_CLIENT_ID || '',
+  clientSecret: config.spotify?.clientSecret || config.SPOTIFY_CLIENT_SECRET || '',
   redirectUri: config.spotify?.redirectUri || config.REDIRECT_URI || 'http://127.0.0.1:8888/callback',
 };
 
@@ -51,13 +100,15 @@ function normalizePlayerState(body) {
   };
 }
 
-function normalizeQueue(body) {
-  if (!body) return { items: [] };
-  const queue = body.queue || [];
+function normalizeQueue(body, contextTitle = null, contextUri = null) {
+  if (!body) return { items: [], source: 'Queue', contextUri: null };
+  const isUpNext = Array.isArray(body.queue) && body.queue.length > 0;
+  const rawList = isUpNext ? body.queue : (body.items ? body.items.map(i => i.track || i) : []);
   const seen = new Set();
   const unique = [];
-  for (const track of queue) {
-    if (unique.length >= 4) break;
+  for (const track of rawList) {
+    if (!track) continue;
+    if (unique.length >= 30) break;
     const id = track.id || track.uri;
     if (id && !seen.has(id)) {
       seen.add(id);
@@ -67,159 +118,617 @@ function normalizeQueue(body) {
   const items = unique.map((track) => ({
     id: track.id,
     uri: track.uri,
-    title: track.name,
-    artist: (track.artists || []).map((a) => a.name).join(', '),
-    albumArt: track.album?.images?.[0]?.url,
+    title: track.name || track.title || 'Unknown Title',
+    artist: (track.artists || []).map((a) => a.name).join(', ') || track.artist || 'Unknown Artist',
+    albumArt: track.album?.images?.[0]?.url || track.albumArt || null,
+    duration_ms: track.duration_ms || track.duration,
   }));
-  return { items, source: 'queue' };
+  let source = 'Queue';
+  if (isUpNext) {
+    source = contextTitle || 'Up Next';
+  } else if (body.items) {
+    source = 'Recently Played';
+  } else if (contextTitle) {
+    source = contextTitle;
+  }
+  return { items, source, contextUri };
 }
 
-let mainWindow;
+function getDynamicDockHeight(display) {
+  const d = display || screen.getPrimaryDisplay();
+  const bounds = d.bounds || { width: 1920, height: 1080 };
+  const h = bounds.height || 1080;
+  // Dynamic responsive dock height proportional to display resolution (~17.2% of screen height)
+  // Perfectly and freely fits 3 queue songs with header, NowPlaying and synced lyrics
+  // Scales across all systems (e.g. 1080p -> 186px, 1143p -> 197px, 1440p -> 248px, 4K -> 280px)
+  const calculated = Math.round(h * 0.172);
+  return Math.min(Math.max(calculated, 185), 280);
+}
+
+function getTargetDisplay(preferredDisplayId) {
+  try {
+    const displays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    if (preferredDisplayId) {
+      const found = displays.find((d) => String(d.id) === String(preferredDisplayId));
+      if (found) return found;
+    }
+    const settings = settingsStore.loadSettings();
+    const target = settings.position?.targetDisplay || 'all';
+
+    if (target === 'cursor' || target === 'all') {
+      const cursorPt = screen.getCursorScreenPoint();
+      return screen.getDisplayNearestPoint(cursorPt) || primary;
+    }
+
+    if (target && target !== 'primary') {
+      const found = displays.find((d) => String(d.id) === String(target));
+      if (found) return found;
+    }
+
+    return primary;
+  } catch (_) {
+    return screen.getPrimaryDisplay();
+  }
+}
+
+function getActiveDisplaysForDock() {
+  try {
+    const settings = settingsStore.loadSettings();
+    const target = settings.position?.targetDisplay || 'all';
+    const allDisplays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+
+    if (target === 'all') {
+      return allDisplays.length > 0 ? allDisplays : [primary];
+    }
+    if (target === 'cursor') {
+      const cursorPt = screen.getCursorScreenPoint();
+      return [screen.getDisplayNearestPoint(cursorPt) || primary];
+    }
+    if (target === 'primary') {
+      return [primary];
+    }
+    const found = allDisplays.find((d) => String(d.id) === String(target));
+    if (found) {
+      return [found];
+    }
+    return allDisplays.length > 0 ? allDisplays : [primary];
+  } catch (_) {
+    return [screen.getPrimaryDisplay()];
+  }
+}
+
+let isCompactMode = false;
+
+function toggleCompactMode() {
+  isCompactMode = !isCompactMode;
+  for (const [dispId, win] of dockWindowsMap.entries()) {
+    if (win && !win.isDestroyed()) {
+      const disp = screen.getAllDisplays().find((d) => String(d.id) === dispId) || screen.getPrimaryDisplay();
+      const b = disp.bounds;
+      if (isCompactMode) {
+        const compactW = 340;
+        const compactH = 62;
+        const compactX = Math.round(b.x + (b.width - compactW) / 2);
+        const compactY = Math.round(b.y + 14);
+
+        win.setBounds({ x: compactX, y: compactY, width: compactW, height: compactH }, true);
+        win.webContents.send('compact-mode-changed', { isCompact: true });
+      } else {
+        const normalBounds = getDockBounds(disp);
+        win.setBounds(normalBounds, true);
+        win.webContents.send('compact-mode-changed', { isCompact: false });
+      }
+    }
+  }
+  return { isCompact: isCompactMode };
+}
+
+function getDockBounds(display) {
+  const d = display || getTargetDisplay();
+  const b = d.bounds || { x: 0, y: 0, width: 1920, height: 1080 };
+  const settings = settingsStore.loadSettings();
+  const mode = settings.position?.mode || 'top';
+  
+  if (mode === 'left') {
+    const w = Math.min(Math.max(settings.position?.sidebarWidth || 340, 260), 520);
+    return { x: b.x, y: b.y, width: w, height: b.height, mode: 'left' };
+  } else if (mode === 'right') {
+    const w = Math.min(Math.max(settings.position?.sidebarWidth || 340, 260), 520);
+    return { x: b.x + b.width - w, y: b.y, width: w, height: b.height, mode: 'right' };
+  } else {
+    // top mode
+    const h = settings.position?.height || getDynamicDockHeight(d);
+    return { x: b.x, y: b.y, width: b.width, height: h, mode: 'top' };
+  }
+}
+
+let dockWindowsMap = new Map(); // displayId -> BrowserWindow
+let mainWindow = null;
+let lastBroadcastedPlayerState = null;
+let lastBroadcastedVolume = null;
+
+function broadcastToDocks(channel, ...args) {
+  for (const win of dockWindowsMap.values()) {
+    if (win && !win.isDestroyed() && win.webContents) {
+      try {
+        win.webContents.send(channel, ...args);
+      } catch (_) {}
+    }
+  }
+}
+
+function updateMainWindowRef() {
+  const primaryId = String(screen.getPrimaryDisplay().id);
+  mainWindow = dockWindowsMap.get(primaryId) || dockWindowsMap.values().next().value || null;
+}
+
+let settingsWindow = null;
+let peekWindow = null;
+let peekDismissTimeout = null;
 let tray = null;
 let last403Log = 0;
-const DOCK_HEIGHT = 450; // CSS pixels
-let deviceScaleFactor = 1;
-let dockWidth = 3000; // Will be calculated based on display
+let dockWidth = 1920;
 let scaledWidth = dockWidth;
-let scaledHeight = DOCK_HEIGHT;
+let scaledHeight = 190;
 let lyricsColor = 'white'; // 'white' or 'black'
 
-// Force Chromium to use scale factor 1 so 1 CSS px == 1 device px (helps avoid Windows zoom)
-app.commandLine.appendSwitch('force-device-scale-factor', '1');
 // Ensure single instance (prevents multiple dock windows)
-const gotTheLock = app.requestSingleInstanceLock();
+const isTestMode = process.env.NODE_ENV === 'test' || process.argv.includes('--test');
+const gotTheLock = isTestMode || app.requestSingleInstanceLock();
 if (!gotTheLock) {
   console.log('[Main] Another instance is running, quitting.');
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
+    showDock();
   });
 }
 let isVisible = false;
-let hideTimeout;
 
-function createWindow() {
-  const primary = screen.getPrimaryDisplay();
-  deviceScaleFactor = primary.scaleFactor || 1;
+// Zero-Wake Idle Deep Sleep state (0% CPU target after 3 mins paused)
+let isDeepSleep = false;
+let lastActivePlaybackTime = Date.now();
+let lastMousePollTime = 0;
+
+function enterDeepSleep() {
+  if (isDeepSleep) return;
+  isDeepSleep = true;
+  console.log('[Main] Zero-Wake Idle Deep Sleep activated (0% CPU target)');
+  broadcastToDocks('deep-sleep-mode', { isSleeping: true });
+}
+
+function wakeFromDeepSleep() {
+  if (!isDeepSleep) return;
+  isDeepSleep = false;
+  lastActivePlaybackTime = Date.now();
+  console.log('[Main] Waking from Deep Sleep mode');
+  broadcastToDocks('deep-sleep-mode', { isSleeping: false });
+}
+
+function updatePlaybackDeepSleep(isPlaying) {
+  if (isPlaying) {
+    lastActivePlaybackTime = Date.now();
+    if (isDeepSleep) wakeFromDeepSleep();
+  } else {
+    if (!isDeepSleep && Date.now() - lastActivePlaybackTime >= 3 * 60 * 1000) {
+      enterDeepSleep();
+    }
+  }
+}
+let hideTimeout = null;
+let showGraceUntil = Date.now() + 6000;
+let initialLaunchPending = true;
+
+let smtcProcess = null;
+let cachedSystemVolume = 50;
+let cachedSystemMute = false;
+let lastSetVolumeTime = 0;
+
+function startSmtcSidecar() {
+  if (config.playbackBackend !== 'smtc') return;
+  if (process.platform !== 'win32') return;
+
+  const compressedPath = path.join(__dirname, 'smtc-bridge', 'bin', 'Release', 'net10.0-windows10.0.19041.0', 'win-x64', 'publish_compressed', 'smtc-bridge.exe');
+  const defaultDevPath = path.join(__dirname, 'smtc-bridge', 'bin', 'Release', 'net10.0-windows10.0.19041.0', 'win-x64', 'publish', 'smtc-bridge.exe');
+  const exePath = app.isPackaged
+    ? path.join(process.resourcesPath, 'smtc-bridge.exe')
+    : (fs.existsSync(compressedPath) ? compressedPath : defaultDevPath);
   
-  // Calculate dock width based on display width (use full width, or max 4000px for very wide displays)
-  const displayWidth = primary.workAreaSize.width * deviceScaleFactor; // Convert to CSS pixels
-  dockWidth = Math.min(displayWidth, 4000); // Cap at 4000px for very wide displays
-  console.log('[Dock DPI]', { 
-    deviceScaleFactor, 
-    workArea: primary.workAreaSize, 
-    displayWidthCSS: displayWidth,
-    dockWidth,
-    scaledWidth: Math.round(dockWidth / deviceScaleFactor),
-    scaledHeight: Math.round(DOCK_HEIGHT / deviceScaleFactor)
+  if (!fs.existsSync(exePath)) {
+    console.error('[SMTC] Executable not found at:', exePath);
+    return;
+  }
+
+  smtcProcess = spawn(exePath, [], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true,
   });
-  
-  // Scale window size to device-independent pixels
-  scaledWidth = Math.max(1, Math.round(dockWidth / deviceScaleFactor));
-  scaledHeight = Math.max(1, Math.round(DOCK_HEIGHT / deviceScaleFactor));
 
-  try {
-  mainWindow = new BrowserWindow({
-    width: scaledWidth,
-    height: scaledHeight,
-    x: 0,
-    y: -scaledHeight, // Start just above the screen
+  if (smtcProcess.stderr) {
+    smtcProcess.stderr.on('data', () => {});
+  }
+
+  let smtcBuffer = '';
+  smtcProcess.stdout.on('data', (data) => {
+    smtcBuffer += data.toString();
+    const lines = smtcBuffer.split('\n');
+    smtcBuffer = lines.pop(); // Keep the last partial line in the buffer
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const state = JSON.parse(line);
+        if (state.type === 'systemVolume') {
+          if (Date.now() - lastSetVolumeTime < 350) {
+            // Suppress echo bounce during active user adjustments
+            return;
+          }
+          if (typeof state.volume === 'number') cachedSystemVolume = state.volume;
+          if (typeof state.isMuted === 'boolean') cachedSystemMute = state.isMuted;
+          lastBroadcastedVolume = {
+            volume: cachedSystemVolume,
+            isMuted: cachedSystemMute,
+          };
+          broadcastToDocks('system-volume-changed', lastBroadcastedVolume);
+        } else {
+          lastBroadcastedPlayerState = state;
+          broadcastToDocks('smtc-player-state', state);
+          const isPlaying = state.isPlaying !== undefined ? !!state.isPlaying : (state.status === 'Playing');
+          updatePlaybackDeepSleep(isPlaying);
+          if (state.title && discordRPC) {
+            discordRPC.updateTrackActivity({
+              title: state.title,
+              artist: state.artist,
+              album: state.album,
+              albumArt: state.artBase64 || state.thumbnail,
+              durationMs: state.durationMs,
+              positionMs: state.positionMs,
+              isPlaying: isPlaying,
+              trackId: state.trackId,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[SMTC] JSON parse error:', err.message);
+      }
+    }
+  });
+
+  smtcProcess.on('exit', (code) => {
+    console.log('[SMTC] exited with code', code);
+    smtcProcess = null;
+    if (!app.isQuiting) {
+      setTimeout(startSmtcSidecar, 3000); // restart on unexpected exit
+    }
+  });
+}
+
+function sendSmtcCommand(cmdObj) {
+  if (smtcProcess && smtcProcess.stdin) {
+    console.log('[Main] sendSmtcCommand:', cmdObj);
+    smtcProcess.stdin.write(JSON.stringify(cmdObj) + '\n');
+  } else {
+    console.warn('[Main] sendSmtcCommand failed: smtcProcess or stdin unavailable');
+  }
+}
+
+
+function createDockWindowForDisplay(display) {
+  const b = getDockBounds(display);
+  const dispId = String(display.id);
+
+  console.log(`[Dock Window Create] Display ${dispId} (${b.width}x${b.height} at ${b.x},${b.y})`);
+
+  const win = new BrowserWindow({
+    width: b.width,
+    height: b.height,
+    x: b.x,
+    y: b.y,
+    icon: getAppIcon(),
+    title: `ksync - ${dispId}`,
     frame: false,
     transparent: true,
-    backgroundColor: '#00000000', // Fully transparent so no black band at top on Windows
-    useContentSize: false, // Changed to false to use exact pixel dimensions
-    alwaysOnTop: false, // Changed to false to prevent blocking
+    backgroundColor: '#00000000',
+    useContentSize: false,
+    alwaysOnTop: true,
     resizable: false,
     maximizable: false,
     minimizable: false,
     hasShadow: false,
     skipTaskbar: true,
-    focusable: false, // Prevent focus stealing
+    focusable: false,
+    show: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      // set via setZoomFactor after creation based on deviceScaleFactor
-      zoomFactor: 1.0,
     },
     autoHideMenuBar: true,
   });
 
-  // Match CSS pixels to requested DOCK_* by inversely scaling the webContents
-  // Force CSS pixels to be 1:1 with our intended layout regardless of Windows scaling
-  mainWindow.webContents.setZoomFactor(1 / deviceScaleFactor);
-  mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.setZoomFactor(1 / deviceScaleFactor);
-  });
+  const appIcon = getAppIcon();
+  if (appIcon && win.setIcon) {
+    try {
+      win.setIcon(appIcon);
+    } catch (_) {}
+  }
 
-  // Clamp bounds at creation regardless of DPI scaling
-  mainWindow.setBounds({ x: 0, y: -scaledHeight, width: scaledWidth, height: scaledHeight }, true);
-  mainWindow.setSize(scaledWidth, scaledHeight, false); // Force exact size
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setContentProtection(false);
+  win.setIgnoreMouseEvents(false);
+  win.setOpacity(isVisible ? 1 : 0);
+  win.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height }, false);
 
-  // Load the app
-  mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
-  
-  // Send dock dimensions and lyrics color to renderer when ready
-  mainWindow.webContents.once('did-finish-load', () => {
-    mainWindow.webContents.send('dock-dimensions', { width: dockWidth, height: DOCK_HEIGHT });
-    mainWindow.webContents.send('lyrics-color-changed', lyricsColor);
-  });
+  win.loadFile(path.join(__dirname, 'dist', 'index.html'));
 
-  // Auto-hide functionality
-  let mouseY = 0;
-  let isHovering = false;
-
-  // Monitor mouse position
-  setInterval(() => {
-    const mousePosition = screen.getCursorScreenPoint();
-    mouseY = mousePosition.y;
-    
-    // Show dock when mouse is at top of screen
-    if (mouseY <= 5 && !isVisible) {
-      console.log('Mouse at top, showing dock. Mouse Y:', mouseY);
-      showDock();
-    } else if (mouseY > scaledHeight && isVisible && !isHovering) {
-      console.log('Mouse moved away, hiding dock. Mouse Y:', mouseY);
-      hideDock();
+  win.webContents.once('did-finish-load', () => {
+    win.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+    win.webContents.send('dock-visible', isVisible);
+    win.webContents.send('lyrics-color-changed', lyricsColor);
+    if (lastBroadcastedPlayerState) {
+      win.webContents.send('smtc-player-state', lastBroadcastedPlayerState);
     }
-  }, 100);
-
-  // Make window ignore mouse events when hidden
-  mainWindow.setIgnoreMouseEvents(true);
-
-  // Handle mouse enter/leave events from renderer
-  ipcMain.on('mouse-enter', () => {
-    isHovering = true;
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      hideTimeout = null;
+    if (lastBroadcastedVolume) {
+      win.webContents.send('system-volume-changed', lastBroadcastedVolume);
+    }
+    if (isSettingsOpen()) {
+      win.webContents.send('settings-window-state', { isOpen: true });
     }
   });
 
-  ipcMain.on('mouse-leave', () => {
-    isHovering = false;
-    if (isVisible && mouseY > DOCK_HEIGHT) {
-      hideDock();
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer ${dispId} ${level}] ${message} (${path.basename(sourceId || '')}:${line})`);
+  });
+
+  win.webContents.on('render-process-gone', (_, details) => {
+    console.error(`[Main ${dispId}] Renderer crashed:`, details.reason, details.exitCode);
+  });
+
+  win.webContents.on('did-fail-load', (_, code, desc, url) => {
+    console.error(`[Main ${dispId}] Load failed:`, code, desc, url);
+  });
+
+  win.on('restore', () => {
+    if (!win.isDestroyed()) {
+      const curB = getDockBounds(display);
+      win.setBounds({ x: curB.x, y: curB.y, width: curB.width, height: curB.height }, false);
+      win.setAlwaysOnTop(true, 'screen-saver');
     }
   });
 
-  // Prevent window from being closed
-  mainWindow.on('close', (event) => {
+  win.on('minimize', (e) => {
+    e.preventDefault();
+    if (!win.isDestroyed() && win.isMinimized()) {
+      win.restore();
+    }
+  });
+
+  win.on('close', (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
       hideDock();
     }
   });
 
+  win.on('closed', () => {
+    dockWindowsMap.delete(dispId);
+    updateMainWindowRef();
+  });
+
+  return win;
+}
+
+function syncDockWindows() {
+  const activeDisplays = getActiveDisplaysForDock();
+  const activeDisplayIds = new Set(activeDisplays.map((d) => String(d.id)));
+
+  // 1. Remove windows for displays no longer active
+  for (const [dispId, win] of dockWindowsMap.entries()) {
+    if (!activeDisplayIds.has(dispId)) {
+      if (win && !win.isDestroyed()) {
+        try {
+          win.destroy();
+        } catch (_) {}
+      }
+      dockWindowsMap.delete(dispId);
+    }
+  }
+
+  // 2. Create or update windows for active displays
+  for (const disp of activeDisplays) {
+    const dispId = String(disp.id);
+    const b = getDockBounds(disp);
+    let win = dockWindowsMap.get(dispId);
+
+    if (!win || win.isDestroyed()) {
+      win = createDockWindowForDisplay(disp);
+      dockWindowsMap.set(dispId, win);
+    } else {
+      win.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height }, false);
+      if (win.webContents) {
+        win.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      }
+    }
+  }
+
+  updateMainWindowRef();
+}
+
+function createWindow() {
+  const primary = screen.getPrimaryDisplay();
+  const initBounds = getDockBounds(primary);
+  dockWidth = initBounds.width;
+  scaledWidth = initBounds.width;
+  scaledHeight = initBounds.height;
+
+  console.log('[Dock Init Responsive Multi-Display]', {
+    initBounds,
+    dockWidth,
+    scaledWidth,
+    scaledHeight,
+  });
+
+  try {
+    isVisible = true;
+    syncDockWindows();
+
+    // Initialize OTA Auto-Updater
+    try {
+      updateService.init(
+        () => [...Array.from(dockWindowsMap.values()), settingsWindow].filter(Boolean),
+        () => updateTrayMenu()
+      );
+    } catch (updaterErr) {
+      console.warn('[Main] AutoUpdater init warning:', updaterErr.message);
+    }
+
+    // Auto-hide functionality: fast 25ms polling loop across all active displays
+    let mouseY = 0;
+    let mouseX = 0;
+    setInterval(() => {
+      try {
+        const settings = settingsStore.loadSettings();
+        if (settings.position?.pinned) {
+          return;
+        }
+
+        // Throttle edge polling during Zero-Wake Deep Sleep when dock is hidden
+        if (isDeepSleep && !isVisible) {
+          const now = Date.now();
+          if (now - lastMousePollTime < 350) return;
+          lastMousePollTime = now;
+        }
+
+        const mousePosition = screen.getCursorScreenPoint();
+        mouseX = mousePosition.x;
+        mouseY = mousePosition.y;
+        const mode = settings.position?.mode || 'top';
+        const rawTriggerDist = settings.position?.triggerDistance;
+        const triggerDist = (rawTriggerDist === 8 || rawTriggerDist === undefined) ? 1 : Math.max(1, rawTriggerDist);
+
+        let isInsideAnyDock = false;
+        let isAnyTriggerZone = false;
+
+        const activeDisplays = getActiveDisplaysForDock();
+        for (const disp of activeDisplays) {
+          const curBounds = disp.bounds;
+          let insideThis = false;
+          let triggerThis = false;
+
+          if (mode === 'left') {
+            const w = Math.min(Math.max(settings.position?.sidebarWidth || 340, 260), 520);
+            insideThis =
+              mouseX >= curBounds.x &&
+              mouseX <= curBounds.x + w &&
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + curBounds.height;
+            triggerThis =
+              mouseX >= curBounds.x &&
+              mouseX <= curBounds.x + triggerDist &&
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + curBounds.height;
+          } else if (mode === 'right') {
+            const w = Math.min(Math.max(settings.position?.sidebarWidth || 340, 260), 520);
+            insideThis =
+              mouseX >= curBounds.x + curBounds.width - w &&
+              mouseX <= curBounds.x + curBounds.width &&
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + curBounds.height;
+            triggerThis =
+              mouseX >= curBounds.x + curBounds.width - triggerDist &&
+              mouseX <= curBounds.x + curBounds.width &&
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + curBounds.height;
+          } else {
+            // top mode: strictly check mouseY >= curBounds.y to prevent multi-monitor vertical bleed
+            const h = settings.position?.height || getDynamicDockHeight(disp);
+            insideThis =
+              mouseX >= curBounds.x &&
+              mouseX <= curBounds.x + curBounds.width &&
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + h;
+            triggerThis =
+              mouseY >= curBounds.y &&
+              mouseY <= curBounds.y + triggerDist &&
+              mouseX >= curBounds.x &&
+              mouseX <= curBounds.x + curBounds.width;
+          }
+
+          if (insideThis) isInsideAnyDock = true;
+          if (triggerThis) isAnyTriggerZone = true;
+        }
+
+        if (typeof mouseX === 'number' && typeof mouseY === 'number' && !isNaN(mouseX) && !isNaN(mouseY)) {
+          if (isInsideAnyDock) {
+            initialLaunchPending = false;
+            showGraceUntil = 0;
+            cancelHide();
+            if (!isVisible && isAnyTriggerZone) {
+              showDock();
+            }
+          } else {
+            if (initialLaunchPending) return;
+            if (Date.now() < showGraceUntil) return;
+            if (isVisible) {
+              performHide();
+            }
+          }
+        }
+      } catch (_) {}
+    }, 25);
+
+    // Dynamic screen display event listeners for hot-plugging & scaling
+    screen.on('display-added', (event, newDisplay) => {
+      console.log('[Screen] Display connected:', newDisplay.id);
+      syncDockWindows();
+      if (isVisible) showDock();
+      updateTrayMenu();
+    });
+
+    screen.on('display-removed', (event, oldDisplay) => {
+      console.log('[Screen] Display disconnected:', oldDisplay.id);
+      syncDockWindows();
+      if (isVisible) showDock();
+      updateTrayMenu();
+    });
+
+    screen.on('display-metrics-changed', (event, display, changedMetrics) => {
+      console.log('[Screen] Display metrics changed:', display.id, changedMetrics);
+      syncDockWindows();
+      if (isVisible) showDock();
+      updateTrayMenu();
+    });
+
+    // Handle mouse enter/leave events from renderer
+    ipcMain.on('mouse-enter', () => {
+      initialLaunchPending = false;
+      showGraceUntil = 0;
+      cancelHide();
+    });
+
+    ipcMain.on('mouse-leave', () => {
+      if (isVisible) {
+        performHide();
+      }
+    });
+
+    ipcMain.on('scroll-hide', () => {
+      performHide(true);
+    });
+
+    ipcMain.handle('get-dock-visibility', () => isVisible);
+    ipcMain.handle('show-dock', () => showDock());
+    ipcMain.handle('hide-dock', (_, force) => hideDock(force));
+
   // Spotify PKCE login
   ipcMain.handle('spotify-login', async () => {
     try {
       await SpotifyAuth.login(spotifyConfig, tokenStore);
+      broadcastToDocks('spotify-login-done');
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.webContents.send('spotify-login-done');
+      }
       return { ok: true };
     } catch (err) {
       console.error('[main] Spotify login error:', err);
@@ -231,8 +740,9 @@ function createWindow() {
 
   ipcMain.on('spotify-logout', () => {
     tokenStore.clearTokens();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('spotify-logout-done');
+    broadcastToDocks('spotify-logout-done');
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('spotify-logout-done');
     }
   });
 
@@ -270,28 +780,457 @@ function createWindow() {
     }
   });
 
-  ipcMain.handle('spotify-get-queue', async () => {
+const contextTitleCache = new Map();
+const CONTEXT_TITLE_TTL = 10 * 60 * 1000; // 10 minutes cache
+
+async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
+  if (!contextUri || typeof contextUri !== 'string') return null;
+
+  const cached = contextTitleCache.get(contextUri);
+  if (cached && Date.now() - cached.ts < CONTEXT_TITLE_TTL) {
+    return cached.title;
+  }
+
+  let title = null;
+  const pMatch = contextUri.match(/playlist[:/]([a-zA-Z0-9]+)/);
+  const aMatch = contextUri.match(/album[:/]([a-zA-Z0-9]+)/);
+
+  if (pMatch) {
+    const playlistId = pMatch[1];
     try {
-      const body = await SpotifyAPI.getQueue(tokenStore, spotifyConfig);
-      return normalizeQueue(body);
-    } catch (err) {
-      if (err.status === 401) throw new Error('Not authenticated');
-      if (err.status === 429) {
-        // Rate limited - return empty queue gracefully
-        return { items: [] };
+      const pInfo = await SpotifyAPI.getPlaylist(tokenStore, spotifyConfig, playlistId, 'name');
+      if (pInfo && pInfo.name) {
+        title = `Playlist: ${pInfo.name}`;
       }
-      return { items: [] };
+    } catch (err) {
+      console.warn('[main] Failed to fetch playlist name:', err.message);
+      title = 'Playlist';
+    }
+  } else if (aMatch) {
+    const albumId = aMatch[1];
+    try {
+      const aInfo = await SpotifyAPI.getAlbum(tokenStore, spotifyConfig, albumId);
+      if (aInfo && aInfo.name) {
+        title = `Album: ${aInfo.name}`;
+      }
+    } catch (err) {
+      console.warn('[main] Failed to fetch album name:', err.message);
+      title = 'Album';
+    }
+  } else if (contextUri.includes(':artist:') || contextUri.includes('/artist/')) {
+    title = 'Artist Radio';
+  } else if (contextUri.includes('collection')) {
+    title = 'Playlist: Liked Songs';
+  }
+
+  if (title) {
+    contextTitleCache.set(contextUri, { title, ts: Date.now() });
+  }
+  return title;
+}
+
+  ipcMain.handle('spotify-get-queue', async (event, currentTrack) => {
+    try {
+      if (tokenStore.hasTokens()) {
+        let playlistOrAlbumTitle = null;
+        let contextUri = null;
+        try {
+          const player = await SpotifyAPI.getPlayer(tokenStore, spotifyConfig);
+          contextUri = player?.context?.uri || player?.contextUri || currentTrack?.contextUri || null;
+          if (contextUri) {
+            playlistOrAlbumTitle = await resolveContextTitle(tokenStore, spotifyConfig, contextUri);
+          } else if (player?.item?.album?.name || currentTrack?.album) {
+            playlistOrAlbumTitle = `Album: ${player?.item?.album?.name || currentTrack?.album}`;
+          }
+        } catch (err) {
+          console.warn('[main] getPlayer context fetch:', err.message);
+        }
+
+        // 1. Try Spotify live user queue (/me/player/queue)
+        try {
+          const body = await SpotifyAPI.getQueue(tokenStore, spotifyConfig);
+          if (body && Array.isArray(body.queue) && body.queue.length > 0) {
+            const normalized = normalizeQueue(body, playlistOrAlbumTitle, contextUri);
+            if (normalized.items && normalized.items.length > 0) {
+              return normalized;
+            }
+          }
+        } catch (err) {
+          console.warn('[main] SpotifyAPI.getQueue:', err.message);
+        }
+
+        // 2. If user queue returned empty, fetch the active context's tracks directly!
+        if (contextUri) {
+          try {
+            const pMatch = contextUri.match(/playlist[:/]([a-zA-Z0-9]+)/);
+            const aMatch = contextUri.match(/album[:/]([a-zA-Z0-9]+)/);
+            if (pMatch) {
+              const playlistId = pMatch[1];
+              const pData = await SpotifyAPI.getPlaylist(tokenStore, spotifyConfig, playlistId);
+              const rawTracks = (pData?.tracks?.items || []).map((i) => i.track || i).filter(Boolean);
+              if (rawTracks.length > 0) {
+                const normalized = normalizeQueue({ queue: rawTracks }, playlistOrAlbumTitle || `Playlist: ${pData.name}`, contextUri);
+                if (normalized.items && normalized.items.length > 0) {
+                  return normalized;
+                }
+              }
+            } else if (aMatch) {
+              const albumId = aMatch[1];
+              const aData = await SpotifyAPI.getAlbum(tokenStore, spotifyConfig, albumId);
+              const rawTracks = (aData?.tracks?.items || []).filter(Boolean);
+              if (rawTracks.length > 0) {
+                const normalized = normalizeQueue({ queue: rawTracks }, playlistOrAlbumTitle || `Album: ${aData.name}`, contextUri);
+                if (normalized.items && normalized.items.length > 0) {
+                  return normalized;
+                }
+              }
+            }
+          } catch (ctxErr) {
+            console.warn('[main] Context tracks query failed:', ctxErr.message);
+          }
+        }
+
+        // 3. Fallback to recently played
+        try {
+          const recent = await SpotifyAPI.getRecentlyPlayed(tokenStore, spotifyConfig);
+          const normalized = normalizeQueue(recent, null, contextUri);
+          if (normalized.items && normalized.items.length > 0) {
+            return normalized;
+          }
+        } catch (_) {}
+      }
+
+      // 4. Fallback source using client credentials (album / movie soundtrack tracks)
+      if (currentTrack && (currentTrack.title || currentTrack.name)) {
+        const title = currentTrack.title || currentTrack.name;
+        const artist = currentTrack.artist || '';
+        const fallback = await SpotifyAPI.getFallbackQueue(spotifyConfig, title, artist);
+        if (fallback.items && fallback.items.length > 0) {
+          return fallback;
+        }
+      }
+
+      return { items: [], source: 'Queue' };
+    } catch (err) {
+      console.error('[main] spotify-get-queue fatal:', err.message);
+      return { items: [], source: 'Queue' };
     }
   });
 
+  function cleanLyricsString(str) {
+    if (!str) return '';
+    return str
+      .replace(/\s*[\(\[](feat|ft|with|remaster|mix|version|deluxe|bonus|radio|edit|live|mono|stereo|anniversary|from|ost|original|soundtrack).*?[\)\]]/gi, '')
+      .replace(/\s*-\s*(remaster|mix|version|radio|edit|live|mono|stereo|bonus|deluxe|from|ost|soundtrack).*$/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeLyricsStr(str) {
+    if (!str) return '';
+    return cleanLyricsString(str)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/gi, '')
+      .trim();
+  }
+
+  function lyricsLevenshtein(s1, s2) {
+    if (!s1 || !s2) return 0;
+    if (s1 === s2) return 1.0;
+    const m = s1.length;
+    const n = s2.length;
+    const dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    const maxLen = Math.max(m, n);
+    return 1 - (dp[m][n] / maxLen);
+  }
+
+  function matchLyricsTitle(target, candidate) {
+    const nTarget = normalizeLyricsStr(target);
+    const nCand = normalizeLyricsStr(candidate);
+    if (!nTarget || !nCand) return 0;
+    if (nTarget === nCand) return 1.0;
+    return lyricsLevenshtein(nTarget, nCand);
+  }
+
+  function matchLyricsArtist(target, candidate) {
+    const nTarget = normalizeLyricsStr(target);
+    const nCand = normalizeLyricsStr(candidate);
+    if (!nTarget || !nCand) return 0;
+    if (nTarget === nCand) return 1.0;
+    const tArtists = (target || '').toLowerCase().split(/[,&/]/).map(s => normalizeLyricsStr(s)).filter(Boolean);
+    const cArtists = (candidate || '').toLowerCase().split(/[,&/]/).map(s => normalizeLyricsStr(s)).filter(Boolean);
+    for (const t of tArtists) {
+      for (const c of cArtists) {
+        if (t === c || lyricsLevenshtein(t, c) >= 0.82) return 0.95;
+      }
+    }
+    return lyricsLevenshtein(nTarget, nCand);
+  }
+
+  function parseLrcText(lrcText) {
+    if (!lrcText) return [];
+    const lines = [];
+    const timeTag = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]\s*(.*)/;
+    const parts = lrcText.split(/\r?\n/);
+    for (const line of parts) {
+      const match = line.match(timeTag);
+      if (!match) continue;
+      const min = parseInt(match[1], 10);
+      const sec = parseInt(match[2], 10);
+      const ms = match[3] ? parseInt(match[3].padEnd(3, '0').slice(0, 3), 10) : 0;
+      const startTime = min * 60 + sec + ms / 1000;
+      const text = (match[4] || '').trim();
+      if (text) lines.push({ text, startTime });
+    }
+    lines.sort((a, b) => a.startTime - b.startTime);
+    return lines;
+  }
+
+  function validateLyricsCandidate(item, title, artist, targetDurationSec) {
+    if (!item) return { valid: false, reason: 'No item' };
+    const candTitle = item.trackName || item.name || '';
+    const candArtist = item.artistName || '';
+    const candDuration = item.duration || 0;
+
+    // Gate 1: Title Verification (must be >= 0.78 similarity)
+    const titleScore = matchLyricsTitle(title, candTitle);
+    if (titleScore < 0.78) {
+      return { valid: false, reason: `Title mismatch: ${titleScore.toFixed(2)} (${candTitle} vs ${title})` };
+    }
+
+    // Gate 2: Artist Verification (must be >= 0.70 similarity)
+    const artistScore = matchLyricsArtist(artist, candArtist);
+    if (artistScore < 0.70) {
+      return { valid: false, reason: `Artist mismatch: ${artistScore.toFixed(2)} (${candArtist} vs ${artist})` };
+    }
+
+    // Gate 3: Duration Tolerance Check (strict: within 4.5 seconds)
+    let durationScore = 1.0;
+    if (targetDurationSec && targetDurationSec > 0 && candDuration > 0) {
+      const durDelta = Math.abs(candDuration - targetDurationSec);
+      if (durDelta > 4.5) {
+        return { valid: false, reason: `Duration delta too large: ${durDelta.toFixed(1)}s` };
+      }
+      durationScore = Math.max(0, 1 - (durDelta / 4.5));
+    }
+
+    // Gate 4: Real Synchronized LRC Timestamps Required
+    // Live karaoke requires verified timestamps. Never fake timestamps for plain lyrics.
+    if (!item.syncedLyrics || item.syncedLyrics.trim().length === 0) {
+      return { valid: false, reason: 'No verified synced LRC timestamps available' };
+    }
+
+    const lines = parseLrcText(item.syncedLyrics);
+    if (lines.length < 3) return { valid: false, reason: 'Too few lines' };
+
+    // Gate 5: Non-decreasing timestamps verification
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].startTime < lines[i - 1].startTime) return { valid: false, reason: 'Non-monotonic LRC' };
+    }
+
+    // Gate 6: Plausible timestamp span relative to song duration
+    if (targetDurationSec && targetDurationSec > 0) {
+      const firstTs = lines[0].startTime;
+      const lastTs = lines[lines.length - 1].startTime;
+      if (firstTs > targetDurationSec * 0.75) {
+        return { valid: false, reason: 'First LRC line starts too late' };
+      }
+      if (lastTs > targetDurationSec + 8 || lastTs < targetDurationSec * 0.40) {
+        return { valid: false, reason: `LRC timing span invalid (${lastTs}s vs ${targetDurationSec}s)` };
+      }
+    }
+
+    const totalScore = (titleScore * 40) + (artistScore * 40) + (durationScore * 20);
+    return { valid: true, lines, isSynced: true, score: totalScore };
+  }
+
+  ipcMain.handle('spotify-get-lyrics', async (_, track) => {
+    if (!track || (!track.title && !track.name)) {
+      return { lines: [], provider: null };
+    }
+    const rawTitle = track.title || track.name || '';
+    const rawArtist = track.artist || (track.artists ? track.artists.map((a) => a.name).join(', ') : '');
+    const duration = track.duration || (track.durationMs ? track.durationMs / 1000 : (track.duration_ms ? track.duration_ms / 1000 : 0));
+    const cleanAlbum = cleanLyricsString(track.album || '');
+
+    const cleanTitle = cleanLyricsString(rawTitle);
+    const cleanArtist = cleanLyricsString(rawArtist);
+    const primaryArtist = cleanArtist.split(/[,&/]/)[0].trim();
+    const userAgent = 'ksync/1.0.0 (https://github.com/KiruthikKumar16/ksync)';
+
+    console.log('[Lyrics Multi-Layer] Checking:', { cleanTitle, cleanArtist, primaryArtist, duration });
+
+    // Layer 1: Exact GET signature match
+    try {
+      let url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`;
+      if (duration > 0) url += `&duration=${Math.round(duration)}`;
+      if (cleanAlbum) url += `&album_name=${encodeURIComponent(cleanAlbum)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+      if (res.ok) {
+        const data = await res.json();
+        const v = validateLyricsCandidate(data, rawTitle, rawArtist, duration);
+        if (v.valid && v.isSynced) {
+          console.log('[Lyrics] Layer 1 Exact Match found:', v.lines.length, 'lines');
+          return { lines: v.lines, provider: 'LRCLIB (Exact Synced)' };
+        }
+      }
+    } catch (_) {}
+
+    // Layer 2: Clean Title + Primary Artist + Duration via GET
+    try {
+      let url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(primaryArtist)}`;
+      if (duration > 0) url += `&duration=${Math.round(duration)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+      if (res.ok) {
+        const data = await res.json();
+        const v = validateLyricsCandidate(data, rawTitle, rawArtist, duration);
+        if (v.valid && v.isSynced) {
+          console.log('[Lyrics] Layer 2 Primary Artist Match found:', v.lines.length, 'lines');
+          return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+        }
+      }
+    } catch (_) {}
+
+    // Layer 3: Clean Title + Primary Artist (without duration param, duration verified post-fetch)
+    try {
+      const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(primaryArtist)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+      if (res.ok) {
+        const data = await res.json();
+        const v = validateLyricsCandidate(data, rawTitle, rawArtist, duration);
+        if (v.valid && v.isSynced) {
+          console.log('[Lyrics] Layer 3 Match found:', v.lines.length, 'lines');
+          return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+        }
+      }
+    } catch (_) {}
+
+    // Layer 4: Field Search (/api/search?track_name=...&artist_name=...)
+    try {
+      const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(primaryArtist)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+      if (res.ok) {
+        const results = await res.json();
+        if (Array.isArray(results) && results.length > 0) {
+          const candidates = [];
+          for (const item of results) {
+            const v = validateLyricsCandidate(item, rawTitle, rawArtist, duration);
+            if (v.valid) candidates.push(v);
+          }
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.score - a.score);
+            const best = candidates[0];
+            console.log('[Lyrics] Layer 4 Field Search Match found:', best.lines.length, 'lines');
+            return { lines: best.lines, provider: best.isSynced ? 'LRCLIB (Synced)' : 'LRCLIB' };
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Layer 5: Fallback Full Search with Strict Multi-Layer Scoring
+    try {
+      const query = `${cleanTitle} ${primaryArtist}`.trim();
+      const url = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+      if (res.ok) {
+        const results = await res.json();
+        if (Array.isArray(results) && results.length > 0) {
+          const candidates = [];
+          for (const item of results) {
+            const v = validateLyricsCandidate(item, rawTitle, rawArtist, duration);
+            if (v.valid) candidates.push(v);
+          }
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.score - a.score);
+            const best = candidates[0];
+            console.log('[Lyrics] Layer 5 Search Match found:', best.lines.length, 'lines');
+            return { lines: best.lines, provider: best.isSynced ? 'LRCLIB (Synced)' : 'LRCLIB' };
+          }
+        }
+      }
+    } catch (_) {}
+
+    console.log('[Lyrics] Multi-layer verification exhausted. No verified lyrics found for track:', cleanTitle);
+    return { lines: [], provider: null };
+  });
+
   ipcMain.handle('spotify-play', () => SpotifyAPI.play(tokenStore, spotifyConfig));
-  ipcMain.handle('spotify-play-track', (_, uri) =>
-    SpotifyAPI.play(tokenStore, spotifyConfig, uri ? { uris: [uri] } : {})
-  );
+  ipcMain.handle('spotify-play-track', async (_, payload) => {
+    const uri = typeof payload === 'string' ? payload : payload?.uri;
+    let contextUri = typeof payload === 'object' ? payload?.contextUri : null;
+    if (!uri) return { ok: false, error: 'No URI provided' };
+    console.log('[main] spotify-play-track called with uri:', uri, 'context:', contextUri);
+
+    const cleanUri = uri.replace(/:play$/i, '');
+    const spotifyUri = cleanUri.startsWith('spotify:') ? cleanUri : `spotify:track:${cleanUri}`;
+
+    if (tokenStore.hasTokens()) {
+      try {
+        // Detect active context if not explicitly passed
+        if (!contextUri) {
+          try {
+            const player = await SpotifyAPI.getPlayer(tokenStore, spotifyConfig);
+            if (player?.context?.uri) {
+              contextUri = player.context.uri;
+            }
+          } catch (_) {}
+        }
+
+        // If we have a playlist/album/artist context, play with offset to preserve the ongoing playlist queue!
+        if (contextUri && (contextUri.includes(':playlist:') || contextUri.includes(':album:') || contextUri.includes(':artist:'))) {
+          try {
+            await SpotifyAPI.play(tokenStore, spotifyConfig, {
+              context_uri: contextUri,
+              offset: { uri: spotifyUri },
+            });
+            console.log('[main] spotify-play-track succeeded via playlist offset play');
+            return { ok: true };
+          } catch (ctxErr) {
+            console.warn('[main] Context-based play failed, trying fallback to single uri:', ctxErr.message);
+          }
+        }
+
+        // Fallback to single track
+        await SpotifyAPI.play(tokenStore, spotifyConfig, { uris: [spotifyUri] });
+        console.log('[main] spotify-play-track succeeded via Web API single track');
+        return { ok: true };
+      } catch (err) {
+        console.warn('[main] Web API play failed:', err.message);
+        return { ok: false, error: err.message };
+      }
+    }
+
+    return { ok: false, error: 'No Spotify Web API tokens' };
+  });
   ipcMain.handle('spotify-pause', () => SpotifyAPI.pause(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-next', () => SpotifyAPI.skipNext(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-previous', () => SpotifyAPI.skipPrevious(tokenStore, spotifyConfig));
-  ipcMain.handle('spotify-set-volume', (_, volume) => SpotifyAPI.setVolume(tokenStore, spotifyConfig, volume));
+  ipcMain.handle('spotify-set-volume', async (_, volume) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(volume)));
+    let webApiSuccess = false;
+    if (tokenStore.hasTokens()) {
+      try {
+        await SpotifyAPI.setVolume(tokenStore, spotifyConfig, clamped);
+        webApiSuccess = true;
+      } catch (err) {
+        console.warn('[main] Spotify Web API setVolume failed (falling back to process audio):', err.message);
+      }
+    }
+    if (!webApiSuccess) {
+      if (smtcProcess && smtcProcess.stdin) {
+        sendSmtcCommand({ cmd: 'setSpotifyVolume', volume: clamped });
+      }
+    }
+    return { ok: true, volume: clamped };
+  });
   ipcMain.handle('spotify-seek', (_, positionMs) => SpotifyAPI.seek(tokenStore, spotifyConfig, positionMs));
   ipcMain.handle('spotify-set-shuffle', (_, state) => SpotifyAPI.setShuffle(tokenStore, spotifyConfig, state));
   ipcMain.handle('spotify-set-repeat', (_, state) => SpotifyAPI.setRepeat(tokenStore, spotifyConfig, state));
@@ -313,18 +1252,287 @@ function createWindow() {
     SpotifyAPI.transferPlayback(tokenStore, spotifyConfig, deviceIds, play)
   );
 
-  mainWindow.on('closed', () => {
-    console.log('[Main] Window closed');
-    mainWindow = null;
+  async function resolveCanonicalTrackId(trackId, title, artist) {
+    if (trackId && typeof trackId === 'string' && !trackId.startsWith('smtc-')) {
+      return trackId;
+    }
+    if (!title) return null;
+    try {
+      const cleanT = (title || '')
+        .replace(/\s*[\(\[](feat|ft|with|remaster|mix|version|deluxe|bonus|radio|edit|live).*?[\)\]]/gi, '')
+        .trim();
+      const cleanA = (artist || '').split(/[,&]/)[0].trim();
+      const query = `${cleanT} ${cleanA}`.trim();
+      const track = await SpotifyAPI.searchTrack(spotifyConfig, query);
+      return track?.id || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  ipcMain.handle('spotify-check-saved-tracks', async (_, payload) => {
+    if (!tokenStore.hasTokens()) return [];
+    try {
+      const { trackId, title, artist } = typeof payload === 'object' ? payload : { trackId: payload };
+      const canonicalId = await resolveCanonicalTrackId(trackId, title, artist);
+      if (!canonicalId) return [];
+      return await SpotifyAPI.checkUserSavedTracks(tokenStore, spotifyConfig, [canonicalId]);
+    } catch (err) {
+      return [];
+    }
   });
 
-  mainWindow.webContents.on('render-process-gone', (_, details) => {
-    console.error('[Main] Renderer crashed:', details.reason, details.exitCode);
+  ipcMain.handle('spotify-save-track', async (_, payload) => {
+    if (!tokenStore.hasTokens()) return { ok: false, error: 'Not authenticated' };
+    try {
+      const { trackId, title, artist } = typeof payload === 'object' ? payload : { trackId: payload };
+      const canonicalId = await resolveCanonicalTrackId(trackId, title, artist);
+      if (!canonicalId) return { ok: false, error: 'Track not found' };
+      await SpotifyAPI.saveUserTracks(tokenStore, spotifyConfig, [canonicalId]);
+      return { ok: true, trackId: canonicalId };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   });
 
-  mainWindow.webContents.on('did-fail-load', (_, code, desc, url) => {
-    console.error('[Main] Load failed:', code, desc, url);
+  ipcMain.handle('spotify-remove-track', async (_, payload) => {
+    if (!tokenStore.hasTokens()) return { ok: false, error: 'Not authenticated' };
+    try {
+      const { trackId, title, artist } = typeof payload === 'object' ? payload : { trackId: payload };
+      const canonicalId = await resolveCanonicalTrackId(trackId, title, artist);
+      if (!canonicalId) return { ok: false, error: 'Track not found' };
+      await SpotifyAPI.removeUserTracks(tokenStore, spotifyConfig, [canonicalId]);
+      return { ok: true, trackId: canonicalId };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   });
+
+  // SMTC IPC Commands
+  ipcMain.handle('smtc-play', () => sendSmtcCommand({ cmd: 'play' }));
+  ipcMain.handle('smtc-pause', () => sendSmtcCommand({ cmd: 'pause' }));
+  ipcMain.handle('smtc-play-pause', () => sendSmtcCommand({ cmd: 'playPause' }));
+  ipcMain.handle('smtc-skip-next', () => sendSmtcCommand({ cmd: 'next' }));
+  ipcMain.handle('smtc-skip-previous', () => sendSmtcCommand({ cmd: 'previous' }));
+  ipcMain.handle('smtc-skip-n', async (_, count) => {
+    const steps = Math.min(Math.max(1, count || 1), 30);
+    console.log('[Main] smtc-skip-n called with count:', count, 'steps:', steps);
+    for (let i = 0; i < steps; i++) {
+      sendSmtcCommand({ cmd: 'next' });
+      if (i < steps - 1) {
+        await new Promise((r) => setTimeout(r, 280));
+      }
+    }
+    return { ok: true };
+  });
+  ipcMain.handle('smtc-skip-prev-n', async (_, count) => {
+    const steps = Math.min(Math.max(1, count || 1), 30);
+    console.log('[Main] smtc-skip-prev-n called with count:', count, 'steps:', steps);
+    for (let i = 0; i < steps; i++) {
+      sendSmtcCommand({ cmd: 'previous' });
+      if (i < steps - 1) {
+        await new Promise((r) => setTimeout(r, 280));
+      }
+    }
+    return { ok: true };
+  });
+  ipcMain.handle('smtc-seek', (_, positionMs) => sendSmtcCommand({ cmd: 'seek', positionMs }));
+
+  ipcMain.handle('get-playback-backend', () => config.playbackBackend || 'smtc');
+
+  // Windows Master Audio System Volume IPC Commands
+  ipcMain.handle('get-system-volume', async () => {
+    if (smtcProcess && smtcProcess.stdin) {
+      sendSmtcCommand({ cmd: 'getSystemVolume' });
+    }
+    return { volume: cachedSystemVolume, isMuted: cachedSystemMute };
+  });
+
+  ipcMain.handle('set-system-volume', async (_, volume) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(volume)));
+    cachedSystemVolume = clamped;
+    lastSetVolumeTime = Date.now();
+    if (smtcProcess && smtcProcess.stdin) {
+      sendSmtcCommand({ cmd: 'setSystemVolume', volume: clamped });
+    }
+    lastBroadcastedVolume = {
+      volume: cachedSystemVolume,
+      isMuted: cachedSystemMute,
+    };
+    broadcastToDocks('system-volume-changed', lastBroadcastedVolume);
+    return { volume: cachedSystemVolume, isMuted: cachedSystemMute };
+  });
+
+  ipcMain.handle('set-system-mute', async (_, isMuted) => {
+    cachedSystemMute = !!isMuted;
+    if (smtcProcess && smtcProcess.stdin) {
+      sendSmtcCommand({ cmd: 'setSystemMute', isMuted: cachedSystemMute });
+    }
+    lastBroadcastedVolume = {
+      volume: cachedSystemVolume,
+      isMuted: cachedSystemMute,
+    };
+    broadcastToDocks('system-volume-changed', lastBroadcastedVolume);
+    return { volume: cachedSystemVolume, isMuted: cachedSystemMute };
+  });
+
+  // Multi-Monitor & Windows 11 Integration
+  ipcMain.handle('get-all-displays', () => {
+    const displays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    return displays.map((d, index) => ({
+      id: String(d.id),
+      index: index + 1,
+      isPrimary: d.id === primary.id,
+      width: d.bounds.width,
+      height: d.bounds.height,
+      label: `Display ${index + 1}${d.id === primary.id ? ' (Primary)' : ''} · ${d.bounds.width}×${d.bounds.height}`,
+    }));
+  });
+
+  ipcMain.handle('wake-from-deep-sleep', () => wakeFromDeepSleep());
+  ipcMain.handle('toggle-compact-mode', () => toggleCompactMode());
+  ipcMain.handle('get-compact-mode', () => isCompactMode);
+
+  ipcMain.handle('update-discord-rpc', (_, trackInfo) => {
+    if (discordRPC) {
+      discordRPC.updateTrackActivity(trackInfo);
+    }
+    return { ok: true };
+  });
+
+  ipcMain.handle('trigger-track-peek', (_, trackData) => {
+    showTrackPeek(trackData);
+    return { ok: true };
+  });
+
+  ipcMain.handle('dismiss-track-peek', () => {
+    dismissTrackPeek();
+    return { ok: true };
+  });
+
+  // Settings & Positioning IPC
+  ipcMain.handle('get-settings', () => settingsStore.loadSettings());
+  ipcMain.handle('save-settings', (_, newSettings) => {
+    const updated = settingsStore.saveSettings(newSettings);
+    syncDockWindows();
+    broadcastToDocks('settings-changed', updated);
+    if (isSettingsOpen()) showDock();
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      const b = getDockBounds(screen.getPrimaryDisplay());
+      settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      settingsWindow.webContents.send('settings-changed', updated);
+    }
+    if (newSettings && newSettings.behavior && discordRPC) {
+      if (typeof newSettings.behavior.discordRPC === 'boolean') {
+        discordRPC.setEnabled(newSettings.behavior.discordRPC);
+      }
+      if (typeof newSettings.behavior.discordPartySync === 'boolean') {
+        discordRPC.setPartySync(newSettings.behavior.discordPartySync);
+      }
+      if (newSettings.behavior.discordClientId) {
+        discordRPC.setClientId(newSettings.behavior.discordClientId);
+      }
+    }
+    updateTrayMenu();
+    return updated;
+  });
+  ipcMain.handle('reset-settings', () => {
+    const def = settingsStore.resetSettings();
+    syncDockWindows();
+    broadcastToDocks('settings-changed', def);
+    if (isSettingsOpen()) showDock();
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      const b = getDockBounds(screen.getPrimaryDisplay());
+      settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      settingsWindow.webContents.send('settings-changed', def);
+    }
+    updateTrayMenu();
+    return def;
+  });
+  ipcMain.handle('toggle-pin', () => {
+    const s = settingsStore.loadSettings();
+    const isPinned = !s.position?.pinned;
+    const updated = settingsStore.saveSettings({ position: { pinned: isPinned } });
+    broadcastToDocks('settings-changed', updated);
+    if (isPinned) {
+      showDock();
+    }
+    updateTrayMenu();
+    return isPinned;
+  });
+  ipcMain.handle('set-dock-height', (_, height) => {
+    const clamped = Math.min(Math.max(Number(height) || 190, 140), 320);
+    const updated = settingsStore.saveSettings({ position: { height: clamped } });
+    syncDockWindows();
+    broadcastToDocks('settings-changed', updated);
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      const b = getDockBounds(screen.getPrimaryDisplay());
+      settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      settingsWindow.webContents.send('settings-changed', updated);
+    }
+    return clamped;
+  });
+  ipcMain.handle('set-sidebar-width', (_, width) => {
+    const clamped = Math.min(Math.max(Number(width) || 340, 260), 520);
+    const updated = settingsStore.saveSettings({ position: { sidebarWidth: clamped } });
+    syncDockWindows();
+    broadcastToDocks('settings-changed', updated);
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      const b = getDockBounds(screen.getPrimaryDisplay());
+      settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      settingsWindow.webContents.send('settings-changed', updated);
+    }
+    return clamped;
+  });
+  ipcMain.handle('open-spotify-app', () => {
+    shell.openExternal('spotify:');
+    return { ok: true };
+  });
+  ipcMain.handle('open-settings-window', () => {
+    openSettingsWindow();
+    return { ok: true };
+  });
+  ipcMain.handle('is-settings-open', () => isSettingsOpen());
+  ipcMain.handle('close-settings', () => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.close();
+    }
+    broadcastSettingsState();
+    return { ok: true };
+  });
+  ipcMain.handle('minimize-settings', () => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.minimize();
+    }
+    broadcastSettingsState();
+    const settings = settingsStore.loadSettings();
+    if (!settings.position?.pinned) {
+      performHide(true);
+    }
+    return { ok: true };
+  });
+  ipcMain.handle('get-dock-dimensions', (event) => {
+    try {
+      const senderWin = BrowserWindow.fromWebContents(event.sender);
+      for (const [dispId, win] of dockWindowsMap.entries()) {
+        if (win === senderWin) {
+          const disp = screen.getAllDisplays().find((d) => String(d.id) === dispId);
+          const b = getDockBounds(disp);
+          return { width: b.width, height: b.height, mode: b.mode, x: b.x, y: b.y };
+        }
+      }
+    } catch (_) {}
+    const b = getDockBounds();
+    return { width: b.width, height: b.height, mode: b.mode, x: b.x, y: b.y };
+  });
+
+  // OTA Auto-Updater IPC Handlers
+  ipcMain.handle('check-for-updates', () => updateService.checkForUpdates(true));
+  ipcMain.handle('download-update', () => updateService.downloadUpdate());
+  ipcMain.handle('quit-and-install', () => updateService.quitAndInstall());
+  ipcMain.handle('get-app-version', () => app.getVersion());
+  ipcMain.handle('get-update-status', () => updateService.getStatus());
 
   } catch (err) {
     console.error('[Main] createWindow error:', err);
@@ -332,94 +1540,543 @@ function createWindow() {
   }
 }
 
-function showDock() {
-  if (!isVisible) {
-    // Recalculate dimensions in case display changed
-    const primary = screen.getPrimaryDisplay();
-    const currentScaleFactor = primary.scaleFactor || 1;
-    const displayWidth = primary.workAreaSize.width * currentScaleFactor;
-    const newDockWidth = Math.min(displayWidth, 4000);
-    const newScaledWidth = Math.round(newDockWidth / currentScaleFactor);
-    
-    // Update if dimensions changed
-    if (newDockWidth !== dockWidth || currentScaleFactor !== deviceScaleFactor) {
-      dockWidth = newDockWidth;
-      deviceScaleFactor = currentScaleFactor;
-      scaledWidth = newScaledWidth;
-      mainWindow.webContents.send('dock-dimensions', { width: dockWidth, height: DOCK_HEIGHT });
+function isAnyKsyncWindowFocused() {
+  if (settingsWindow && !settingsWindow.isDestroyed() && settingsWindow.isFocused()) return true;
+  if (peekWindow && !peekWindow.isDestroyed() && peekWindow.isFocused()) return true;
+  for (const win of dockWindowsMap.values()) {
+    if (win && !win.isDestroyed() && win.isFocused()) return true;
+  }
+  return false;
+}
+
+function isCursorInsideAnyDock() {
+  try {
+    const pt = screen.getCursorScreenPoint();
+    const activeDisplays = getActiveDisplaysForDock();
+    for (const disp of activeDisplays) {
+      const b = getDockBounds(disp);
+      const isInside = pt.x >= b.x && pt.x <= (b.x + b.width) && pt.y >= b.y && pt.y <= (b.y + b.height);
+      if (isInside) return true;
     }
-    
-    isVisible = true;
-    console.log('Showing dock...', { dockWidth, scaledWidth, deviceScaleFactor });
-    mainWindow.setAlwaysOnTop(true); // Make it top when visible
-    mainWindow.setIgnoreMouseEvents(false); // Allow mouse events when visible
-    mainWindow.setOpacity(1); // Make fully visible
-    // Force exact dimensions and position (no DPI scaling side-effects)
-    mainWindow.setBounds({ x: 0, y: 0, width: scaledWidth, height: scaledHeight }, true);
-    mainWindow.setSize(scaledWidth, scaledHeight, false); // Force exact size
-    mainWindow.show(); // Ensure window is shown
-    mainWindow.webContents.send('dock-visible', true);
-    updateTrayMenu();
+  } catch (_) {}
+  return false;
+}
+
+function isSettingsActive() {
+  if (!settingsWindow || settingsWindow.isDestroyed()) return false;
+  if (settingsWindow.isMinimized() || !settingsWindow.isVisible()) return false;
+  return isAnyKsyncWindowFocused() || isCursorInsideAnyDock();
+}
+
+function isSettingsOpen() {
+  if (!settingsWindow || settingsWindow.isDestroyed()) return false;
+  if (settingsWindow.isMinimized()) return false;
+  return settingsWindow.isVisible();
+}
+
+function broadcastSettingsState() {
+  const open = isSettingsOpen();
+  broadcastToDocks('settings-window-state', { isOpen: open });
+}
+
+function openSettingsWindow() {
+  const primary = screen.getPrimaryDisplay();
+  const dockB = getDockBounds(primary);
+
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
+    settingsWindow.maximize();
+    settingsWindow.show();
+    settingsWindow.focus();
+    broadcastSettingsState();
+    showDock();
+    setTimeout(showDock, 150);
+    settingsWindow.webContents.send('dock-dimensions', { width: dockB.width, height: dockB.height, mode: dockB.mode });
+    return;
+  }
+
+  const b = primary.bounds;
+
+  settingsWindow = new BrowserWindow({
+    width: b.width,
+    height: b.height,
+    minWidth: 800,
+    minHeight: 560,
+    icon: getAppIcon(),
+    title: 'ksync',
+    backgroundColor: '#09090b',
+    backgroundMaterial: process.platform === 'win32' ? 'mica' : undefined,
+    frame: false, // Sleek frameless Tony Stark HUD interface
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  settingsWindow.loadFile(path.join(__dirname, 'dist', 'index.html'), { hash: 'settings' });
+
+  settingsWindow.once('ready-to-show', () => {
+    const appIcon = getAppIcon();
+    if (appIcon && settingsWindow.setIcon) {
+      try {
+        settingsWindow.setIcon(appIcon);
+      } catch (_) {}
+    }
+    settingsWindow.setContentProtection(false);
+    settingsWindow.maximize();
+    settingsWindow.show();
+    broadcastSettingsState();
+    showDock();
+    setTimeout(showDock, 150);
+    const currentDockBounds = getDockBounds(screen.getPrimaryDisplay());
+    settingsWindow.webContents.send('dock-dimensions', {
+      width: currentDockBounds.width,
+      height: currentDockBounds.height,
+      mode: currentDockBounds.mode,
+    });
+  });
+
+  // Keep dock visible and unminimized whenever settings window is restored, shown, focused, or maximized
+  settingsWindow.on('restore', () => {
+    broadcastSettingsState();
+    showDock();
+    setTimeout(showDock, 150);
+  });
+
+  settingsWindow.on('focus', () => {
+    broadcastSettingsState();
+    showDock();
+  });
+
+  settingsWindow.on('blur', () => {
+    setTimeout(() => {
+      if (!isSettingsActive()) {
+        const settings = settingsStore.loadSettings();
+        if (!settings.position?.pinned) {
+          console.log('[Main] Settings blurred and navigated away -> hiding dock');
+          showGraceUntil = 0;
+          performHide(true);
+        }
+      }
+    }, 120);
+  });
+
+  settingsWindow.on('show', () => {
+    broadcastSettingsState();
+    showDock();
+    setTimeout(showDock, 150);
+  });
+
+  settingsWindow.on('maximize', () => {
+    broadcastSettingsState();
+    showDock();
+    setTimeout(showDock, 150);
+  });
+
+  settingsWindow.on('minimize', () => {
+    broadcastSettingsState();
+    const settings = settingsStore.loadSettings();
+    if (!settings.position?.pinned) {
+      performHide(true);
+    }
+  });
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+    broadcastSettingsState();
+    scheduleHide(800);
+  });
+}
+
+function getOrCreatePeekWindow() {
+  if (peekWindow && !peekWindow.isDestroyed()) {
+    return peekWindow;
+  }
+
+  const d = getTargetDisplay();
+  const b = d.bounds;
+  const peekW = 380;
+  const peekH = 76;
+  const peekX = Math.round(b.x + (b.width - peekW) / 2);
+  const peekY = Math.round(b.y + 12);
+
+  peekWindow = new BrowserWindow({
+    width: peekW,
+    height: peekH,
+    x: peekX,
+    y: peekY,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  peekWindow.setAlwaysOnTop(true, 'screen-saver');
+  peekWindow.loadFile(path.join(__dirname, 'dist', 'index.html'), { hash: 'peek' });
+
+  peekWindow.on('closed', () => {
+    peekWindow = null;
+  });
+
+  return peekWindow;
+}
+
+function showTrackPeek(trackData) {
+  const settings = settingsStore.loadSettings();
+  if (settings.behavior?.trackChangePeek === false) return;
+  if (isVisible) return; // Do not peek if dock is already open/visible
+  if (isSettingsOpen()) return; // Do not peek if settings window is open
+
+  const win = getOrCreatePeekWindow();
+
+  // Position at top center of target display
+  const d = getTargetDisplay();
+  const b = d.bounds;
+  const peekW = 380;
+  const peekH = 76;
+  const peekX = Math.round(b.x + (b.width - peekW) / 2);
+  const peekY = Math.round(b.y + 12);
+
+  win.setBounds({ x: peekX, y: peekY, width: peekW, height: peekH }, false);
+  win.setAlwaysOnTop(true, 'screen-saver');
+
+  if (win.showInactive) {
+    win.showInactive();
+  } else {
+    win.show();
+  }
+
+  const sendData = () => {
+    if (win && !win.isDestroyed() && win.webContents) {
+      win.webContents.send('track-peek-data', trackData);
+    }
+  };
+
+  if (win.webContents.isLoading()) {
+    win.webContents.once('did-finish-load', sendData);
+  } else {
+    sendData();
+  }
+
+  if (peekDismissTimeout) {
+    clearTimeout(peekDismissTimeout);
+    peekDismissTimeout = null;
   }
 }
 
-function hideDock() {
-  if (isVisible) {
-    hideTimeout = setTimeout(() => {
-      isVisible = false;
-      console.log('Hiding dock...');
-      mainWindow.setAlwaysOnTop(false); // Remove from top when hidden
-      mainWindow.setIgnoreMouseEvents(true); // Ignore mouse events when hidden
-      mainWindow.setOpacity(0); // Make completely transparent
-      mainWindow.setPosition(0, -scaledHeight); // Move just above the screen
-      mainWindow.webContents.send('dock-visible', false);
-      updateTrayMenu();
-    }, 300); // Small delay to prevent flickering
+function dismissTrackPeek() {
+  if (peekDismissTimeout) {
+    clearTimeout(peekDismissTimeout);
+    peekDismissTimeout = null;
+  }
+  if (peekWindow && !peekWindow.isDestroyed()) {
+    peekWindow.hide();
+  }
+}
+
+function showDock() {
+  dismissTrackPeek();
+  cancelHide();
+  showGraceUntil = Date.now() + 600;
+  isVisible = true;
+
+  syncDockWindows();
+
+  for (const [dispId, win] of dockWindowsMap.entries()) {
+    if (win && !win.isDestroyed()) {
+      const disp = screen.getAllDisplays().find((d) => String(d.id) === dispId) || screen.getPrimaryDisplay();
+      const b = getDockBounds(disp);
+
+      if (win.isMinimized()) {
+        win.restore();
+      }
+      win.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height }, false);
+      if (win.webContents) {
+        win.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+        win.webContents.send('dock-visible', true);
+      }
+      win.setOpacity(1);
+      if (win.showInactive) {
+        win.showInactive();
+      } else {
+        win.show();
+      }
+      win.setIgnoreMouseEvents(false);
+      win.setAlwaysOnTop(true, 'screen-saver');
+      win.moveTop();
+    }
+  }
+
+  updateTrayMenu();
+}
+
+function scheduleHide(delayMs = 30) {
+  const settings = settingsStore.loadSettings();
+  if (settings.position?.pinned) return;
+  if (isSettingsActive()) return; // Keep dock visible as live preview while settings is actively in use
+  if (initialLaunchPending || Date.now() < showGraceUntil) return;
+  if (hideTimeout) return;
+  hideTimeout = setTimeout(() => {
+    hideTimeout = null;
+    performHide();
+  }, delayMs);
+}
+
+function cancelHide() {
+  if (hideTimeout) {
+    clearTimeout(hideTimeout);
+    hideTimeout = null;
+  }
+}
+
+function performHide(force = false) {
+  const settings = settingsStore.loadSettings();
+  if (!force && settings.position?.pinned) return;
+  if (!force && isSettingsActive()) return; // Keep dock visible as live preview while settings is actively in use
+  if (!isVisible) return;
+  if (!force && (initialLaunchPending || Date.now() < showGraceUntil)) return;
+
+  try {
+    const pt = screen.getCursorScreenPoint();
+    const activeDisplays = getActiveDisplaysForDock();
+    for (const disp of activeDisplays) {
+      const b = getDockBounds(disp);
+      const isActuallyInside = pt.x >= b.x && pt.x <= (b.x + b.width) && pt.y >= b.y && pt.y <= (b.y + b.height);
+      if (!force && isActuallyInside) {
+        return;
+      }
+    }
+  } catch (_) {}
+
+  cancelHide();
+  isVisible = false;
+  console.log('[Main] Hiding dock smoothly across all active displays.');
+
+  for (const win of dockWindowsMap.values()) {
+    if (win && !win.isDestroyed() && win.webContents) {
+      win.webContents.send('dock-visible', false);
+      win.setIgnoreMouseEvents(true);
+    }
+  }
+
+  setTimeout(() => {
+    if (!isVisible) {
+      for (const win of dockWindowsMap.values()) {
+        if (win && !win.isDestroyed()) {
+          win.setAlwaysOnTop(false);
+          win.setOpacity(0);
+          win.hide();
+        }
+      }
+    }
+  }, 240);
+
+  updateTrayMenu();
+}
+
+function hideDock(force = false) {
+  if (force) {
+    performHide(true);
+  } else {
+    performHide();
   }
 }
 
 function buildTrayMenu() {
-  return Menu.buildFromTemplate([
+  const settings = settingsStore.loadSettings();
+  const isPinned = !!settings.position?.pinned;
+  const allDisplays = screen.getAllDisplays();
+  const displayMenuItems = allDisplays.length > 1 ? [
     {
-      label: isVisible ? 'Hide dock' : 'Show dock',
-      click: () => {
-        if (isVisible) hideDock();
-        else showDock();
-      },
-    },
-    { type: 'separator' },
-    {
-      label: 'Lyrics Color',
+      label: 'Target Displays',
       submenu: [
         {
-          label: 'White',
+          label: 'All Displays (All Screens)',
           type: 'radio',
-          checked: lyricsColor === 'white',
+          checked: (settings.position?.targetDisplay || 'all') === 'all',
           click: () => {
-            lyricsColor = 'white';
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('lyrics-color-changed', 'white');
-            }
+            const updated = settingsStore.saveSettings({ position: { targetDisplay: 'all' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
             updateTrayMenu();
           },
         },
         {
-          label: 'Black',
+          label: 'Primary Display',
           type: 'radio',
-          checked: lyricsColor === 'black',
+          checked: settings.position?.targetDisplay === 'primary',
           click: () => {
-            lyricsColor = 'black';
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('lyrics-color-changed', 'black');
-            }
+            const updated = settingsStore.saveSettings({ position: { targetDisplay: 'primary' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
+            updateTrayMenu();
+          },
+        },
+        {
+          label: 'Follow Mouse Cursor',
+          type: 'radio',
+          checked: settings.position?.targetDisplay === 'cursor',
+          click: () => {
+            const updated = settingsStore.saveSettings({ position: { targetDisplay: 'cursor' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
+            updateTrayMenu();
+          },
+        },
+        ...allDisplays.map((disp, idx) => ({
+          label: `Display ${idx + 1}${disp.id === screen.getPrimaryDisplay().id ? ' (Primary)' : ''} · ${disp.bounds.width}×${disp.bounds.height}`,
+          type: 'radio',
+          checked: String(settings.position?.targetDisplay) === String(disp.id),
+          click: () => {
+            const updated = settingsStore.saveSettings({ position: { targetDisplay: disp.id } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
+            updateTrayMenu();
+          },
+        })),
+      ],
+    },
+    { type: 'separator' },
+  ] : [];
+
+  return Menu.buildFromTemplate([
+    {
+      label: 'Open Settings & Configurator',
+      click: () => openSettingsWindow(),
+    },
+    { type: 'separator' },
+    {
+      label: isVisible ? 'Hide dock (Ctrl+Alt+S)' : 'Show dock (Ctrl+Alt+S)',
+      click: () => {
+        if (isVisible) hideDock(true);
+        else showDock();
+      },
+    },
+    {
+      label: isPinned ? '✓ Dock Pinned (Always Open)' : 'Pin Dock (Always Open)',
+      click: () => {
+        const updated = settingsStore.saveSettings({ position: { pinned: !isPinned } });
+        broadcastToDocks('settings-changed', updated);
+        if (!isPinned) showDock();
+        updateTrayMenu();
+      },
+    },
+    { type: 'separator' },
+    ...displayMenuItems,
+    {
+      label: 'Dock Position',
+      submenu: [
+        {
+          label: 'Top Bar Dock',
+          type: 'radio',
+          checked: (settings.position?.mode || 'top') === 'top',
+          click: () => {
+            const updated = settingsStore.saveSettings({ position: { mode: 'top' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
+            updateTrayMenu();
+          },
+        },
+        {
+          label: 'Left Sidebar',
+          type: 'radio',
+          checked: settings.position?.mode === 'left',
+          click: () => {
+            const updated = settingsStore.saveSettings({ position: { mode: 'left' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
+            updateTrayMenu();
+          },
+        },
+        {
+          label: 'Right Sidebar',
+          type: 'radio',
+          checked: settings.position?.mode === 'right',
+          click: () => {
+            const updated = settingsStore.saveSettings({ position: { mode: 'right' } });
+            syncDockWindows();
+            broadcastToDocks('settings-changed', updated);
+            showDock();
             updateTrayMenu();
           },
         },
       ],
     },
     { type: 'separator' },
+    {
+      label: 'Open Spotify App',
+      click: () => {
+        shell.openExternal('spotify:');
+      },
+    },
+    { type: 'separator' },
+    ...getUpdateTrayMenuItems(),
+    { type: 'separator' },
     { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } },
   ]);
+}
+
+function getUpdateTrayMenuItems() {
+  const status = updateService.getStatus();
+  if (status.state === 'downloaded') {
+    return [
+      {
+        label: `✓ Restart to Update (v${status.version || ''})`,
+        click: () => updateService.quitAndInstall(),
+      },
+    ];
+  }
+  if (status.state === 'downloading') {
+    return [
+      {
+        label: `Downloading update (${status.percent}%)...`,
+        enabled: false,
+      },
+    ];
+  }
+  if (status.state === 'available') {
+    return [
+      {
+        label: `Update Available (v${status.version})`,
+        click: () => updateService.downloadUpdate(),
+      },
+    ];
+  }
+  if (status.state === 'checking') {
+    return [
+      {
+        label: 'Checking for updates...',
+        enabled: false,
+      },
+    ];
+  }
+  return [
+    {
+      label: 'Check for Updates...',
+      click: () => updateService.checkForUpdates(true),
+    },
+  ];
 }
 
 function updateTrayMenu() {
@@ -427,9 +2084,10 @@ function updateTrayMenu() {
 }
 
 function createTray() {
-  const logoPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
-  const fallbackPath = path.join(__dirname, 'assets', 'tray-icon.png');
-  let iconPath = fs.existsSync(logoPath) ? logoPath : null;
+  const trayIconPath = path.join(__dirname, 'assets', 'tray-icon.png');
+  const whiteLogoPath = path.join(__dirname, 'assets', 'k-logo-white.png');
+  const blackLogoPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
+  let iconPath = fs.existsSync(trayIconPath) ? trayIconPath : (fs.existsSync(whiteLogoPath) ? whiteLogoPath : (fs.existsSync(blackLogoPath) ? blackLogoPath : null));
   if (!iconPath && !fs.existsSync(fallbackPath)) {
     const assetsDir = path.join(__dirname, 'assets');
     if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
@@ -445,8 +2103,13 @@ function createTray() {
   const size = process.platform === 'win32' ? 16 : 22;
   const resized = icon.getSize().width > size ? icon.resize({ width: size, height: size }) : icon;
   tray = new Tray(resized.isEmpty() ? icon : resized);
-  tray.setToolTip('ksync');
+  tray.setToolTip('ksync (Ctrl+Alt+S to toggle)');
   tray.setContextMenu(buildTrayMenu());
+
+  tray.on('click', () => {
+    if (isVisible) hideDock();
+    else showDock();
+  });
 }
 
 process.on('uncaughtException', (err) => {
@@ -456,14 +2119,29 @@ process.on('uncaughtException', (err) => {
 app.whenReady().then(() => {
   createWindow();
   createTray();
+  startSmtcSidecar();
+
+  try {
+    globalShortcut.register('CommandOrControl+Alt+S', () => {
+      if (isVisible) hideDock();
+      else showDock();
+    });
+    console.log('[Main] Hotkey Ctrl+Alt+S registered');
+
+    globalShortcut.register('CommandOrControl+Shift+M', () => {
+      toggleCompactMode();
+    });
+    console.log('[Main] Hotkey Ctrl+Shift+M registered for Compact Dynamic Island Mode');
+  } catch (err) {
+    console.warn('[Main] Failed to register global shortcut:', err.message);
+  }
 }).catch((err) => {
   console.error('[App ready error]', err);
 });
 
 app.on('window-all-closed', () => {
-  console.log('[Main] window-all-closed – recreating window in 1s');
+  console.log('[Main] window-all-closed â€“ recreating window in 1s');
   mainWindow = null;
-  // Recreate window so app keeps running (e.g. after renderer crash)
   setTimeout(() => {
     if (!mainWindow && !app.isQuiting) {
       createWindow();
@@ -480,4 +2158,12 @@ app.on('activate', () => {
 // Handle app quit
 app.on('before-quit', () => {
   app.isQuiting = true;
+  globalShortcut.unregisterAll();
+  if (peekWindow && !peekWindow.isDestroyed()) {
+    try { peekWindow.destroy(); } catch (_) {}
+  }
+  if (discordRPC) discordRPC.destroy();
+  if (smtcProcess) {
+    smtcProcess.kill();
+  }
 });

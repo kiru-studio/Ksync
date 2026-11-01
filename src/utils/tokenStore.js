@@ -9,7 +9,35 @@ const path = require('path');
 const TOKEN_FILE = 'tokens.json';
 const BUFFER_ENCODING = 'base64';
 
+function getCandidatePaths() {
+  const paths = [];
+  try {
+    const userData = app.getPath('userData');
+    paths.push(path.join(userData, TOKEN_FILE));
+    paths.push(path.join(userData, 'spotiffy-dock', TOKEN_FILE));
+  } catch (_) {}
+  try {
+    const appData = app.getPath('appData');
+    paths.push(path.join(appData, 'ksync', TOKEN_FILE));
+    paths.push(path.join(appData, 'ksync', 'spotiffy-dock', TOKEN_FILE));
+    paths.push(path.join(appData, 'Electron', TOKEN_FILE));
+    paths.push(path.join(appData, 'Electron', 'spotiffy-dock', TOKEN_FILE));
+  } catch (_) {}
+  return paths;
+}
+
+function findExistingTokenPath() {
+  for (const p of getCandidatePaths()) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function getTokenPath() {
+  const existing = findExistingTokenPath();
+  if (existing) return existing;
   const userData = app.getPath('userData');
   const dir = path.join(userData, 'spotiffy-dock');
   if (!fs.existsSync(dir)) {
@@ -38,8 +66,8 @@ function decrypt(encryptedBase64) {
  */
 function getTokens() {
   try {
-    const tokenPath = getTokenPath();
-    if (!fs.existsSync(tokenPath)) return null;
+    const tokenPath = findExistingTokenPath() || getTokenPath();
+    if (!tokenPath || !fs.existsSync(tokenPath)) return null;
     const raw = fs.readFileSync(tokenPath, 'utf8');
     const data = JSON.parse(raw);
     return {
@@ -59,14 +87,21 @@ function getTokens() {
  */
 function setTokens(tokens) {
   try {
-    const tokenPath = getTokenPath();
+    const primaryPath = getTokenPath();
     const data = {
       access_token_enc: encrypt(tokens.access_token),
       refresh_token_enc: encrypt(tokens.refresh_token),
       expires_at: Date.now() + (tokens.expires_in || 3600) * 1000,
       user_id: tokens.user_id || null,
     };
-    fs.writeFileSync(tokenPath, JSON.stringify(data, null, 0), 'utf8');
+    const jsonStr = JSON.stringify(data, null, 0);
+    fs.writeFileSync(primaryPath, jsonStr, 'utf8');
+    
+    // Also mirror to root userData to be safe
+    try {
+      const altPath = path.join(app.getPath('userData'), TOKEN_FILE);
+      if (altPath !== primaryPath) fs.writeFileSync(altPath, jsonStr, 'utf8');
+    } catch (_) {}
   } catch (err) {
     console.error('[tokenStore] setTokens error:', err.message);
     throw err;
@@ -75,9 +110,10 @@ function setTokens(tokens) {
 
 function clearTokens() {
   try {
-    const tokenPath = getTokenPath();
-    if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+    for (const p of getCandidatePaths()) {
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (_) {}
+      }
     }
   } catch (err) {
     console.error('[tokenStore] clearTokens error:', err.message);
