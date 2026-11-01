@@ -16,7 +16,8 @@ yarn-error.log*
 
 # Build outputs
 dist/
-build/
+!build/installer.nsh
+!build/*.ico
 release/
 
 # IDE files

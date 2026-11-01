@@ -1534,6 +1534,27 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-update-status', () => updateService.getStatus());
 
+  // Windows Startup / Login Item Settings
+  ipcMain.handle('get-login-item-settings', () => {
+    try {
+      return app.getLoginItemSettings().openAtLogin;
+    } catch (_) {
+      return false;
+    }
+  });
+  ipcMain.handle('set-login-item-settings', (_, openAtLogin) => {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: !!openAtLogin,
+        path: process.execPath,
+      });
+      return app.getLoginItemSettings().openAtLogin;
+    } catch (err) {
+      console.warn('[Main] setLoginItemSettings error:', err.message);
+      return false;
+    }
+  });
+
   } catch (err) {
     console.error('[Main] createWindow error:', err);
     throw err;

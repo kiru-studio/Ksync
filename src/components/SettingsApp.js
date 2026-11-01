@@ -59,6 +59,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Power,
 } from 'lucide-react';
 import { useSettings, PRESET_THEMES, DEFAULT_SETTINGS } from '../context/SettingsContext';
 import SpotifyService from '../services/SpotifyService';
@@ -162,6 +163,7 @@ export default function SettingsApp() {
   const [appVersion, setAppVersion] = useState('2.4.0');
   const [updateStatus, setUpdateStatus] = useState({ state: 'idle', percent: 0, version: null });
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [openAtLogin, setOpenAtLogin] = useState(false);
   const [dockDimensions, setDockDimensions] = useState({
     width: 1920,
     height: 190,
@@ -330,6 +332,10 @@ export default function SettingsApp() {
         api.getUpdateStatus().then((s) => { if (s) setUpdateStatus(s); });
       }
 
+      if (api.getLoginItemSettings) {
+        api.getLoginItemSettings().then((val) => setOpenAtLogin(!!val));
+      }
+
       if (api.onUpdateStatus) {
         api.onUpdateStatus((s) => {
           if (s) {
@@ -387,6 +393,16 @@ export default function SettingsApp() {
     const api = typeof window !== 'undefined' && window.electronAPI;
     if (api && api.quitAndInstall) {
       api.quitAndInstall();
+    }
+  };
+
+  const handleToggleOpenAtLogin = async () => {
+    const api = typeof window !== 'undefined' && window.electronAPI;
+    if (api && api.setLoginItemSettings) {
+      const nextVal = !openAtLogin;
+      const res = await api.setLoginItemSettings(nextVal);
+      setOpenAtLogin(!!res);
+      updateSettings({ behavior: { openAtLogin: !!res } });
     }
   };
 
@@ -2749,7 +2765,7 @@ export default function SettingsApp() {
                           </div>
                           <div>
                             <div className="row-main-label">Dynamic Island "Peek-on-Track-Change"</div>
-                            <div className="row-sub-label">Briefly glide down a compact Dynamic Island pill for 2.5s on track change when the dock is auto-hidden</div>
+                            <div className="row-sub-label">Briefly glide down a compact Dynamic Island pill for 5s on track change when the dock is auto-hidden</div>
                           </div>
                         </div>
                         <button
@@ -2766,7 +2782,28 @@ export default function SettingsApp() {
                         </button>
                       </div>
 
-                      {/* Row 6: Discord Rich Presence (RPC) */}
+                      {/* Row 6: Launch on Windows Startup */}
+                      <div className="card-hairline-row flex-between">
+                        <div className="row-with-icon">
+                          <div className="inner-icon-badge">
+                            <Power size={15} />
+                          </div>
+                          <div>
+                            <div className="row-main-label">Launch on Windows Startup</div>
+                            <div className="row-sub-label">Automatically start ksync in the background when Windows boots up</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`pill-toggle-switch emerald-switch ${openAtLogin ? 'on active' : 'off'}`}
+                          onClick={handleToggleOpenAtLogin}
+                          aria-label="Toggle Launch on Startup"
+                        >
+                          <span className="toggle-thumb" />
+                        </button>
+                      </div>
+
+                      {/* Row 7: Discord Rich Presence (RPC) */}
                       <div className="card-hairline-row flex-between">
                         <div className="row-with-icon">
                           <div className="inner-icon-badge">

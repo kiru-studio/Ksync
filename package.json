@@ -110,7 +110,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": true,
+      "include": "build/installer.nsh"
     }
   }
 }

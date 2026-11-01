@@ -105,6 +105,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+  getLoginItemSettings: () => ipcRenderer.invoke('get-login-item-settings'),
+  setLoginItemSettings: (openAtLogin) => ipcRenderer.invoke('set-login-item-settings', openAtLogin),
 
   // Windows 11 Native Integration & Discord RPC
   getAllDisplays: () => ipcRenderer.invoke('get-all-displays'),
