@@ -9,7 +9,7 @@ const path = require('path');
 const SETTINGS_FILE = 'ksync-settings.json';
 
 const DEFAULT_SETTINGS = {
-  version: '2.4.0',
+  version: '2.4.1',
   position: {
     mode: 'top',               // 'top' | 'left' | 'right'
     style: 'full',             // 'full' | 'island'
