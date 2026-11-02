@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import NowPlaying from './components/NowPlaying';
 import LyricsPanel from './components/LyricsPanel';
 import QueuePanel from './components/QueuePanel';
+import SidebarDock from './components/SidebarDock';
 import LoginScreen from './components/LoginScreen';
 import UserProfile from './components/UserProfile';
 import SpotifyService from './services/SpotifyService';
@@ -1216,21 +1217,59 @@ function App() {
           maxWidth: isIsland && mode === 'top' ? `${settings.position?.islandWidth || 1180}px` : '100%',
         }}
       >
-        {activePanels.map((panelId, index) => (
-          <React.Fragment key={panelId}>
-            {renderPanelComponent(panelId, index)}
-            {isSettingsOpen && index < activePanels.length - 1 && (
-              <div
-                className={`panel-divider ${activeDividerIdx === index ? 'is-resizing' : ''}`}
-                onMouseDown={(e) => handleDividerMouseDown(e, index)}
-                onDoubleClick={handleDividerDoubleClick}
-                title="Drag to adjust section ratio (Double-click to reset)"
-                aria-label={`Adjust size between section ${index + 1} and ${index + 2}`}
-                role="separator"
-              />
-            )}
-          </React.Fragment>
-        ))}
+        {mode !== 'top' ? (
+          <SidebarDock
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            progress={progress}
+            duration={duration}
+            volume={volume}
+            shuffleState={shuffleState}
+            repeatState={repeatState}
+            devices={devices}
+            currentDeviceId={currentTrack?.device?.id}
+            lyrics={lyrics}
+            currentLyricIndex={currentLyricIndex}
+            lyricsProvider={lyricsProvider}
+            lyricsOffsetMs={lyricsOffsetMs}
+            queue={queue}
+            isAuthenticated={isAuthenticated}
+            user={user}
+            settings={settings}
+            onPlayPause={handlePlayPause}
+            onSkip={handleSkip}
+            onVolumeChange={handleVolumeChange}
+            onProgressChange={handleProgressChange}
+            onShuffle={handleShuffle}
+            onRepeat={handleRepeat}
+            onDeviceChange={handleDeviceChange}
+            onSeek={handleProgressChange}
+            onPlayTrack={handlePlayQueueTrack}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onHideDock={() => {
+              if (typeof window !== 'undefined' && window.electronAPI?.scrollHide) {
+                window.electronAPI.scrollHide();
+              }
+            }}
+          />
+        ) : (
+          activePanels.map((panelId, index) => (
+            <React.Fragment key={panelId}>
+              {renderPanelComponent(panelId, index)}
+              {isSettingsOpen && index < activePanels.length - 1 && (
+                <div
+                  className={`panel-divider ${activeDividerIdx === index ? 'is-resizing' : ''}`}
+                  onMouseDown={(e) => handleDividerMouseDown(e, index)}
+                  onDoubleClick={handleDividerDoubleClick}
+                  title="Drag to adjust section ratio (Double-click to reset)"
+                  aria-label={`Adjust size between section ${index + 1} and ${index + 2}`}
+                  role="separator"
+                />
+              )}
+            </React.Fragment>
+          ))
+        )}
       </div>
 
       {/* Interactive Bottom Resize Handle (Top Dock Mode) - Only available when Settings is open */}

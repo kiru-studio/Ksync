@@ -5,3 +5,4 @@
 !macro customUnInstall
   Delete "$SMSTARTUP\ksync.lnk"
 !macroend
+

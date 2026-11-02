@@ -2004,357 +2004,744 @@ button:focus:not(:focus-visible),
   height: 0 !important;
 }
 
-/* Base Panel Columns in Sidebar */
-.app.sidebar-mode .panel-col {
+/* ==========================================================================
+   MODERN SIDEBAR DOCK (Dedicated Vertical UX: Meta -> Art -> Lyrics -> Controls -> Up Next)
+   ========================================================================== */
+
+.sidebar-dock-root {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  padding: 0 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  padding: 12px 12px 8px 12px !important;
   box-sizing: border-box !important;
-  position: relative !important;
-}
-
-/* 1. NOW PLAYING PANEL (Top Zone) - 2 Parts = 40% Height */
-.app.sidebar-mode .panel-col.panel-left {
-  flex: var(--sidebar-slot-flex, 2 1 0%) !important;
-  height: var(--sidebar-slot-height, 40%) !important;
-  max-height: var(--sidebar-slot-height, 40%) !important;
-  min-height: 0 !important;
-  background: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-.app.sidebar-mode .now-playing-compact {
-  flex-direction: column !important;
-  align-items: center !important;
-  text-align: center !important;
-  gap: clamp(3px, 0.7vh, 6px) !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  padding: 2px 4px !important;
-  width: 100% !important;
-  justify-content: space-evenly !important;
-  overflow: hidden !important;
-}
-
-.app.sidebar-mode .art-wrapper {
-  width: clamp(52px, 9.5vh, 78px) !important;
-  height: clamp(52px, 9.5vh, 78px) !important;
-  min-width: unset !important;
-  min-height: unset !important;
-  max-height: unset !important;
-  border-radius: 10px !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  margin: 0 auto !important;
-  flex-shrink: 0 !important;
-}
-
-.app.sidebar-mode .track-meta {
-  width: 100% !important;
-  align-items: center !important;
-  gap: 2px !important;
-  text-align: center !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex-shrink: 0 !important;
-}
-
-.app.sidebar-mode .meta-header {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
   justify-content: space-between !important;
+  gap: 6px !important;
+}
+
+/* 1. TOP HEADER: Context Badge + Title & Artist + Quick Actions */
+.sidebar-header-card {
   width: 100% !important;
-  padding: 0 4px !important;
-}
-
-.app.sidebar-mode .meta-header .track-text {
-  flex: 1 !important;
-  min-width: 0 !important;
-  text-align: left !important;
-}
-
-.app.sidebar-mode .song-title {
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  text-align: left !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 170px !important;
-}
-
-.app.sidebar-mode .song-artist {
-  font-size: 11px !important;
-  color: #a1a1aa !important;
-  text-align: left !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 170px !important;
-}
-
-.app.sidebar-mode .quick-actions {
   display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 2px 4px !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar-header-top-row {
+  display: flex !important;
+  justify-content: space-between !important;
   align-items: center !important;
-  gap: 2px !important;
-  flex-shrink: 0 !important;
-}
-
-.app.sidebar-mode .meta-chips {
-  display: none !important;
-}
-
-.app.sidebar-mode .controls-row {
-  justify-content: center !important;
   width: 100% !important;
-  gap: clamp(8px, 1.4vw, 14px) !important;
-  margin-top: 1px !important;
-  flex-shrink: 0 !important;
 }
 
-.app.sidebar-mode .seekbar-row {
-  width: 100% !important;
-  padding: 0 4px !important;
-  margin-top: 1px !important;
-  flex-shrink: 0 !important;
-}
-
-.app.sidebar-mode .time-pill {
+.sidebar-context-badge {
   font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--accent, #10b981) !important;
+  opacity: 0.9 !important;
+  max-width: 190px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
-/* 2. LYRICS PANEL (Center Zone) - 1 Part = 20% Height */
-.app.sidebar-mode .panel-col.panel-center {
-  flex: var(--sidebar-slot-flex, 1 1 0%) !important;
-  height: var(--sidebar-slot-height, 20%) !important;
-  max-height: var(--sidebar-slot-height, 20%) !important;
-  min-height: 0 !important;
-  padding: 0 !important;
+.sidebar-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.sidebar-icon-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  width: 26px !important;
+  height: 26px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #a1a1aa !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.sidebar-icon-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  transform: scale(1.05) !important;
+}
+
+.sidebar-icon-btn.liked {
+  color: var(--accent, #10b981) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.sidebar-icon-btn.close-btn:hover {
+  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.sidebar-meta-text {
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  position: relative !important;
-  overflow: hidden !important;
+  gap: 2px !important;
 }
 
-.app.sidebar-mode .lyrics-panel-compact {
-  height: 100% !important;
+.sidebar-track-title {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.sidebar-track-artist {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #a1a1aa !important;
+  line-height: 1.25 !important;
+}
+
+/* 2. ALBUM ARTWORK */
+.sidebar-art-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
   width: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  padding: 0 6px !important;
+  margin: 4px 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-art-wrapper {
   position: relative !important;
+  width: clamp(120px, 15vh, 160px) !important;
+  height: clamp(120px, 15vh, 160px) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.75), 0 0 24px rgba(16, 185, 129, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s !important;
+}
+
+.sidebar-art-wrapper:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.85), 0 0 32px rgba(16, 185, 129, 0.25) !important;
+}
+
+.sidebar-art-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+.sidebar-art-playing-badge {
+  position: absolute !important;
+  bottom: 8px !important;
+  right: 8px !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  padding: 5px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.sidebar-art-pulse {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: var(--accent, #10b981) !important;
+  box-shadow: 0 0 8px var(--accent, #10b981) !important;
+  animation: sidebarBadgePulse 1.8s infinite alternate !important;
+}
+
+@keyframes sidebarBadgePulse {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+/* 3. CENTER ZONE: LYRICS FEED (Smooth auto-scrolling with glow) */
+.sidebar-lyrics-zone {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+  margin: 2px 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  align-items: center !important;
-  overflow: hidden !important;
+  mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
 }
 
-.app.sidebar-mode .lyrics-volume-pill {
-  top: 4px !important;
-  transform: translateX(-50%) scale(0.85) !important;
-  transform-origin: top center !important;
-  z-index: 10 !important;
-}
-
-.app.sidebar-mode .lyrics-lines-wrapper {
-  position: absolute !important;
-  top: 20px !important;
-  bottom: 2px !important;
-  left: 0 !important;
-  right: 0 !important;
+.sidebar-lyrics-scroll-feed {
+  width: 100% !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  overflow: hidden !important;
+  scroll-behavior: smooth !important;
+  gap: 8px !important;
+  padding: 24px 6px !important;
+  box-sizing: border-box !important;
+  scrollbar-width: none !important;
 }
 
-.app.sidebar-mode .lyric-line {
-  font-size: clamp(11.5px, 1.4vh, 13px) !important;
-  padding: 1px 6px !important;
+.sidebar-lyrics-scroll-feed::-webkit-scrollbar {
+  display: none !important;
+}
+
+.sidebar-lyric-line {
   text-align: center !important;
-  line-height: 1.35 !important;
+  width: 100% !important;
+  line-height: 1.4 !important;
+  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  cursor: default !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  padding: 2px 6px !important;
 }
 
-.app.sidebar-mode .lyric-line.lyric-active {
-  font-size: clamp(13px, 1.7vh, 15px) !important;
+.sidebar-lyric-line.is-seekable:hover {
+  cursor: pointer !important;
+  opacity: 1 !important;
+  transform: scale(1.03) !important;
+}
+
+.sidebar-lyric-faded {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(0.96) !important;
+}
+
+.sidebar-lyric-near {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.sidebar-lyric-active {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--lyrics-color, #ffffff) !important;
+  text-shadow: 0 0 18px var(--accent, #10b981), 0 0 32px rgba(16, 185, 129, 0.45) !important;
+  transform: scale(1.05) !important;
+}
+
+.sidebar-musical-interlude {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  color: var(--accent, #10b981) !important;
+  padding: 4px 10px !important;
+}
+
+.sidebar-soundwave-mini {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  height: 14px !important;
+}
+
+.sidebar-soundwave-mini .sw-bar {
+  width: 2.5px !important;
+  background: var(--accent, #10b981) !important;
+  border-radius: 1px !important;
+  animation: swMiniAnim 1.2s ease-in-out infinite alternate !important;
+}
+.sidebar-soundwave-mini .sw-bar.b1 { height: 6px; animation-delay: -0.2s; }
+.sidebar-soundwave-mini .sw-bar.b2 { height: 12px; animation-delay: -0.4s; }
+.sidebar-soundwave-mini .sw-bar.b3 { height: 8px; animation-delay: -0.1s; }
+
+@keyframes swMiniAnim {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.1); }
+}
+
+.sidebar-instrumental-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar-inst-badge {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: #a1a1aa !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 5px 12px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar-ambient-eq {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3.5px !important;
+  height: 40px !important;
+  width: 100% !important;
+}
+
+.sidebar-eq-bar {
+  width: 3px !important;
+  height: var(--eq-h) !important;
+  background: var(--accent, #10b981) !important;
+  border-radius: 2px !important;
+  opacity: 0.65 !important;
+}
+
+.sidebar-ambient-eq.playing .sidebar-eq-bar {
+  animation: sidebarEqBounce 1.2s ease-in-out infinite alternate !important;
+  animation-delay: var(--eq-delay) !important;
+}
+
+@keyframes sidebarEqBounce {
+  0% { transform: scaleY(0.3); opacity: 0.35; }
+  100% { transform: scaleY(1.15); opacity: 0.95; }
+}
+
+/* 4. PROGRESS BAR & CONTROLS (Below Lyrics) */
+.sidebar-player-controls-card {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 10px 10px 6px 10px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.sidebar-seekbar-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.sidebar-time-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #a1a1aa !important;
+  font-variant-numeric: tabular-nums !important;
+  min-width: 28px !important;
+  text-align: center !important;
+}
+
+.sidebar-time-label.time-toggle-btn {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  color: #a1a1aa !important;
+  transition: color 0.15s !important;
+}
+
+.sidebar-time-label.time-toggle-btn:hover {
+  color: #ffffff !important;
+}
+
+.sidebar-seekbar-track {
+  flex: 1 !important;
+  height: 20px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+}
+
+.sidebar-seekbar-tooltip {
+  position: absolute !important;
+  top: -18px !important;
+  transform: translateX(-50%) !important;
+  background: #181b26 !important;
+  color: #ffffff !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  pointer-events: none !important;
+  z-index: 20 !important;
+}
+
+.sidebar-wave-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 14px !important;
+  gap: 2px !important;
+}
+
+.sidebar-wave-bar {
+  flex: 1 !important;
+  height: var(--wb-h) !important;
+  border-radius: 1px !important;
+  transition: all 0.2s !important;
+}
+
+.sidebar-wave-bar.played {
+  background: var(--accent, #10b981) !important;
+}
+
+.sidebar-wave-bar.unplayed {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.sidebar-wave-bar.hover {
+  background: #ffffff !important;
+}
+
+.sidebar-wave-container.is-playing .sidebar-wave-bar.played {
+  animation: waveBarPulse 1.4s ease-in-out infinite alternate !important;
+  animation-delay: var(--wb-delay) !important;
+}
+
+@keyframes waveBarPulse {
+  0% { opacity: 0.75; transform: scaleY(0.9); }
+  100% { opacity: 1; transform: scaleY(1.05); }
+}
+
+.sidebar-flat-fill {
+  display: none !important;
+}
+
+.sidebar-seek-thumb {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.7) !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s !important;
+  pointer-events: none !important;
+}
+
+.sidebar-seekbar-track:hover .sidebar-seek-thumb {
+  opacity: 1 !important;
+}
+
+.sidebar-buttons-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin-top: 2px !important;
+}
+
+.sidebar-btn-sub {
+  background: none !important;
+  border: none !important;
+  color: #a1a1aa !important;
+  cursor: pointer !important;
+  padding: 6px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.sidebar-btn-sub:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: scale(1.08) !important;
+}
+
+.sidebar-btn-sub.active {
+  color: var(--accent, #10b981) !important;
+}
+
+.sidebar-btn-play {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  background: var(--accent, #10b981) !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.sidebar-btn-play:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.65) !important;
+}
+
+.sidebar-volume-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.sidebar-volume-popover {
+  position: absolute !important;
+  bottom: 40px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: #181b26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 120px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7) !important;
+  z-index: 50 !important;
+}
+
+.sidebar-vol-track {
+  flex: 1 !important;
+  height: 6px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-radius: 3px !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+.sidebar-vol-fill {
+  height: 100% !important;
+  background: var(--accent, #10b981) !important;
+  border-radius: 3px !important;
+}
+
+.sidebar-vol-num {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  width: 26px !important;
+  text-align: right !important;
+}
+
+/* 5. BOTTOM HOVER-EXPANDABLE "UP NEXT" QUEUE DRAWER */
+.sidebar-queue-drawer {
+  position: relative !important;
+  width: 100% !important;
+  border-radius: 14px !important;
+  background: rgba(20, 23, 34, 0.88) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  overflow: hidden !important;
+  transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+  z-index: 40 !important;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.4) !important;
+  max-height: 38px !important;
+  cursor: pointer !important;
+}
+
+.sidebar-queue-drawer.expanded {
+  max-height: 320px !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.85), 0 0 20px rgba(16, 185, 129, 0.16) !important;
+}
+
+.sidebar-queue-tab-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 12px !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.sidebar-queue-tab-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  flex: 1 !important;
+}
+
+.sidebar-queue-icon {
+  color: var(--accent, #10b981) !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-queue-pill-label {
+  font-size: 11.5px !important;
+  color: #d4d4d8 !important;
+  font-weight: 500 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.queue-up-next-tag {
+  color: var(--accent, #10b981) !important;
   font-weight: 700 !important;
 }
 
-.app.sidebar-mode .lyrics-empty-state {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  padding: 4px !important;
-  margin-top: 18px !important;
-}
-
-.app.sidebar-mode .lyrics-empty-title {
-  font-size: 11px !important;
-}
-
-.app.sidebar-mode .lyrics-empty-sub {
-  font-size: 9px !important;
-  max-width: 200px !important;
-  display: -webkit-box !important;
-  -webkit-line-clamp: 2 !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
-}
-
-/* 3. QUEUE PANEL (Bottom Zone) - 2 Parts = 40% Height */
-.app.sidebar-mode .panel-col.panel-right {
-  flex: var(--sidebar-slot-flex, 2 1 0%) !important;
-  height: var(--sidebar-slot-height, 40%) !important;
-  max-height: var(--sidebar-slot-height, 40%) !important;
-  min-height: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-.app.sidebar-mode .queue-panel-compact {
-  height: 100% !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin-left: 0 !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 4px 4px 2px 4px !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-.app.sidebar-mode .queue-header-bar {
-  margin-bottom: 4px !important;
+.sidebar-drawer-chevron {
+  color: #a1a1aa !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s !important;
   flex-shrink: 0 !important;
 }
 
-.app.sidebar-mode .queue-cards-area {
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
-  height: 100% !important;
+.sidebar-drawer-chevron.rotated {
+  transform: rotate(180deg) !important;
+  color: var(--accent, #10b981) !important;
+}
+
+.sidebar-queue-expanded-panel {
+  padding: 0 12px 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  height: 275px !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar-queue-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.queue-title-bold {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #a1a1aa !important;
+}
+
+.sidebar-queue-connect-btn {
+  background: var(--accent, #10b981) !important;
+  color: #09090b !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 2px 8px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.sidebar-queue-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  max-height: 235px !important;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 3px !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+  padding-right: 2px !important;
 }
 
-.app.sidebar-mode .queue-cards-area::-webkit-scrollbar {
-  width: 4px !important;
-}
-
-.app.sidebar-mode .queue-cards-area::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-radius: 4px !important;
-}
-
-.app.sidebar-mode .queue-card {
-  height: 32px !important;
-  min-height: 32px !important;
-  padding: 2px 6px !important;
-  gap: 8px !important;
-  flex-shrink: 0 !important;
-}
-
-.app.sidebar-mode .queue-card-art {
-  width: 24px !important;
-  height: 24px !important;
-  border-radius: 4px !important;
-}
-
-.app.sidebar-mode .queue-track-title {
-  font-size: 11px !important;
-}
-
-.app.sidebar-mode .queue-track-artist {
-  font-size: 9.5px !important;
-}
-
-/* Interactive Horizontal Splitter Dividers in Sidebar */
-.app.sidebar-mode .panel-divider {
-  width: 100% !important;
-  height: 14px !important;
-  min-height: 14px !important;
-  max-height: 14px !important;
-  margin: -7px 0 !important;
+.sidebar-queue-row {
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  position: relative !important;
-  z-index: 25 !important;
-  cursor: row-resize !important;
-  background: transparent !important;
+  gap: 8px !important;
+  padding: 5px 6px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.sidebar-queue-row:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar-queue-row.active-playing {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+
+.sidebar-queue-thumb {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 5px !important;
+  object-fit: cover !important;
   flex-shrink: 0 !important;
 }
 
-.app.sidebar-mode .panel-divider::after {
-  content: '' !important;
-  width: 70% !important;
-  height: 1px !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.12) 70%, transparent 100%) !important;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  border-radius: 1px !important;
+.sidebar-queue-info {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex: 1 !important;
 }
 
-.app.sidebar-mode .panel-divider::before {
-  content: '' !important;
-  position: absolute !important;
-  width: 18px !important;
-  height: 4px !important;
-  border-radius: 2px !important;
-  background: rgba(255, 255, 255, 0.18) !important;
-  opacity: 0 !important;
-  transform: scaleX(0.7) !important;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+.sidebar-queue-row-title {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-.app.sidebar-mode .panel-divider:hover::before,
-.app.sidebar-mode .panel-divider.is-resizing::before {
-  opacity: 1 !important;
-  transform: scaleX(1) !important;
-  background: #10b981 !important;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6) !important;
+.sidebar-queue-row-artist {
+  font-size: 10px !important;
+  color: #a1a1aa !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-.app.sidebar-mode .panel-divider:hover::after,
-.app.sidebar-mode .panel-divider.is-resizing::after {
-  width: 85% !important;
-  height: 2px !important;
-  background: #10b981 !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
+.sidebar-queue-duration {
+  font-size: 10px !important;
+  color: #71717a !important;
+  font-variant-numeric: tabular-nums !important;
+  flex-shrink: 0 !important;
 }
 
-/* Balanced 2-Panel Mode in Sidebar */
-.app.sidebar-mode .dock-container.two-panel-balanced .panel-col {
-  flex: 1 1 50% !important;
-  height: 50% !important;
-  max-height: 50% !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Solo Mode in Sidebar */
-.app.sidebar-mode .panel-col.solo-expanded {
-  flex: 1 1 100% !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  width: 100% !important;
-  max-width: 100% !important;
+.sidebar-queue-empty {
+  text-align: center !important;
+  color: #71717a !important;
+  font-size: 11px !important;
+  padding: 20px 0 !important;
 }
 
 /* ==========================================================================
