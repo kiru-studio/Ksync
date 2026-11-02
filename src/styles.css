@@ -2467,22 +2467,22 @@ button:focus:not(:focus-visible),
   pointer-events: auto !important;
 }
 
-/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (Box C: 5 lines, zero scrollbars) */
+/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (Box C: 5 lines, full text wrapped, zero truncation) */
 .sidebar-middle-lyrics-zone {
   flex: 1 1 auto !important;
   min-height: 160px !important;
-  max-height: 240px !important;
+  max-height: 260px !important;
   width: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
   overflow-y: hidden !important;
   position: relative !important;
-  margin: 0 0 36px 0 !important; /* Space between lyrics and playback section (Gap C->D) */
+  margin: 0 0 32px 0 !important; /* Space between lyrics and playback section (Gap C->D) */
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+  mask-image: linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%) !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
@@ -2504,8 +2504,8 @@ button:focus:not(:focus-visible),
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
-  padding: 4px 2px !important;
+  gap: 7px !important;
+  padding: 4px 6px !important;
   box-sizing: border-box !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
@@ -2521,18 +2521,22 @@ button:focus:not(:focus-visible),
   text-align: center !important;
   width: 100% !important;
   max-width: 100% !important;
-  line-height: 1.4 !important;
+  line-height: 1.35 !important;
+  font-family: var(--dock-lyrics-font-family, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
+  letter-spacing: var(--dock-lyrics-letter-spacing, -0.2px) !important;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   user-select: none !important;
   box-sizing: border-box !important;
-  padding: 2px 4px !important;
-  overflow: hidden !important;
+  padding: 3px 6px !important;
+  height: auto !important;
+  min-height: 22px !important;
+  transform-origin: center center !important;
 }
 
 .sidebar-lyric-item.is-seekable:hover {
   cursor: pointer !important;
   opacity: 1 !important;
-  transform: scale(1.03) !important;
+  transform: scale(1.02) !important;
 }
 
 .lyric-far {
@@ -2540,11 +2544,11 @@ button:focus:not(:focus-visible),
   font-weight: 500 !important;
   color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.28)) !important;
   opacity: var(--dock-lyrics-fade, 0.28) !important;
-  transform: scale(0.95) !important;
+  transform: scale(0.96) !important;
 }
 
 .lyric-near {
-  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.75) !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.78) !important;
   font-weight: 600 !important;
   color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.6)) !important;
   opacity: 0.65 !important;
@@ -2556,7 +2560,7 @@ button:focus:not(:focus-visible),
   font-weight: var(--dock-lyrics-font-weight, 800) !important;
   color: var(--dock-lyrics-active, var(--accent, #ffffff)) !important;
   text-shadow: 0 0 var(--dock-lyrics-glow-radius, 20px) var(--dock-lyrics-active-glow, var(--accent-glow, rgba(29, 185, 84, 0.4))), 0 2px 14px rgba(0, 0, 0, 0.7) !important;
-  transform: scale(1.04) !important;
+  transform: scale(1.03) !important;
 }
 
 .lyric-empty {
@@ -2567,10 +2571,15 @@ button:focus:not(:focus-visible),
 
 .lyric-content-text {
   display: block !important;
+  width: 100% !important;
   max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  text-wrap: balance !important;
+  line-height: 1.35 !important;
+  overflow: visible !important;
 }
 
 .sidebar-interlude-pill {
