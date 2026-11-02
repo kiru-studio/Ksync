@@ -103,7 +103,9 @@ export default function SidebarDock({
   const [hoverPercent, setHoverPercent] = useState(0);
   const [hoverTime, setHoverTime] = useState(null);
 
-
+  // Lyrics auto-centering refs
+  const lyricsScrollerRef = useRef(null);
+  const activeLyricRef = useRef(null);
 
   useEffect(() => {
     if (typeof volume === 'number') {
@@ -132,7 +134,7 @@ export default function SidebarDock({
       if (typeof local[trackKey] === 'boolean') {
         setIsLiked(local[trackKey]);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     SpotifyService.checkSavedTracks({
       trackId: currentTrack.id,
@@ -145,9 +147,9 @@ export default function SidebarDock({
           const local = JSON.parse(localStorage.getItem('ksync_liked_tracks') || '{}');
           local[trackKey] = saved;
           localStorage.setItem('ksync_liked_tracks', JSON.stringify(local));
-        } catch (_) {}
+        } catch (_) { }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
   const handleToggleLike = async () => {
@@ -160,7 +162,7 @@ export default function SidebarDock({
       const local = JSON.parse(localStorage.getItem('ksync_liked_tracks') || '{}');
       local[trackKey] = nextState;
       localStorage.setItem('ksync_liked_tracks', JSON.stringify(local));
-    } catch (_) {}
+    } catch (_) { }
 
     try {
       await SpotifyService.toggleSaveTrack({
@@ -242,30 +244,16 @@ export default function SidebarDock({
     }, 180);
   };
 
-  // Exactly 5 Lines: 2 before, 1 current, 2 next (User explicit specification)
-  const fiveLines = useMemo(() => {
-    if (!lyrics || lyrics.length === 0) return [];
-    const activeIdx = currentLyricIndex >= 0 ? currentLyricIndex : 0;
-    return [-2, -1, 0, 1, 2].map((offset) => {
-      const targetIdx = activeIdx + offset;
-      if (targetIdx >= 0 && targetIdx < lyrics.length) {
-        return {
-          ...lyrics[targetIdx],
-          originalIdx: targetIdx,
-          isCurrent: offset === 0,
-          offset,
-          isEmpty: false,
-        };
-      }
-      return {
-        text: '',
-        originalIdx: targetIdx,
-        isCurrent: offset === 0,
-        offset,
-        isEmpty: true,
-      };
-    });
-  }, [lyrics, currentLyricIndex]);
+  // Auto-scroll active lyric into center of lyrics view
+  useEffect(() => {
+    if (activeLyricRef.current && lyricsScrollerRef.current) {
+      activeLyricRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }
+  }, [currentLyricIndex]);
 
   // Seekbar calculations
   const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (progress / duration) * 100)) : 0;
@@ -359,41 +347,33 @@ export default function SidebarDock({
               e.currentTarget.src = '/default-album-art.png';
             }}
           />
-          {isPlaying && (
-            <div className="sidebar-art-live-badge" title="Playing">
-              <span className="sidebar-live-dot" />
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (5 lines: 2 before, current, 2 next) */}
+      {/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS */}
       <div className="sidebar-middle-lyrics-zone">
         {lyrics && lyrics.length > 0 ? (
-          <div className="sidebar-lyrics-scroller">
-            {fiveLines.map((line) => {
-              const isActive = line.isCurrent;
-              const isNear = Math.abs(line.offset) === 1;
-              const isFar = Math.abs(line.offset) === 2;
-              const isSeekable = !line.isEmpty && typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
+          <div className="sidebar-lyrics-scroller" ref={lyricsScrollerRef}>
+            {lyrics.map((line, idx) => {
+              const isActive = idx === currentLyricIndex;
+              const isNear = Math.abs(idx - currentLyricIndex) === 1;
+              const isSeekable = typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
 
-              let lineClass = 'lyric-empty';
+              let lineClass = 'lyric-far';
               if (isActive) lineClass = 'lyric-active';
               else if (isNear) lineClass = 'lyric-near';
-              else if (isFar) lineClass = 'lyric-far';
 
               return (
                 <div
-                  key={`5l-${line.originalIdx}-${line.offset}`}
+                  key={`${line.startTime ?? idx}-${idx}`}
+                  ref={isActive ? activeLyricRef : null}
                   className={`sidebar-lyric-item ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
                   onClick={() => {
                     if (isSeekable) onSeek(line.startTime);
                   }}
                   title={isSeekable ? `Jump to ${formatTime(line.startTime)}` : line.text}
                 >
-                  {line.isEmpty ? (
-                    <span className="lyric-content-text">&nbsp;</span>
-                  ) : line.isIntro ? (
+                  {line.isIntro ? (
                     <div className="sidebar-interlude-pill">
                       <Music size={13} />
                       <span>Instrumental Interlude</span>
@@ -452,8 +432,8 @@ export default function SidebarDock({
         >
           <Heart
             size={22}
-            fill={isLiked ? 'var(--accent, #10b981)' : 'none'}
-            color={isLiked ? 'var(--accent, #10b981)' : 'currentColor'}
+            fill={isLiked ? '#ffffff' : 'none'}
+            color={isLiked ? '#ffffff' : 'currentColor'}
           />
         </button>
       </div>
