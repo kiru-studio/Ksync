@@ -2471,7 +2471,7 @@ button:focus:not(:focus-visible),
 .sidebar-middle-lyrics-zone {
   flex: 1 1 auto !important;
   min-height: 160px !important;
-  max-height: 260px !important;
+  max-height: 280px !important;
   width: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
@@ -2531,6 +2531,11 @@ button:focus:not(:focus-visible),
   height: auto !important;
   min-height: 22px !important;
   transform-origin: center center !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  text-wrap: balance !important;
 }
 
 .sidebar-lyric-item.is-seekable:hover {

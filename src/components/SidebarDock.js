@@ -711,6 +711,11 @@ export default function SidebarDock({
                     if (isSeekable) onSeek(item.startTime);
                   }}
                   title={isSeekable ? `Jump to ${formatTime(item.startTime)}` : item.text}
+                  style={{
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                  }}
                 >
                   {item.isIntro ? (
                     <div className="sidebar-interlude-pill">
@@ -718,7 +723,21 @@ export default function SidebarDock({
                       <span>Instrumental Intro</span>
                     </div>
                   ) : (
-                    <span className="lyric-content-text">{item.text}</span>
+                    <span
+                      className="lyric-content-text"
+                      style={{
+                        whiteSpace: 'normal',
+                        textOverflow: 'clip',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'anywhere',
+                        lineHeight: 1.35,
+                        display: 'block',
+                        width: '100%',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {item.text}
+                    </span>
                   )}
                 </div>
               );
