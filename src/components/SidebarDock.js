@@ -10,6 +10,7 @@ import {
   Heart,
   Volume2,
   VolumeX,
+  Monitor,
   ChevronDown,
   ChevronUp,
   Music,
@@ -72,6 +73,8 @@ export default function SidebarDock({
   volume = 50,
   shuffleState = false,
   repeatState = 'off',
+  devices = [],
+  currentDeviceId = null,
   lyrics = [],
   currentLyricIndex = -1,
   queue = null,
@@ -82,6 +85,7 @@ export default function SidebarDock({
   onProgressChange,
   onShuffle,
   onRepeat,
+  onDeviceChange,
   onSeek,
   onPlayTrack,
   onLogin,
@@ -89,10 +93,17 @@ export default function SidebarDock({
 }) {
   const [localVolume, setLocalVolume] = useState(volume ?? 50);
   const [showVolumePopup, setShowVolumePopup] = useState(false);
+  const [showDevices, setShowDevices] = useState(false);
   const [showRemaining, setShowRemaining] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const volThrottleTimerRef = useRef(null);
   const latestVolRef = useRef(volume ?? 50);
+
+  const deviceList = useMemo(() => (Array.isArray(devices) ? devices : []), [devices]);
+  const currentDevice = useMemo(
+    () => deviceList.find((d) => d.id === currentDeviceId) || deviceList.find((d) => d.is_active),
+    [deviceList, currentDeviceId]
+  );
 
   // Queue hover drawer state
   const [isQueueHovered, setIsQueueHovered] = useState(false);
@@ -407,7 +418,7 @@ export default function SidebarDock({
         )}
       </div>
 
-      {/* 4. TRACK TITLE & ARTIST (Left) + HEART BUTTON (Right) */}
+      {/* 4. TRACK TITLE & ARTIST (Left) + QUICK ACTIONS (Heart, Device, Volume) (Right) */}
       <div className="sidebar-track-row">
         <div className="sidebar-track-info-col">
           <MarqueeText
@@ -423,54 +434,93 @@ export default function SidebarDock({
             gap={24}
           />
         </div>
-        <button
-          type="button"
-          className={`sidebar-heart-circle-btn ${isLiked ? 'liked' : ''}`}
-          onClick={handleToggleLike}
-          title={isLiked ? 'Remove from Your Library' : 'Save to Your Library'}
-          aria-label="Like"
-        >
-          <Heart
-            size={22}
-            fill={isLiked ? '#ffffff' : 'none'}
-            color={isLiked ? '#ffffff' : 'currentColor'}
-          />
-        </button>
-      </div>
 
-      {/* 5. SEEKBAR (Scrubber line with 0:30 and 4:59) */}
-      <div className="sidebar-seekbar-container">
-        <div
-          className={`sidebar-seekbar-bar ${isHoveringSeek ? 'hovered' : ''}`}
-          onClick={handleProgressClick}
-          onMouseEnter={() => setIsHoveringSeek(true)}
-          onMouseLeave={() => setIsHoveringSeek(false)}
-          onMouseMove={handleSeekMouseMove}
-          style={{ cursor: currentTrack?.canSeek === false ? 'default' : 'pointer' }}
-        >
-          {isHoveringSeek && hoverTime !== null && (
-            <div className="sidebar-seek-tooltip" style={{ left: `${hoverPercent}%` }}>
-              {formatTime(hoverTime)}
+        <div className="sidebar-track-actions">
+          {/* Heart / Like Button */}
+          <button
+            type="button"
+            className={`sidebar-action-btn ${isLiked ? 'liked' : ''}`}
+            onClick={handleToggleLike}
+            title={isLiked ? 'Remove from Your Library' : 'Save to Your Library'}
+            aria-label="Like"
+          >
+            <Heart
+              size={18}
+              fill={isLiked ? '#ffffff' : 'none'}
+              color={isLiked ? '#ffffff' : 'currentColor'}
+            />
+          </button>
+
+          {/* Device Picker */}
+          {deviceList.length > 0 && (
+            <div className="sidebar-device-anchor">
+              <button
+                type="button"
+                className="sidebar-action-btn"
+                onClick={() => setShowDevices(!showDevices)}
+                title={currentDevice ? `Playing on ${currentDevice.name}` : 'Select device'}
+                aria-label="Devices"
+              >
+                <Monitor size={18} />
+              </button>
+              {showDevices && (
+                <ul className="sidebar-device-dropdown">
+                  {deviceList.map((d) => (
+                    <li key={d.id}>
+                      <button
+                        type="button"
+                        className={d.id === currentDeviceId ? 'active' : ''}
+                        onClick={() => {
+                          if (onDeviceChange) onDeviceChange(d.id);
+                          setShowDevices(false);
+                        }}
+                      >
+                        {d.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
-          <div className="sidebar-seek-track-bg">
-            <div className="sidebar-seek-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
-        </div>
-        <div className="sidebar-time-row">
-          <span className="sidebar-time-val">{formatTime(progress)}</span>
-          <span
-            className="sidebar-time-val time-toggle-btn"
-            onClick={() => setShowRemaining(!showRemaining)}
-            title={showRemaining ? 'Show total duration' : 'Show remaining time'}
+
+          {/* Volume Button with Popover */}
+          <div
+            className="sidebar-volume-anchor"
+            onMouseEnter={() => setShowVolumePopup(true)}
+            onMouseLeave={() => setShowVolumePopup(false)}
           >
-            {showRemaining ? `-${formatTime(remaining)}` : formatTime(duration)}
-          </span>
+            <button
+              type="button"
+              className="sidebar-action-btn"
+              onClick={() => dispatchVolume(localVolume === 0 ? 50 : 0, true)}
+              onWheel={handleWheelVolume}
+              title={`Volume: ${localVolume}% (Scroll to adjust)`}
+              aria-label="Volume"
+            >
+              {localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </button>
+
+            {showVolumePopup && (
+              <div className="sidebar-volume-popup" onWheel={handleWheelVolume}>
+                <div
+                  className="sidebar-vol-bar"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    dispatchVolume(pct * 100, true);
+                  }}
+                >
+                  <div className="sidebar-vol-bar-fill" style={{ width: `${localVolume}%` }} />
+                </div>
+                <span className="sidebar-vol-text">{localVolume}%</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 6. MEDIA CONTROLS (Shuffle, Prev, Big Circle Play, Next, Repeat, Volume) */}
+      {/* 5. MEDIA CONTROLS (Shuffle, Prev, Big Circle Play IN EXACT CENTER, Next, Repeat) */}
       <div className="sidebar-controls-container">
         <button
           type="button"
@@ -479,7 +529,7 @@ export default function SidebarDock({
           title={shuffleState ? 'Disable Shuffle' : 'Enable Shuffle'}
           aria-label="Shuffle"
         >
-          <Shuffle size={19} />
+          <Shuffle size={18} />
         </button>
 
         <button
@@ -489,10 +539,10 @@ export default function SidebarDock({
           title="Previous Track"
           aria-label="Previous"
         >
-          <SkipBack size={24} fill="currentColor" />
+          <SkipBack size={22} fill="currentColor" />
         </button>
 
-        {/* Large Circular Play/Pause Button */}
+        {/* Large Circular Play/Pause Button - GUARANTEED DEAD CENTER (Item 3 of 5) */}
         <button
           type="button"
           className="sidebar-main-play-circle"
@@ -514,7 +564,7 @@ export default function SidebarDock({
           title="Next Track"
           aria-label="Next"
         >
-          <SkipForward size={24} fill="currentColor" />
+          <SkipForward size={22} fill="currentColor" />
         </button>
 
         <button
@@ -524,42 +574,38 @@ export default function SidebarDock({
           title={`Repeat: ${repeatState}`}
           aria-label={`Repeat: ${repeatState}`}
         >
-          {repeatState === 'track' ? <Repeat1 size={19} /> : <Repeat size={19} />}
+          {repeatState === 'track' ? <Repeat1 size={18} /> : <Repeat size={18} />}
         </button>
+      </div>
 
-        {/* Volume Button with Popover */}
+      {/* 6. SEEKBAR ROW: 0:37 ── Progress Scrubber Bar ── 4:13 */}
+      <div className="sidebar-seekbar-row">
+        <span className="sidebar-time-val">{formatTime(progress)}</span>
         <div
-          className="sidebar-volume-anchor"
-          onMouseEnter={() => setShowVolumePopup(true)}
-          onMouseLeave={() => setShowVolumePopup(false)}
+          className={`sidebar-seekbar-bar ${isHoveringSeek ? 'hovered' : ''}`}
+          onClick={handleProgressClick}
+          onMouseEnter={() => setIsHoveringSeek(true)}
+          onMouseLeave={() => setIsHoveringSeek(false)}
+          onMouseMove={handleSeekMouseMove}
+          style={{ cursor: currentTrack?.canSeek === false ? 'default' : 'pointer' }}
         >
-          <button
-            type="button"
-            className="sidebar-ctrl-btn"
-            onClick={() => dispatchVolume(localVolume === 0 ? 50 : 0, true)}
-            onWheel={handleWheelVolume}
-            title={`Volume: ${localVolume}% (Scroll to adjust)`}
-            aria-label="Volume"
-          >
-            {localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
-
-          {showVolumePopup && (
-            <div className="sidebar-volume-popup" onWheel={handleWheelVolume}>
-              <div
-                className="sidebar-vol-bar"
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                  dispatchVolume(pct * 100, true);
-                }}
-              >
-                <div className="sidebar-vol-bar-fill" style={{ width: `${localVolume}%` }} />
-              </div>
-              <span className="sidebar-vol-text">{localVolume}%</span>
+          {isHoveringSeek && hoverTime !== null && (
+            <div className="sidebar-seek-tooltip" style={{ left: `${hoverPercent}%` }}>
+              {formatTime(hoverTime)}
             </div>
           )}
+          <div className="sidebar-seek-track-bg">
+            <div className="sidebar-seek-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
         </div>
+        <span
+          className="sidebar-time-val time-toggle-btn"
+          onClick={() => setShowRemaining(!showRemaining)}
+          title={showRemaining ? 'Show total duration' : 'Show remaining time'}
+        >
+          {showRemaining ? `-${formatTime(remaining)}` : formatTime(duration)}
+        </span>
       </div>
 
       {/* 7. BELOW SPACE: SHOW NEXT SONG (Hover to expand queue) */}

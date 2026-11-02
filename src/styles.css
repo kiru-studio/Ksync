@@ -2328,13 +2328,13 @@ button:focus:not(:focus-visible),
   100% { transform: scaleY(1.15); opacity: 0.95; }
 }
 
-/* 4. TRACK TITLE & ARTIST (Left) + HEART BUTTON (Right) */
+/* 4. TRACK TITLE & ARTIST (Left) + QUICK ACTIONS (Heart, Device, Volume) (Right) */
 .sidebar-track-row {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
-  gap: 12px !important;
+  gap: 8px !important;
   flex-shrink: 0 !important;
   padding: 0 !important;
   margin-bottom: 6px !important;
@@ -2364,11 +2364,18 @@ button:focus:not(:focus-visible),
   line-height: 1.25 !important;
 }
 
-.sidebar-heart-circle-btn {
+.sidebar-track-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-action-btn {
   background: none !important;
   border: none !important;
   cursor: pointer !important;
-  padding: 6px !important;
+  padding: 5px !important;
   border-radius: 50% !important;
   color: #b3b3b3 !important;
   display: flex !important;
@@ -2378,28 +2385,178 @@ button:focus:not(:focus-visible),
   flex-shrink: 0 !important;
 }
 
-.sidebar-heart-circle-btn:hover {
+.sidebar-action-btn:hover {
   color: #ffffff !important;
-  transform: scale(1.12) !important;
+  transform: scale(1.1) !important;
 }
 
-.sidebar-heart-circle-btn.liked {
+.sidebar-action-btn.liked {
   color: #ffffff !important;
 }
 
-/* 5. SEEKBAR */
-.sidebar-seekbar-container {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 5px !important;
-  flex-shrink: 0 !important;
-  margin-bottom: 6px !important;
-}
-
-.sidebar-seekbar-bar {
+.sidebar-device-anchor {
   position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.sidebar-device-dropdown {
+  position: absolute !important;
+  bottom: 34px !important;
+  right: 0 !important;
+  background: #181b26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  list-style: none !important;
+  margin: 0 !important;
+  min-width: 140px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7) !important;
+  z-index: 60 !important;
+}
+
+.sidebar-device-dropdown li button {
   width: 100% !important;
+  text-align: left !important;
+  background: none !important;
+  border: none !important;
+  color: #a1a1aa !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+}
+
+.sidebar-device-dropdown li button:hover,
+.sidebar-device-dropdown li button.active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.sidebar-volume-anchor {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.sidebar-volume-popup {
+  position: absolute !important;
+  bottom: 34px !important;
+  right: 0 !important;
+  background: #181b26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 120px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7) !important;
+  z-index: 60 !important;
+}
+
+.sidebar-vol-bar {
+  flex: 1 !important;
+  height: 6px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-radius: 3px !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+.sidebar-vol-bar-fill {
+  height: 100% !important;
+  background: #ffffff !important;
+  border-radius: 3px !important;
+}
+
+.sidebar-vol-text {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  width: 26px !important;
+  text-align: right !important;
+}
+
+/* 5. MEDIA CONTROLS (Shuffle, Prev, Big Circle Play DEAD CENTER, Next, Repeat) */
+.sidebar-controls-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  padding: 0 2px !important;
+  margin: 4px 0 6px 0 !important;
+}
+
+.sidebar-ctrl-btn {
+  background: none !important;
+  border: none !important;
+  color: #b3b3b3 !important;
+  cursor: pointer !important;
+  padding: 6px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  position: relative !important;
+}
+
+.sidebar-ctrl-btn:hover {
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+}
+
+.sidebar-ctrl-btn.active {
+  color: #ffffff !important;
+}
+
+.sidebar-ctrl-btn.active::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+}
+
+.sidebar-main-play-circle {
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-main-play-circle:hover {
+  transform: scale(1.06) !important;
+  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.35) !important;
+}
+
+/* 6. SEEKBAR ROW: 0:37 ── Progress Scrubber Bar ── 4:13 */
+.sidebar-seekbar-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  margin-bottom: 8px !important;
+}
+
+.sidebar-seekbar-row .sidebar-seekbar-bar {
+  flex: 1 !important;
+  position: relative !important;
   height: 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -2460,138 +2617,21 @@ button:focus:not(:focus-visible),
   z-index: 20 !important;
 }
 
-.sidebar-time-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  width: 100% !important;
-}
-
-.sidebar-time-val {
+.sidebar-seekbar-row .sidebar-time-val {
   font-size: 11px !important;
   font-weight: 500 !important;
   color: #a1a1aa !important;
   font-variant-numeric: tabular-nums !important;
+  flex-shrink: 0 !important;
 }
 
-.sidebar-time-val.time-toggle-btn {
+.sidebar-seekbar-row .sidebar-time-val.time-toggle-btn {
   cursor: pointer !important;
   transition: color 0.15s !important;
 }
 
-.sidebar-time-val.time-toggle-btn:hover {
+.sidebar-seekbar-row .sidebar-time-val.time-toggle-btn:hover {
   color: #ffffff !important;
-}
-
-/* 6. MEDIA CONTROLS */
-.sidebar-controls-container {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  flex-shrink: 0 !important;
-  padding: 0 !important;
-  margin-bottom: 8px !important;
-}
-
-.sidebar-ctrl-btn {
-  background: none !important;
-  border: none !important;
-  color: #b3b3b3 !important;
-  cursor: pointer !important;
-  padding: 6px !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  position: relative !important;
-}
-
-.sidebar-ctrl-btn:hover {
-  color: #ffffff !important;
-  transform: scale(1.08) !important;
-}
-
-.sidebar-ctrl-btn.active {
-  color: #ffffff !important;
-}
-
-.sidebar-ctrl-btn.active::after {
-  content: '' !important;
-  position: absolute !important;
-  bottom: 0px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: 4px !important;
-  height: 4px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-}
-
-.sidebar-main-play-circle {
-  width: 54px !important;
-  height: 54px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-  border: none !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
-  flex-shrink: 0 !important;
-}
-
-.sidebar-main-play-circle:hover {
-  transform: scale(1.06) !important;
-  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.35) !important;
-}
-
-.sidebar-volume-anchor {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.sidebar-volume-popup {
-  position: absolute !important;
-  bottom: 44px !important;
-  right: 0 !important;
-  background: #181b26 !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: 12px !important;
-  padding: 10px 12px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  width: 120px !important;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.7) !important;
-  z-index: 50 !important;
-}
-
-.sidebar-vol-bar {
-  flex: 1 !important;
-  height: 6px !important;
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-radius: 3px !important;
-  cursor: pointer !important;
-  position: relative !important;
-}
-
-.sidebar-vol-bar-fill {
-  height: 100% !important;
-  background: #ffffff !important;
-  border-radius: 3px !important;
-}
-
-.sidebar-vol-text {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  width: 26px !important;
-  text-align: right !important;
 }
 
 /* 7. BELOW SPACE: SHOW NEXT SONG (Hover to expand queue) */
