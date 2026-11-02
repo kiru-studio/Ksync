@@ -2118,11 +2118,11 @@ button:focus:not(:focus-visible),
   max-width: 275px !important;
   aspect-ratio: 1 / 1 !important;
   height: auto !important;
-  border-radius: 10px !important;
+  border-radius: var(--art-corner-radius, 10px) !important;
   overflow: hidden !important;
-  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.85), 0 0 28px var(--accent-soft, rgba(29, 185, 84, 0.25)) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease !important;
 }
 
 .sidebar-art-card:hover {
@@ -2153,8 +2153,8 @@ button:focus:not(:focus-visible),
   width: 8px !important;
   height: 8px !important;
   border-radius: 50% !important;
-  background: #ffffff !important;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8) !important;
+  background: var(--accent, #1db954) !important;
+  box-shadow: 0 0 8px var(--accent, #1db954) !important;
   animation: sidebarBadgePulse 1.8s infinite alternate !important;
 }
 
@@ -2232,24 +2232,26 @@ button:focus:not(:focus-visible),
 }
 
 .lyric-far {
-  font-size: 13px !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.65) !important;
   font-weight: 500 !important;
-  color: rgba(255, 255, 255, 0.28) !important;
+  color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.28)) !important;
+  opacity: var(--dock-lyrics-fade, 0.28) !important;
   transform: scale(0.95) !important;
 }
 
 .lyric-near {
-  font-size: 14.5px !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.75) !important;
   font-weight: 600 !important;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.6)) !important;
+  opacity: 0.65 !important;
   transform: scale(0.98) !important;
 }
 
 .lyric-active {
-  font-size: 19px !important;
-  font-weight: 800 !important;
-  color: #ffffff !important;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 255, 255, 0.25) !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * var(--dock-lyrics-scale, 1.04)) !important;
+  font-weight: var(--dock-lyrics-font-weight, 800) !important;
+  color: var(--dock-lyrics-active, var(--accent, #ffffff)) !important;
+  text-shadow: 0 0 var(--dock-lyrics-glow-radius, 20px) var(--dock-lyrics-active-glow, var(--accent-glow, rgba(29, 185, 84, 0.4))), 0 2px 14px rgba(0, 0, 0, 0.7) !important;
   transform: scale(1.04) !important;
 }
 
@@ -2272,7 +2274,8 @@ button:focus:not(:focus-visible),
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  color: rgba(255, 255, 255, 0.75) !important;
+  color: var(--dock-lyrics-active, var(--accent, #ffffff)) !important;
+  text-shadow: 0 0 10px var(--dock-lyrics-active-glow, var(--accent-glow, rgba(29, 185, 84, 0.4))) !important;
   padding: 2px 10px !important;
   font-size: 12px !important;
 }
@@ -2296,7 +2299,7 @@ button:focus:not(:focus-visible),
   font-size: 11px !important;
   font-weight: 600 !important;
   color: #f4f4f5 !important;
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--accent-soft, rgba(255, 255, 255, 0.12)) !important;
   padding: 5px 12px !important;
   border-radius: 20px !important;
   border: 1px solid rgba(255, 255, 255, 0.18) !important;
@@ -2314,9 +2317,10 @@ button:focus:not(:focus-visible),
 .sidebar-eq-bar {
   width: 3px !important;
   height: var(--eq-h) !important;
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: var(--accent, rgba(255, 255, 255, 0.8)) !important;
+  box-shadow: 0 0 6px var(--accent-glow, rgba(29, 185, 84, 0.4)) !important;
   border-radius: 2px !important;
-  opacity: 0.65 !important;
+  opacity: 0.85 !important;
 }
 
 .sidebar-ambient-eq.playing .sidebar-eq-bar {
@@ -2402,7 +2406,12 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-action-btn.liked {
-  color: #ffffff !important;
+  color: var(--accent, #1db954) !important;
+  filter: drop-shadow(0 0 6px var(--accent-glow, rgba(29, 185, 84, 0.4))) !important;
+}
+
+.sidebar-action-btn.liked svg {
+  animation: heartPopAnim 0.36s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .sidebar-device-anchor {
@@ -2440,8 +2449,8 @@ button:focus:not(:focus-visible),
 
 .sidebar-device-dropdown li button:hover,
 .sidebar-device-dropdown li button.active {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
+  background: var(--accent-soft, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--accent, #ffffff) !important;
 }
 
 .sidebar-volume-anchor {
@@ -2477,7 +2486,8 @@ button:focus:not(:focus-visible),
 
 .sidebar-vol-bar-fill {
   height: 100% !important;
-  background: #ffffff !important;
+  background: var(--accent, #1db954) !important;
+  box-shadow: 0 0 6px var(--accent-glow, rgba(29, 185, 84, 0.35)) !important;
   border-radius: 3px !important;
 }
 
@@ -2520,7 +2530,8 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-ctrl-btn.active {
-  color: #ffffff !important;
+  color: var(--accent, #1db954) !important;
+  filter: drop-shadow(0 0 6px var(--accent-glow, rgba(29, 185, 84, 0.4))) !important;
 }
 
 .sidebar-ctrl-btn.active::after {
@@ -2532,7 +2543,8 @@ button:focus:not(:focus-visible),
   width: 4px !important;
   height: 4px !important;
   border-radius: 50% !important;
-  background: #ffffff !important;
+  background: var(--accent, #1db954) !important;
+  box-shadow: 0 0 6px var(--accent, #1db954) !important;
 }
 
 .sidebar-main-play-circle {
@@ -2546,13 +2558,13 @@ button:focus:not(:focus-visible),
   justify-content: center !important;
   cursor: pointer !important;
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px var(--accent-soft, rgba(29, 185, 84, 0.2)) !important;
   flex-shrink: 0 !important;
 }
 
 .sidebar-main-play-circle:hover {
   transform: scale(1.06) !important;
-  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.35), 0 0 20px var(--accent-glow, rgba(29, 185, 84, 0.35)) !important;
 }
 
 /* 6. SEEKBAR ROW: 0:37 ── Progress Scrubber Bar ── 4:13 */
@@ -2618,8 +2630,8 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-seekbar-row .wave-bar.played {
-  background: #ffffff !important;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.45) !important;
+  background: var(--progress-color, var(--accent, #1db954)) !important;
+  box-shadow: 0 0 8px var(--accent-glow, rgba(29, 185, 84, 0.45)) !important;
 }
 
 .sidebar-seekbar-row .wave-bar.hover-fill:not(.played) {
@@ -2651,9 +2663,9 @@ button:focus:not(:focus-visible),
 
 .sidebar-seekbar-row .flat-progress-fill {
   height: 100% !important;
-  background: #ffffff !important;
+  background: var(--progress-color, var(--accent, #1db954)) !important;
   border-radius: 999px !important;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 8px var(--accent-glow, rgba(29, 185, 84, 0.45)) !important;
   transition: width 0.1s linear !important;
 }
 
@@ -2662,7 +2674,7 @@ button:focus:not(:focus-visible),
   height: 9px !important;
   border-radius: 50% !important;
   background: #ffffff !important;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9), 0 0 10px var(--accent, #1db954) !important;
   position: absolute !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
@@ -2785,7 +2797,7 @@ button:focus:not(:focus-visible),
   font-weight: 800 !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
-  color: #a1a1aa !important;
+  color: var(--accent, #a1a1aa) !important;
   line-height: 1.1 !important;
 }
 
@@ -2847,6 +2859,12 @@ button:focus:not(:focus-visible),
   display: flex !important;
   align-items: center !important;
   gap: 4px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.sidebar-queue-login-pill:hover {
+  background: var(--accent, #1db954) !important;
+  color: #09090b !important;
 }
 
 .sidebar-queue-scroll-area {
@@ -2874,7 +2892,7 @@ button:focus:not(:focus-visible),
   padding: 5px 6px !important;
   border-radius: 8px !important;
   cursor: pointer !important;
-  transition: background 0.15s !important;
+  transition: background 0.15s, border-color 0.15s !important;
 }
 
 .sidebar-queue-item:hover {
@@ -2882,8 +2900,12 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-queue-item.is-playing-now {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: none !important;
+  background: var(--accent-soft, rgba(29, 185, 84, 0.16)) !important;
+  border-left: 2px solid var(--accent, #1db954) !important;
+}
+
+.sidebar-queue-item.is-playing-now .queue-item-title {
+  color: var(--accent, #1db954) !important;
 }
 
 .sidebar-queue-item-art {

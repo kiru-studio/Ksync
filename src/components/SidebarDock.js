@@ -478,8 +478,8 @@ export default function SidebarDock({
             >
               <Heart
                 size={18}
-                fill={isLiked ? '#ffffff' : 'none'}
-                color={isLiked ? '#ffffff' : 'currentColor'}
+                fill={isLiked ? 'var(--accent, #1db954)' : 'none'}
+                color={isLiked ? 'var(--accent, #1db954)' : 'currentColor'}
               />
             </button>
 

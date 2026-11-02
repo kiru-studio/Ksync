@@ -1196,7 +1196,7 @@ function App() {
       }}
     >
       {/* Blurred Album Art Mood Backdrop & Dark Scrim (Only for Album Art Reactive theme) */}
-      {settings.theming?.backdropStyle === 'artwork' && currentTrack?.albumArt && (
+      {(settings.theming?.backdropStyle === 'artwork' || settings.theming?.preset === 'artwork') && currentTrack?.albumArt && (
         <div className="dock-backdrop-blur" aria-hidden="true">
           <img
             key={currentTrack.id || currentTrack.albumArt}
