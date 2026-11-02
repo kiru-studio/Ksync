@@ -163,6 +163,43 @@ const NowPlaying = ({
     }
   }, [track?.albumArt]);
   
+  // Circle rotating artwork state (toggle via click, sync with localStorage)
+  const [isCircleArt, setIsCircleArt] = useState(() => {
+    try {
+      return localStorage.getItem('ksync_circle_art') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'ksync_circle_art') {
+        setIsCircleArt(e.newValue === 'true');
+      }
+    };
+    const handleCustomToggle = (e) => {
+      if (e.detail && typeof e.detail.isCircle === 'boolean') {
+        setIsCircleArt(e.detail.isCircle);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('ksync:circle-art-toggle', handleCustomToggle);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ksync:circle-art-toggle', handleCustomToggle);
+    };
+  }, []);
+
+  const toggleCircleArt = () => {
+    const next = !isCircleArt;
+    setIsCircleArt(next);
+    try {
+      localStorage.setItem('ksync_circle_art', String(next));
+      window.dispatchEvent(new CustomEvent('ksync:circle-art-toggle', { detail: { isCircle: next } }));
+    } catch (_) {}
+  };
+
   // Right-hand time toggle (elapsed vs remaining) with persistence
   const [showRemaining, setShowRemaining] = useState(() => {
     try {
@@ -273,24 +310,37 @@ const NowPlaying = ({
 
   return (
     <div className="now-playing-compact">
-      <div className="art-wrapper">
+      <div
+        className={`art-wrapper ${isCircleArt ? 'circle-rotating-art' : ''} ${isPlaying ? 'is-playing' : 'is-paused'}`}
+        onClick={toggleCircleArt}
+        role="button"
+        tabIndex={0}
+        title={isCircleArt ? "Click to switch to standard album art" : "Click to switch to rotating circular vinyl art"}
+      >
         <div className="art-ambient-tint" />
-        {prevArt && (
+        <div className="art-disc-inner">
+          {prevArt && (
+            <img
+              src={prevArt}
+              alt="Previous Album Art"
+              className="art-img art-img-prev"
+            />
+          )}
           <img
-            src={prevArt}
-            alt="Previous Album Art"
-            className="art-img art-img-prev"
+            src={currentArt}
+            alt="Album Art"
+            className={`art-img art-img-current ${isCrossfading ? 'art-crossfade-in' : ''}`}
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="%23282828" width="64" height="64" rx="8"/><circle cx="32" cy="32" r="16" fill="%231db954" opacity="0.4"/></svg>';
+            }}
           />
+        </div>
+        {isCircleArt && (
+          <div className="art-vinyl-spindle">
+            <div className="art-vinyl-spindle-dot" />
+          </div>
         )}
-        <img
-          src={currentArt}
-          alt="Album Art"
-          className={`art-img art-img-current ${isCrossfading ? 'art-crossfade-in' : ''}`}
-          onError={(e) => {
-            e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="%23282828" width="64" height="64" rx="8"/><circle cx="32" cy="32" r="16" fill="%231db954" opacity="0.4"/></svg>';
-          }}
-        />
-        {isPlaying && <div className="art-pulse-glow" />}
+        {isPlaying && !isCircleArt && <div className="art-pulse-glow" />}
       </div>
 
       <div className="track-meta">

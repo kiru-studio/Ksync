@@ -122,6 +122,43 @@ export default function SidebarDock({
   const globalInteractionTimerRef = useRef(null);
   const latestSysVolRef = useRef(systemVolume ?? 50);
 
+  // Circle rotating artwork state (toggle via click, sync with localStorage and top dock)
+  const [isCircleArt, setIsCircleArt] = useState(() => {
+    try {
+      return localStorage.getItem('ksync_circle_art') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'ksync_circle_art') {
+        setIsCircleArt(e.newValue === 'true');
+      }
+    };
+    const handleCustomToggle = (e) => {
+      if (e.detail && typeof e.detail.isCircle === 'boolean') {
+        setIsCircleArt(e.detail.isCircle);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('ksync:circle-art-toggle', handleCustomToggle);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ksync:circle-art-toggle', handleCustomToggle);
+    };
+  }, []);
+
+  const toggleCircleArt = () => {
+    const next = !isCircleArt;
+    setIsCircleArt(next);
+    try {
+      localStorage.setItem('ksync_circle_art', String(next));
+      window.dispatchEvent(new CustomEvent('ksync:circle-art-toggle', { detail: { isCircle: next } }));
+    } catch (_) {}
+  };
+
   const [showDevices, setShowDevices] = useState(false);
   const [showRemaining, setShowRemaining] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -561,17 +598,30 @@ export default function SidebarDock({
         </div>
       </div>
 
-      {/* 2. BIG SQUARE ALBUM ARTWORK */}
+      {/* 2. BIG ALBUM ARTWORK (Square / Rotating Circle Disc on Click) */}
       <div className="sidebar-art-container">
-        <div className="sidebar-art-card">
-          <img
-            src={currentTrack?.albumArt || '/default-album-art.png'}
-            alt=""
-            className="sidebar-art-image"
-            onError={(e) => {
-              e.currentTarget.src = '/default-album-art.png';
-            }}
-          />
+        <div
+          className={`sidebar-art-card ${isCircleArt ? 'circle-rotating-art' : ''} ${isPlaying ? 'is-playing' : 'is-paused'}`}
+          onClick={toggleCircleArt}
+          role="button"
+          tabIndex={0}
+          title={isCircleArt ? 'Click to switch to standard album art' : 'Click to switch to rotating circular vinyl art'}
+        >
+          <div className="sidebar-art-disc-inner">
+            <img
+              src={currentTrack?.albumArt || '/default-album-art.png'}
+              alt=""
+              className="sidebar-art-image"
+              onError={(e) => {
+                e.currentTarget.src = '/default-album-art.png';
+              }}
+            />
+          </div>
+          {isCircleArt && (
+            <div className="art-vinyl-spindle">
+              <div className="art-vinyl-spindle-dot" />
+            </div>
+          )}
         </div>
       </div>
 
