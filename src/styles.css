@@ -1410,17 +1410,17 @@ button:focus:not(:focus-visible),
   transform: scale(0.99);
 }
 
-/* Now-Playing Highlight Row */
+/* Now-Playing Clean Highlight Row (No green highlight) */
 .queue-card.now-playing-row {
-  background: rgba(var(--accent-rgb, 29, 185, 84), 0.12);
-  border-left: 2.5px solid var(--accent, #1db954);
-  border-radius: 4px 8px 8px 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-left: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
 }
 
 .queue-card.now-playing-row:hover {
-  background: rgba(var(--accent-rgb, 29, 185, 84), 0.20);
-  border-color: var(--accent);
-  box-shadow: 0 6px 20px var(--accent-soft);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   transform: translateY(-1px);
 }
 
@@ -1529,12 +1529,12 @@ button:focus:not(:focus-visible),
 }
 
 .queue-card.now-playing-row .queue-card-title {
-  color: var(--accent);
+  color: #ffffff;
 }
 
 .queue-card.now-playing-row:hover .queue-card-title {
   color: #ffffff;
-  text-shadow: 0 0 10px var(--accent-glow);
+  text-shadow: none;
 }
 
 .queue-card-artist {
@@ -2668,7 +2668,7 @@ button:focus:not(:focus-visible),
   font-weight: 800 !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
-  color: var(--accent, #10b981) !important;
+  color: #a1a1aa !important;
   line-height: 1.1 !important;
 }
 
@@ -2690,7 +2690,7 @@ button:focus:not(:focus-visible),
 
 .sidebar-next-chevron.open {
   transform: rotate(180deg) !important;
-  color: var(--accent, #10b981) !important;
+  color: #ffffff !important;
 }
 
 .sidebar-queue-slideout {
@@ -2719,9 +2719,9 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-queue-login-pill {
-  background: var(--accent, #10b981) !important;
-  color: #09090b !important;
-  border: none !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 12px !important;
   padding: 2px 8px !important;
   font-size: 10px !important;
@@ -2739,9 +2739,15 @@ button:focus:not(:focus-visible),
   overflow-y: auto !important;
   overflow-x: hidden !important;
   max-height: 195px !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
-  padding-right: 2px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  padding-right: 0 !important;
+}
+
+.sidebar-queue-scroll-area::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .sidebar-queue-item {
@@ -2759,8 +2765,8 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-queue-item.is-playing-now {
-  background: rgba(16, 185, 129, 0.12) !important;
-  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
 }
 
 .sidebar-queue-item-art {
