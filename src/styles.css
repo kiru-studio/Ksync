@@ -2015,7 +2015,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   position: relative !important;
   overflow: hidden !important;
-  padding: 26px 18px 24px 18px !important; /* Generous space at top and bottom edges */
+  padding: 54px 18px 34px 18px !important; /* Matches Box placement: 54px top, 34px bottom */
   box-sizing: border-box !important;
   justify-content: space-between !important;
   scrollbar-width: none !important;
@@ -2028,15 +2028,15 @@ button:focus:not(:focus-visible),
   height: 0 !important;
 }
 
-/* 1. TOP BAR: Context Header */
+/* 1. TOP BAR: Context Header (Box A) */
 .sidebar-top-bar {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 100% !important;
   flex-shrink: 0 !important;
-  min-height: 36px !important;
-  margin-bottom: 18px !important; /* Generous space between header text and album art */
+  min-height: 44px !important;
+  margin-bottom: 28px !important; /* Space between header text and album art (Gap A->B) */
 }
 
 .sidebar-top-action-btn {
@@ -2102,20 +2102,20 @@ button:focus:not(:focus-visible),
   line-height: 1.25 !important;
 }
 
-/* 2. BIG SQUARE ALBUM ARTWORK */
+/* 2. BIG SQUARE ALBUM ARTWORK (Box B) */
 .sidebar-art-container {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 34px 0 !important; /* Space between album art and lyrics (Gap B->C) */
   flex-shrink: 0 !important;
 }
 
 .sidebar-art-card {
   position: relative !important;
   width: 100% !important;
-  max-width: 280px !important;
+  max-width: 275px !important;
   aspect-ratio: 1 / 1 !important;
   height: auto !important;
   border-radius: 10px !important;
@@ -2163,16 +2163,17 @@ button:focus:not(:focus-visible),
   100% { transform: scale(1.2); opacity: 1; }
 }
 
-/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (5 lines, zero scrollbars) */
+/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (Box C: 5 lines, zero scrollbars) */
 .sidebar-middle-lyrics-zone {
-  flex: 1 1 0% !important;
-  min-height: 120px !important;
+  flex: 1 1 auto !important;
+  min-height: 160px !important;
+  max-height: 240px !important;
   width: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
   overflow-y: hidden !important;
   position: relative !important;
-  margin: 4px 0 !important;
+  margin: 0 0 36px 0 !important; /* Space between lyrics and playback section (Gap C->D) */
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -2328,14 +2329,14 @@ button:focus:not(:focus-visible),
   100% { transform: scaleY(1.15); opacity: 0.95; }
 }
 
-/* 4. COMPACT PLAYBACK SECTION (Track Info + Centered Controls + Seekbar) */
+/* 4. COMPACT PLAYBACK SECTION (Box D: Track Info + Centered Controls + Seekbar) */
 .sidebar-playback-section {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
   flex-shrink: 0 !important;
   gap: 2px !important;
-  margin: 4px 0 38px 0 !important; /* Generous breathing space between progress bar and queue */
+  margin: 0 0 24px 0 !important; /* Space between progress bar and queue (Gap D->E: ~25px) */
 }
 
 /* Track Title & Artist (Left) + Quick Actions (Heart, Device, Volume) (Right) */
@@ -2709,12 +2710,11 @@ button:focus:not(:focus-visible),
   color: #ffffff !important;
 }
 
-/* 7. BELOW SPACE: SHOW NEXT SONG (Hover to expand queue) */
+/* 7. BELOW SPACE: SHOW NEXT SONG (Box E: Queue card) */
 .sidebar-next-song-card {
   position: relative !important;
   width: 100% !important;
-  margin-top: 6px !important;
-  margin-bottom: 4px !important;
+  margin: 0 !important;
   border-radius: 12px !important;
   background: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(24px) !important;
