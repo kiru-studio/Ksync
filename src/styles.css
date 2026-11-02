@@ -2015,7 +2015,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   position: relative !important;
   overflow: hidden !important;
-  padding: 16px 18px 24px 18px !important;
+  padding: 26px 18px 24px 18px !important; /* Generous space at top and bottom edges */
   box-sizing: border-box !important;
   justify-content: space-between !important;
   scrollbar-width: none !important;
@@ -2036,7 +2036,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   flex-shrink: 0 !important;
   min-height: 36px !important;
-  margin-bottom: 4px !important;
+  margin-bottom: 18px !important; /* Generous space between header text and album art */
 }
 
 .sidebar-top-action-btn {
@@ -2108,7 +2108,7 @@ button:focus:not(:focus-visible),
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
-  margin: 4px 0 6px 0 !important;
+  margin: 0 0 6px 0 !important;
   flex-shrink: 0 !important;
 }
 
