@@ -11,11 +11,9 @@ import {
   Volume2,
   VolumeX,
   Monitor,
-  ChevronDown,
   ChevronUp,
   Music,
   Sparkles,
-  X,
   LogIn,
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
@@ -338,54 +336,38 @@ export default function SidebarDock({
 
   // Context Header Titles (matches mock: "Playing from Playlist" / "Avalin kural")
   const { contextSubText, contextMainText } = useMemo(() => {
-    if (queue?.rawSource) {
-      const isPlaylist = /^playlist:\s*/i.test(queue.rawSource);
-      const isAlbum = /^album:\s*/i.test(queue.rawSource);
-      const isArtist = /^artist:\s*/i.test(queue.rawSource);
-      const clean = queue.rawSource.replace(/^(playlist:\s*|album:\s*|artist:\s*)/i, '').trim();
-      if (isPlaylist) return { contextSubText: 'Playing from Playlist', contextMainText: clean };
-      if (isAlbum) return { contextSubText: 'Playing from Album', contextMainText: clean };
-      if (isArtist) return { contextSubText: 'Playing from Artist', contextMainText: clean };
-      return { contextSubText: 'Playing from', contextMainText: clean };
+    const raw =
+      currentTrack?.contextTitle ||
+      queue?.source ||
+      queue?.rawSource ||
+      queue?.meta?.source;
+
+    if (raw && typeof raw === 'string') {
+      const isPlaylist = /^playlist:\s*/i.test(raw);
+      const isAlbum = /^album:\s*/i.test(raw);
+      const isArtist = /^artist:\s*/i.test(raw);
+      const clean = raw.replace(/^(playlist:\s*|album:\s*|artist:\s*)/i, '').trim();
+      if (clean && clean !== 'Up Next' && clean !== 'Queue' && clean !== 'Recently Played') {
+        if (isPlaylist) return { contextSubText: 'Playing from Playlist', contextMainText: clean };
+        if (isAlbum) return { contextSubText: 'Playing from Album', contextMainText: clean };
+        if (isArtist) return { contextSubText: 'Playing from Artist', contextMainText: clean };
+        return { contextSubText: 'Playing from', contextMainText: clean };
+      }
     }
     if (currentTrack?.album) {
       return { contextSubText: 'Playing from Album', contextMainText: currentTrack.album };
     }
     return { contextSubText: 'Playing from', contextMainText: 'Spotify' };
-  }, [queue?.rawSource, currentTrack?.album]);
+  }, [currentTrack?.contextTitle, queue?.source, queue?.rawSource, queue?.meta?.source, currentTrack?.album]);
 
   return (
     <div className="sidebar-dock-root">
-      {/* 1. TOP HEADER: Chevron Left + Playing from Playlist Context + Close Right */}
+      {/* 1. TOP HEADER: Centered Playing from Playlist / Album Context */}
       <div className="sidebar-top-bar">
-        <button
-          type="button"
-          className="sidebar-top-action-btn"
-          onClick={onHideDock}
-          title="Minimize / Hide Dock"
-          aria-label="Minimize"
-        >
-          <ChevronDown size={22} />
-        </button>
-
         <div className="sidebar-context-group" title={`${contextSubText}: ${contextMainText}`}>
           <span className="sidebar-context-sub">{contextSubText}</span>
           <span className="sidebar-context-main">{contextMainText}</span>
         </div>
-
-        {onHideDock ? (
-          <button
-            type="button"
-            className="sidebar-top-action-btn close-btn"
-            onClick={onHideDock}
-            title="Close Dock"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        ) : (
-          <div className="sidebar-top-action-placeholder" />
-        )}
       </div>
 
       {/* 2. BIG SQUARE ALBUM ARTWORK */}

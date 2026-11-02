@@ -757,6 +757,11 @@ function createWindow() {
     try {
       const body = await SpotifyAPI.getPlayer(tokenStore, spotifyConfig);
       const normalized = normalizePlayerState(body);
+      if (normalized && normalized.contextUri) {
+        try {
+          normalized.contextTitle = await resolveContextTitle(tokenStore, spotifyConfig, normalized.contextUri);
+        } catch (_) {}
+      }
       // Log when we get a response but no track (for debugging)
       if (body && !body.item) {
         console.log('[Spotify] Got player state but item is null. Device:', body.device?.name, 'Playing:', body.is_playing);
