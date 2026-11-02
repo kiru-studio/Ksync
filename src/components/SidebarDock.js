@@ -10,7 +10,7 @@ import {
   Heart,
   Volume2,
   VolumeX,
-  ListMusic,
+  ChevronDown,
   ChevronUp,
   Music,
   Sparkles,
@@ -19,11 +19,6 @@ import {
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
-
-const WAVE_BARS = [
-  28, 44, 65, 85, 52, 36, 74, 98, 80, 55, 42, 78, 92, 100, 70, 46, 62, 88, 96,
-  76, 50, 38, 60, 84, 90, 72, 48, 64, 86, 94, 66, 44, 56, 42, 32, 24,
-];
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds === null || seconds === undefined) return '0:00';
@@ -107,6 +102,8 @@ export default function SidebarDock({
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
   const [hoverPercent, setHoverPercent] = useState(0);
   const [hoverTime, setHoverTime] = useState(null);
+
+
 
   useEffect(() => {
     if (typeof volume === 'number') {
@@ -245,7 +242,7 @@ export default function SidebarDock({
     }, 180);
   };
 
-  // Exactly 5 Lines: 2 before, 1 current, 2 next
+  // Exactly 5 Lines: 2 before, 1 current, 2 next (User explicit specification)
   const fiveLines = useMemo(() => {
     if (!lyrics || lyrics.length === 0) return [];
     const activeIdx = currentLyricIndex >= 0 ? currentLyricIndex : 0;
@@ -299,111 +296,120 @@ export default function SidebarDock({
     else onRepeat('off');
   };
 
-  // Center-aligned context title
-  const contextTag = useMemo(() => {
+  // Context Header Titles (matches mock: "Playing from Playlist" / "Avalin kural")
+  const { contextSubText, contextMainText } = useMemo(() => {
     if (queue?.rawSource) {
       const isPlaylist = /^playlist:\s*/i.test(queue.rawSource);
       const isAlbum = /^album:\s*/i.test(queue.rawSource);
-      const clean = queue.rawSource.replace(/^(playlist:\s*|album:\s*)/i, '').trim();
-      if (isPlaylist) return `Playing from playlist • ${clean}`;
-      if (isAlbum) return `Playing from album • ${clean}`;
-      return `Playing from • ${clean}`;
+      const isArtist = /^artist:\s*/i.test(queue.rawSource);
+      const clean = queue.rawSource.replace(/^(playlist:\s*|album:\s*|artist:\s*)/i, '').trim();
+      if (isPlaylist) return { contextSubText: 'Playing from Playlist', contextMainText: clean };
+      if (isAlbum) return { contextSubText: 'Playing from Album', contextMainText: clean };
+      if (isArtist) return { contextSubText: 'Playing from Artist', contextMainText: clean };
+      return { contextSubText: 'Playing from', contextMainText: clean };
     }
-    if (currentTrack?.album) return `Playing from album • ${currentTrack.album}`;
-    return 'Playing from Spotify';
+    if (currentTrack?.album) {
+      return { contextSubText: 'Playing from Album', contextMainText: currentTrack.album };
+    }
+    return { contextSubText: 'Playing from', contextMainText: 'Spotify' };
   }, [queue?.rawSource, currentTrack?.album]);
 
   return (
     <div className="sidebar-dock-root">
-      {/* 1. TOP: PLAYING FROM CONTEXT (Center Aligned) */}
-      <div className="sidebar-top-context-row">
-        <div className="sidebar-context-badge-centered" title={contextTag}>
-          {contextTag}
+      {/* 1. TOP HEADER: Chevron Left + Playing from Playlist Context + Close Right */}
+      <div className="sidebar-top-bar">
+        <button
+          type="button"
+          className="sidebar-top-action-btn"
+          onClick={onHideDock}
+          title="Minimize / Hide Dock"
+          aria-label="Minimize"
+        >
+          <ChevronDown size={22} />
+        </button>
+
+        <div className="sidebar-context-group" title={`${contextSubText}: ${contextMainText}`}>
+          <span className="sidebar-context-sub">{contextSubText}</span>
+          <span className="sidebar-context-main">{contextMainText}</span>
         </div>
-        {onHideDock && (
+
+        {onHideDock ? (
           <button
             type="button"
-            className="sidebar-icon-btn-corner"
+            className="sidebar-top-action-btn close-btn"
             onClick={onHideDock}
-            title="Hide Dock"
-            aria-label="Hide Dock"
+            title="Close Dock"
+            aria-label="Close"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
+        ) : (
+          <div className="sidebar-top-action-placeholder" />
         )}
       </div>
 
       {/* 2. BIG SQUARE ALBUM ARTWORK */}
-      <div className="sidebar-art-container-square">
-        <div className="sidebar-art-wrapper-square">
+      <div className="sidebar-art-container">
+        <div className="sidebar-art-card">
           <img
             src={currentTrack?.albumArt || '/default-album-art.png'}
             alt=""
-            className="sidebar-art-img-square"
+            className="sidebar-art-image"
             onError={(e) => {
               e.currentTarget.src = '/default-album-art.png';
             }}
           />
           {isPlaying && (
-            <div className="sidebar-art-playing-badge" title="Playing">
-              <span className="sidebar-art-pulse" />
+            <div className="sidebar-art-live-badge" title="Playing">
+              <span className="sidebar-live-dot" />
             </div>
           )}
         </div>
       </div>
 
-      {/* 3. 5-LINE LYRICS STACK: b4 2, current, next 2 */}
-      <div className="sidebar-lyrics-five-stack">
+      {/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (5 lines: 2 before, current, 2 next) */}
+      <div className="sidebar-middle-lyrics-zone">
         {lyrics && lyrics.length > 0 ? (
-          <div className="sidebar-five-lines-wrapper">
-            {fiveLines.map((line, idx) => {
-              if (line.isEmpty) {
-                return (
-                  <div key={`empty-${idx}`} className="sidebar-lyric-line-slot empty-slot">
-                    <span className="sidebar-lyric-placeholder">&nbsp;</span>
-                  </div>
-                );
-              }
+          <div className="sidebar-lyrics-scroller">
+            {fiveLines.map((line) => {
+              const isActive = line.isCurrent;
+              const isNear = Math.abs(line.offset) === 1;
+              const isFar = Math.abs(line.offset) === 2;
+              const isSeekable = !line.isEmpty && typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
 
-              const isCurrent = line.isCurrent;
-              const isPrev = line.offset === -1;
-              const isNext = line.offset === 1;
-              const isSeekable = typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
-
-              let lineClass = 'lyric-slot-far';
-              if (isCurrent) lineClass = 'lyric-slot-current';
-              else if (isPrev || isNext) lineClass = 'lyric-slot-near';
+              let lineClass = 'lyric-empty';
+              if (isActive) lineClass = 'lyric-active';
+              else if (isNear) lineClass = 'lyric-near';
+              else if (isFar) lineClass = 'lyric-far';
 
               return (
                 <div
-                  key={`${line.startTime ?? line.originalIdx}-${line.offset}`}
-                  className={`sidebar-lyric-line-slot ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
+                  key={`5l-${line.originalIdx}-${line.offset}`}
+                  className={`sidebar-lyric-item ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
                   onClick={() => {
                     if (isSeekable) onSeek(line.startTime);
                   }}
                   title={isSeekable ? `Jump to ${formatTime(line.startTime)}` : line.text}
                 >
-                  {line.isIntro ? (
-                    <div className="sidebar-musical-interlude">
+                  {line.isEmpty ? (
+                    <span className="lyric-content-text">&nbsp;</span>
+                  ) : line.isIntro ? (
+                    <div className="sidebar-interlude-pill">
                       <Music size={13} />
-                      <div className="sidebar-soundwave-mini">
-                        <span className="sw-bar b1" />
-                        <span className="sw-bar b2" />
-                        <span className="sw-bar b3" />
-                      </div>
+                      <span>Instrumental Interlude</span>
                     </div>
                   ) : (
-                    <span className="sidebar-lyric-text">{line.text}</span>
+                    <span className="lyric-content-text">{line.text}</span>
                   )}
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="sidebar-instrumental-card-compact">
-            <div className="sidebar-inst-badge">
+          <div className="sidebar-ambient-card">
+            <div className="sidebar-ambient-chip">
               <Sparkles size={11} />
-              <span>{currentTrack?.title ? 'Synced Lyrics Unavailable • Pure Audio' : 'Waiting for music...'}</span>
+              <span>{currentTrack?.title ? 'Synced Lyrics Unavailable • Pure Audio' : 'Ready for playback'}</span>
             </div>
             <div className={`sidebar-ambient-eq ${isPlaying ? 'playing' : ''}`}>
               {[25, 45, 75, 95, 70, 50, 85, 100, 65, 35, 55, 90, 80, 45, 30].map((h, i) => (
@@ -421,220 +427,208 @@ export default function SidebarDock({
         )}
       </div>
 
-      {/* 4. SONG NAME & ARTIST NAME (Both on New Line, Aligned Center) */}
-      <div className="sidebar-track-info-centered">
-        <div className="sidebar-title-row-centered">
+      {/* 4. TRACK TITLE & ARTIST (Left) + HEART BUTTON (Right) */}
+      <div className="sidebar-track-row">
+        <div className="sidebar-track-info-col">
           <MarqueeText
             text={currentTrack?.title || 'No Track Playing'}
-            className="sidebar-track-title-centered"
+            className="sidebar-title-text"
             speed={26}
             gap={30}
           />
-          <button
-            type="button"
-            className={`sidebar-like-btn ${isLiked ? 'liked' : ''}`}
-            onClick={handleToggleLike}
-            title={isLiked ? 'Remove from Library' : 'Save to Library'}
-            aria-label="Save to Library"
-          >
-            <Heart
-              size={15}
-              fill={isLiked ? 'var(--accent, #10b981)' : 'none'}
-              color={isLiked ? 'var(--accent, #10b981)' : 'currentColor'}
-            />
-          </button>
-        </div>
-        <div className="sidebar-artist-row-centered">
           <MarqueeText
             text={currentTrack?.artist || 'Open Spotify to start playback'}
-            className="sidebar-track-artist-centered"
+            className="sidebar-artist-text"
             speed={20}
             gap={24}
           />
         </div>
+        <button
+          type="button"
+          className={`sidebar-heart-circle-btn ${isLiked ? 'liked' : ''}`}
+          onClick={handleToggleLike}
+          title={isLiked ? 'Remove from Your Library' : 'Save to Your Library'}
+          aria-label="Like"
+        >
+          <Heart
+            size={22}
+            fill={isLiked ? 'var(--accent, #10b981)' : 'none'}
+            color={isLiked ? 'var(--accent, #10b981)' : 'currentColor'}
+          />
+        </button>
       </div>
 
-      {/* 5. MUSIC CONTROLS (Seekbar + Playback Buttons) */}
-      <div className="sidebar-player-controls-card">
-        {/* Seekbar Row */}
-        <div className="sidebar-seekbar-row">
-          <span className="sidebar-time-label">{formatTime(progress)}</span>
-          <div
-            className={`sidebar-seekbar-track ${isHoveringSeek ? 'hovered' : ''}`}
-            onClick={handleProgressClick}
-            onMouseEnter={() => setIsHoveringSeek(true)}
-            onMouseLeave={() => setIsHoveringSeek(false)}
-            onMouseMove={handleSeekMouseMove}
-            style={{ cursor: currentTrack?.canSeek === false ? 'default' : 'pointer' }}
-          >
-            {isHoveringSeek && hoverTime !== null && (
-              <div className="sidebar-seekbar-tooltip" style={{ left: `${hoverPercent}%` }}>
-                {formatTime(hoverTime)}
-              </div>
-            )}
-
-            <div className={`sidebar-wave-container ${isPlaying ? 'is-playing' : ''}`}>
-              {WAVE_BARS.slice(0, 24).map((baseH, idx) => {
-                const barPct = (idx / 23) * 100;
-                const isPlayed = barPct <= progressPercent;
-                const isHovered = isHoveringSeek && barPct <= hoverPercent;
-                return (
-                  <span
-                    key={idx}
-                    className={`sidebar-wave-bar ${isPlayed ? 'played' : 'unplayed'} ${isHovered ? 'hover' : ''}`}
-                    style={{
-                      '--wb-h': `${baseH}%`,
-                      '--wb-delay': `${(idx % 6) * -0.14}s`,
-                    }}
-                  />
-                );
-              })}
+      {/* 5. SEEKBAR (Scrubber line with 0:30 and 4:59) */}
+      <div className="sidebar-seekbar-container">
+        <div
+          className={`sidebar-seekbar-bar ${isHoveringSeek ? 'hovered' : ''}`}
+          onClick={handleProgressClick}
+          onMouseEnter={() => setIsHoveringSeek(true)}
+          onMouseLeave={() => setIsHoveringSeek(false)}
+          onMouseMove={handleSeekMouseMove}
+          style={{ cursor: currentTrack?.canSeek === false ? 'default' : 'pointer' }}
+        >
+          {isHoveringSeek && hoverTime !== null && (
+            <div className="sidebar-seek-tooltip" style={{ left: `${hoverPercent}%` }}>
+              {formatTime(hoverTime)}
             </div>
-
-            <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
+          )}
+          <div className="sidebar-seek-track-bg">
+            <div className="sidebar-seek-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-          <button
-            type="button"
-            className="sidebar-time-label time-toggle-btn"
+          <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
+        </div>
+        <div className="sidebar-time-row">
+          <span className="sidebar-time-val">{formatTime(progress)}</span>
+          <span
+            className="sidebar-time-val time-toggle-btn"
             onClick={() => setShowRemaining(!showRemaining)}
-            title={showRemaining ? 'Switch to duration' : 'Switch to remaining'}
+            title={showRemaining ? 'Show total duration' : 'Show remaining time'}
           >
             {showRemaining ? `-${formatTime(remaining)}` : formatTime(duration)}
-          </button>
-        </div>
-
-        {/* Buttons Row */}
-        <div className="sidebar-buttons-row">
-          <button
-            type="button"
-            className={`sidebar-btn-sub ${shuffleState ? 'active' : ''}`}
-            onClick={() => onShuffle && onShuffle(!shuffleState)}
-            title={shuffleState ? 'Disable Shuffle' : 'Enable Shuffle'}
-            aria-label="Shuffle"
-          >
-            <Shuffle size={15} />
-          </button>
-
-          <button
-            type="button"
-            className="sidebar-btn-sub"
-            onClick={() => onSkip && onSkip('previous')}
-            title="Previous track"
-            aria-label="Previous track"
-          >
-            <SkipBack size={18} />
-          </button>
-
-          <button
-            type="button"
-            className="sidebar-btn-play"
-            onClick={onPlayPause}
-            title={isPlaying ? 'Pause' : 'Play'}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? (
-              <Pause size={17} fill="#09090b" color="#09090b" />
-            ) : (
-              <Play size={17} fill="#09090b" color="#09090b" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="sidebar-btn-sub"
-            onClick={() => onSkip && onSkip('next')}
-            title="Next track"
-            aria-label="Next track"
-          >
-            <SkipForward size={18} />
-          </button>
-
-          <button
-            type="button"
-            className={`sidebar-btn-sub ${repeatState !== 'off' ? 'active' : ''}`}
-            onClick={cycleRepeat}
-            title={`Repeat: ${repeatState}`}
-            aria-label={`Repeat: ${repeatState}`}
-          >
-            {repeatState === 'track' ? <Repeat1 size={15} /> : <Repeat size={15} />}
-          </button>
-
-          {/* Volume Button with Popover */}
-          <div
-            className="sidebar-volume-wrapper"
-            onMouseEnter={() => setShowVolumePopup(true)}
-            onMouseLeave={() => setShowVolumePopup(false)}
-          >
-            <button
-              type="button"
-              className="sidebar-btn-sub"
-              onClick={() => dispatchVolume(localVolume === 0 ? 50 : 0, true)}
-              onWheel={handleWheelVolume}
-              title={`Volume: ${localVolume}% (Scroll to adjust)`}
-              aria-label="Volume"
-            >
-              {localVolume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-            </button>
-
-            {showVolumePopup && (
-              <div
-                className="sidebar-volume-popover"
-                onWheel={handleWheelVolume}
-              >
-                <div
-                  className="sidebar-vol-track"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                    dispatchVolume(pct * 100, true);
-                  }}
-                >
-                  <div className="sidebar-vol-fill" style={{ width: `${localVolume}%` }} />
-                </div>
-                <span className="sidebar-vol-num">{localVolume}%</span>
-              </div>
-            )}
-          </div>
+          </span>
         </div>
       </div>
 
-      {/* 6. UP NEXT SONG & HOVER TO SHOW QUEUE */}
+      {/* 6. MEDIA CONTROLS (Shuffle, Prev, Big Circle Play, Next, Repeat, Volume) */}
+      <div className="sidebar-controls-container">
+        <button
+          type="button"
+          className={`sidebar-ctrl-btn ${shuffleState ? 'active' : ''}`}
+          onClick={() => onShuffle && onShuffle(!shuffleState)}
+          title={shuffleState ? 'Disable Shuffle' : 'Enable Shuffle'}
+          aria-label="Shuffle"
+        >
+          <Shuffle size={19} />
+        </button>
+
+        <button
+          type="button"
+          className="sidebar-ctrl-btn"
+          onClick={() => onSkip && onSkip('previous')}
+          title="Previous Track"
+          aria-label="Previous"
+        >
+          <SkipBack size={24} fill="currentColor" />
+        </button>
+
+        {/* Large Circular Play/Pause Button */}
+        <button
+          type="button"
+          className="sidebar-main-play-circle"
+          onClick={onPlayPause}
+          title={isPlaying ? 'Pause' : 'Play'}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? (
+            <Pause size={22} fill="#000000" color="#000000" />
+          ) : (
+            <Play size={22} fill="#000000" color="#000000" style={{ marginLeft: '2px' }} />
+          )}
+        </button>
+
+        <button
+          type="button"
+          className="sidebar-ctrl-btn"
+          onClick={() => onSkip && onSkip('next')}
+          title="Next Track"
+          aria-label="Next"
+        >
+          <SkipForward size={24} fill="currentColor" />
+        </button>
+
+        <button
+          type="button"
+          className={`sidebar-ctrl-btn ${repeatState !== 'off' ? 'active' : ''}`}
+          onClick={cycleRepeat}
+          title={`Repeat: ${repeatState}`}
+          aria-label={`Repeat: ${repeatState}`}
+        >
+          {repeatState === 'track' ? <Repeat1 size={19} /> : <Repeat size={19} />}
+        </button>
+
+        {/* Volume Button with Popover */}
+        <div
+          className="sidebar-volume-anchor"
+          onMouseEnter={() => setShowVolumePopup(true)}
+          onMouseLeave={() => setShowVolumePopup(false)}
+        >
+          <button
+            type="button"
+            className="sidebar-ctrl-btn"
+            onClick={() => dispatchVolume(localVolume === 0 ? 50 : 0, true)}
+            onWheel={handleWheelVolume}
+            title={`Volume: ${localVolume}% (Scroll to adjust)`}
+            aria-label="Volume"
+          >
+            {localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+
+          {showVolumePopup && (
+            <div className="sidebar-volume-popup" onWheel={handleWheelVolume}>
+              <div
+                className="sidebar-vol-bar"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  dispatchVolume(pct * 100, true);
+                }}
+              >
+                <div className="sidebar-vol-bar-fill" style={{ width: `${localVolume}%` }} />
+              </div>
+              <span className="sidebar-vol-text">{localVolume}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 7. BELOW SPACE: SHOW NEXT SONG (Hover to expand queue) */}
       <div
-        className={`sidebar-queue-drawer ${isQueueHovered ? 'expanded' : ''}`}
+        className={`sidebar-next-song-card ${isQueueHovered ? 'expanded' : ''}`}
         onMouseEnter={handleQueueMouseEnter}
         onMouseLeave={handleQueueMouseLeave}
       >
-        {/* Collapsed Pill Indicator (Always visible at the base) */}
-        <div className="sidebar-queue-tab-bar">
-          <div className="sidebar-queue-tab-left">
-            <ListMusic size={14} className="sidebar-queue-icon" />
-            <span className="sidebar-queue-pill-label">
-              {nextTrack ? (
-                <>
-                  <strong className="queue-up-next-tag">Up Next:</strong> {nextTrack.title || 'Next Track'}
-                  {nextTrack.artist ? ` · ${nextTrack.artist}` : ''}
-                </>
-              ) : (
-                'Up Next: Hover to view queue'
-              )}
-            </span>
+        {/* Collapsed Bar: Up Next Preview */}
+        <div className="sidebar-next-song-header">
+          <div className="sidebar-next-song-left">
+            {nextTrack?.albumArt ? (
+              <img
+                src={nextTrack.albumArt}
+                alt=""
+                className="sidebar-next-thumb"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="sidebar-next-thumb-placeholder">
+                <Music size={13} />
+              </div>
+            )}
+            <div className="sidebar-next-text-col">
+              <span className="sidebar-next-label">UP NEXT</span>
+              <span className="sidebar-next-title">
+                {nextTrack
+                  ? `${nextTrack.title || 'Unknown Title'} • ${nextTrack.artist || 'Unknown Artist'}`
+                  : 'Open queue to view upcoming tracks'}
+              </span>
+            </div>
           </div>
-          <ChevronUp size={14} className={`sidebar-drawer-chevron ${isQueueHovered ? 'rotated' : ''}`} />
+          <ChevronUp size={16} className={`sidebar-next-chevron ${isQueueHovered ? 'open' : ''}`} />
         </div>
 
-        {/* Expanded Drawer Surface (Slides up seamlessly on hover) */}
-        <div className="sidebar-queue-expanded-panel">
-          <div className="sidebar-queue-header">
-            <span className="queue-title-bold">Upcoming Tracks ({queueItems.length})</span>
+        {/* Expanded Queue List (Reveals on hover) */}
+        <div className="sidebar-queue-slideout">
+          <div className="sidebar-queue-slideout-header">
+            <span className="queue-badge-title">Upcoming Queue ({queueItems.length})</span>
             {!isAuthenticated && onLogin && (
-              <button type="button" className="sidebar-queue-connect-btn" onClick={onLogin}>
+              <button type="button" className="sidebar-queue-login-pill" onClick={onLogin}>
                 <LogIn size={11} />
                 <span>Connect</span>
               </button>
             )}
           </div>
-
-          <div className="sidebar-queue-list">
+          <div className="sidebar-queue-scroll-area">
             {queueItems.length > 0 ? (
               queueItems.map((item, idx) => {
                 const isCur = isTrackMatch(item, currentTrack);
@@ -644,32 +638,31 @@ export default function SidebarDock({
                 return (
                   <div
                     key={item.id || item.uri || idx}
-                    className={`sidebar-queue-row ${isCur ? 'active-playing' : ''}`}
+                    className={`sidebar-queue-item ${isCur ? 'is-playing-now' : ''}`}
                     onClick={() => onPlayTrack && onPlayTrack(itemUri, queueOffset, item, queue?.meta?.contextUri)}
-                    title={`Play ${item.title} - ${item.artist}`}
                     role="button"
                     tabIndex={0}
                   >
                     <img
                       src={item.albumArt || '/default-album-art.png'}
                       alt=""
-                      className="sidebar-queue-thumb"
+                      className="sidebar-queue-item-art"
                       onError={(e) => {
                         e.currentTarget.src = '/default-album-art.png';
                       }}
                     />
-                    <div className="sidebar-queue-info">
-                      <div className="sidebar-queue-row-title">{item.title || 'Unknown Title'}</div>
-                      <div className="sidebar-queue-row-artist">{item.artist || 'Unknown Artist'}</div>
+                    <div className="sidebar-queue-item-meta">
+                      <div className="queue-item-title">{item.title || 'Unknown Title'}</div>
+                      <div className="queue-item-artist">{item.artist || 'Unknown Artist'}</div>
                     </div>
-                    <span className="sidebar-queue-duration">
+                    <span className="queue-item-time">
                       {formatDuration(item.duration_ms || item.duration)}
                     </span>
                   </div>
                 );
               })
             ) : (
-              <div className="sidebar-queue-empty">
+              <div className="sidebar-queue-none">
                 <span>{isAuthenticated ? 'No upcoming tracks in queue' : 'Connect Spotify to see full queue'}</span>
               </div>
             )}
