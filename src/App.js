@@ -1239,6 +1239,10 @@ function App() {
             onPlayPause={handlePlayPause}
             onSkip={handleSkip}
             onVolumeChange={handleVolumeChange}
+            systemVolume={systemVolume}
+            systemMuted={systemMuted}
+            onSystemVolumeChange={handleSystemVolumeChange}
+            onSystemMuteToggle={handleSystemMuteToggle}
             onProgressChange={handleProgressChange}
             onShuffle={handleShuffle}
             onRepeat={handleRepeat}

@@ -8,6 +8,8 @@ import {
   Repeat,
   Repeat1,
   Heart,
+  Volume,
+  Volume1,
   Volume2,
   VolumeX,
   Monitor,
@@ -74,6 +76,8 @@ export default function SidebarDock({
   progress = 0,
   duration = 0,
   volume = 50,
+  systemVolume = 50,
+  systemMuted = false,
   shuffleState = false,
   repeatState = 'off',
   devices = [],
@@ -85,6 +89,8 @@ export default function SidebarDock({
   onPlayPause,
   onSkip,
   onVolumeChange,
+  onSystemVolumeChange,
+  onSystemMuteToggle,
   onProgressChange,
   onShuffle,
   onRepeat,
@@ -94,13 +100,31 @@ export default function SidebarDock({
   onLogin,
   onHideDock,
 }) {
+  // Spotify Volume state (matching top dock expandable slider)
   const [localVolume, setLocalVolume] = useState(volume ?? 50);
-  const [showVolumePopup, setShowVolumePopup] = useState(false);
+  const [prevSpotifyVolume, setPrevSpotifyVolume] = useState(volume || 50);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const latestVolRef = useRef(volume ?? 50);
+  const volThrottleTimerRef = useRef(null);
+
+  // Global System Volume state (matching top dock lyrics-volume-pill)
+  const [displaySysVolume, setDisplaySysVolume] = useState(systemVolume ?? 50);
+  const [prevSysVolume, setPrevSysVolume] = useState(systemVolume || 50);
+  const [isSysMuted, setIsSysMuted] = useState(systemMuted || false);
+  const [isHoveringGlobalVol, setIsHoveringGlobalVol] = useState(false);
+  const [isGlobalDragging, setIsGlobalDragging] = useState(false);
+  const [isGlobalInteracting, setIsGlobalInteracting] = useState(false);
+
+  const globalDraggingRef = useRef(false);
+  const globalInteractingRef = useRef(false);
+  const globalVolTrackRef = useRef(null);
+  const sysThrottleTimerRef = useRef(null);
+  const globalInteractionTimerRef = useRef(null);
+  const latestSysVolRef = useRef(systemVolume ?? 50);
+
   const [showDevices, setShowDevices] = useState(false);
   const [showRemaining, setShowRemaining] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const volThrottleTimerRef = useRef(null);
-  const latestVolRef = useRef(volume ?? 50);
 
   const deviceList = useMemo(() => (Array.isArray(devices) ? devices : []), [devices]);
   const currentDevice = useMemo(
@@ -121,6 +145,7 @@ export default function SidebarDock({
   const lyricsScrollerRef = useRef(null);
   const activeLyricRef = useRef(null);
 
+  // Sync external Spotify volume changes
   useEffect(() => {
     if (typeof volume === 'number') {
       setLocalVolume(volume);
@@ -128,12 +153,206 @@ export default function SidebarDock({
     }
   }, [volume]);
 
+  // Sync external System volume changes
+  useEffect(() => {
+    if (!globalDraggingRef.current && !globalInteractingRef.current && typeof systemVolume === 'number') {
+      setDisplaySysVolume(systemVolume);
+      latestSysVolRef.current = systemVolume;
+    }
+  }, [systemVolume]);
+
+  useEffect(() => {
+    setIsSysMuted(!!systemMuted);
+  }, [systemMuted]);
+
   useEffect(() => {
     return () => {
       if (volThrottleTimerRef.current) clearTimeout(volThrottleTimerRef.current);
+      if (sysThrottleTimerRef.current) clearTimeout(sysThrottleTimerRef.current);
+      if (globalInteractionTimerRef.current) clearTimeout(globalInteractionTimerRef.current);
       if (queueLeaveTimerRef.current) clearTimeout(queueLeaveTimerRef.current);
     };
   }, []);
+
+  const triggerGlobalVolInteraction = useCallback(() => {
+    setIsGlobalInteracting(true);
+    globalInteractingRef.current = true;
+    if (globalInteractionTimerRef.current) clearTimeout(globalInteractionTimerRef.current);
+    globalInteractionTimerRef.current = setTimeout(() => {
+      setIsGlobalInteracting(false);
+      globalInteractingRef.current = false;
+    }, 600);
+  }, []);
+
+  // Dispatch Spotify Volume
+  const dispatchVolume = useCallback((newVol, immediate = false) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
+    setLocalVolume(clamped);
+    latestVolRef.current = clamped;
+
+    if (immediate) {
+      if (volThrottleTimerRef.current) {
+        clearTimeout(volThrottleTimerRef.current);
+        volThrottleTimerRef.current = null;
+      }
+      if (onVolumeChange) onVolumeChange(clamped);
+      return;
+    }
+
+    if (!volThrottleTimerRef.current) {
+      volThrottleTimerRef.current = setTimeout(() => {
+        volThrottleTimerRef.current = null;
+        if (onVolumeChange) onVolumeChange(latestVolRef.current);
+      }, 60);
+    }
+  }, [onVolumeChange]);
+
+  const toggleSpotifyMute = (e) => {
+    e.stopPropagation();
+    if (localVolume > 0) {
+      setPrevSpotifyVolume(localVolume);
+      dispatchVolume(0, true);
+    } else {
+      dispatchVolume(prevSpotifyVolume || 50, true);
+    }
+  };
+
+  const handleSpotifyVolumeClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = clickX / rect.width;
+    const newVolume = Math.round(percentage * 100);
+    dispatchVolume(newVolume, true);
+  };
+
+  const handleWheelSpotifyVolume = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY < 0 ? 5 : -5;
+    const newVol = Math.max(0, Math.min(100, (localVolume || 50) + delta));
+    dispatchVolume(newVol, false);
+  };
+
+  const handleSpotifyVolumeKeyDown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      dispatchVolume(Math.min(100, (localVolume || 50) + 5), true);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      dispatchVolume(Math.max(0, (localVolume || 50) - 5), true);
+    }
+  };
+
+  // Dispatch Global System Volume
+  const dispatchSysVolumeChange = useCallback((newVol, immediate = false) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
+    setDisplaySysVolume(clamped);
+    latestSysVolRef.current = clamped;
+
+    if (clamped > 0 && isSysMuted) {
+      setIsSysMuted(false);
+      if (onSystemMuteToggle) onSystemMuteToggle(false);
+    }
+
+    if (sysThrottleTimerRef.current) {
+      clearTimeout(sysThrottleTimerRef.current);
+      sysThrottleTimerRef.current = null;
+    }
+
+    if (immediate) {
+      if (onSystemVolumeChange) onSystemVolumeChange(clamped);
+      return;
+    }
+
+    sysThrottleTimerRef.current = setTimeout(() => {
+      sysThrottleTimerRef.current = null;
+      if (onSystemVolumeChange) onSystemVolumeChange(latestSysVolRef.current);
+    }, 50);
+  }, [isSysMuted, onSystemMuteToggle, onSystemVolumeChange]);
+
+  const calcGlobalVolFromEvent = useCallback((e) => {
+    if (!globalVolTrackRef.current) return displaySysVolume;
+    const rect = globalVolTrackRef.current.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = clickX / rect.width;
+    return Math.round(percentage * 100);
+  }, [displaySysVolume]);
+
+  const handleGlobalPointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    globalDraggingRef.current = true;
+    setIsGlobalDragging(true);
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+
+    const newVol = calcGlobalVolFromEvent(e);
+    dispatchSysVolumeChange(newVol, true);
+  };
+
+  const handleGlobalPointerMove = (e) => {
+    if (!globalDraggingRef.current) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const newVol = calcGlobalVolFromEvent(e);
+    dispatchSysVolumeChange(newVol, false);
+  };
+
+  const handleGlobalPointerUp = (e) => {
+    if (!globalDraggingRef.current) return;
+    e.stopPropagation();
+    e.preventDefault();
+    globalDraggingRef.current = false;
+    setIsGlobalDragging(false);
+    triggerGlobalVolInteraction();
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+
+    const finalVol = calcGlobalVolFromEvent(e);
+    dispatchSysVolumeChange(finalVol, true);
+  };
+
+  const toggleSystemMute = (e) => {
+    e.stopPropagation();
+    if (isSysMuted || displaySysVolume === 0) {
+      setIsSysMuted(false);
+      if (onSystemMuteToggle) onSystemMuteToggle(false);
+      const restore = prevSysVolume > 0 ? prevSysVolume : 50;
+      dispatchSysVolumeChange(restore, true);
+    } else {
+      setIsSysMuted(true);
+      if (onSystemMuteToggle) onSystemMuteToggle(true);
+      setPrevSysVolume(displaySysVolume);
+    }
+  };
+
+  const handleGlobalWheel = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 5 : -5;
+    const newVol = Math.max(0, Math.min(100, displaySysVolume + delta));
+    dispatchSysVolumeChange(newVol, true);
+  };
+
+  const handleGlobalKeyDown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const newVol = Math.min(100, displaySysVolume + 5);
+      dispatchSysVolumeChange(newVol, true);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const newVol = Math.max(0, displaySysVolume - 5);
+      dispatchSysVolumeChange(newVol, true);
+    }
+  };
+
+  const isGlobalVolExpanded = isHoveringGlobalVol || isGlobalDragging || isGlobalInteracting;
+  const isEffectiveSysMuted = isSysMuted || displaySysVolume === 0;
+  const SysVolumeIcon = isEffectiveSysMuted ? VolumeX : displaySysVolume < 50 ? Volume1 : Volume2;
 
   // Synchronize Like / Heart status with Spotify & localStorage
   useEffect(() => {
@@ -188,34 +407,6 @@ export default function SidebarDock({
     } catch (err) {
       console.warn('[SidebarDock] Failed to toggle like:', err);
     }
-  };
-
-  const dispatchVolume = (newVol, immediate = false) => {
-    const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
-    setLocalVolume(clamped);
-    latestVolRef.current = clamped;
-
-    if (immediate) {
-      if (volThrottleTimerRef.current) {
-        clearTimeout(volThrottleTimerRef.current);
-        volThrottleTimerRef.current = null;
-      }
-      if (onVolumeChange) onVolumeChange(clamped);
-      return;
-    }
-
-    if (!volThrottleTimerRef.current) {
-      volThrottleTimerRef.current = setTimeout(() => {
-        volThrottleTimerRef.current = null;
-        if (onVolumeChange) onVolumeChange(latestVolRef.current);
-      }, 60);
-    }
-  };
-
-  const handleWheelVolume = (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 3 : -3;
-    dispatchVolume(localVolume + delta, true);
   };
 
   // Queue item resolution
@@ -384,6 +575,63 @@ export default function SidebarDock({
         </div>
       </div>
 
+      {/* GLOBAL SYSTEM VOLUME CONTROL (Below Album Art) */}
+      <div className="sidebar-global-vol-container">
+        <div
+          className={`sidebar-global-vol-pill ${isGlobalVolExpanded ? 'expanded' : ''}`}
+          onMouseEnter={() => setIsHoveringGlobalVol(true)}
+          onMouseLeave={() => setIsHoveringGlobalVol(false)}
+          onWheel={(e) => {
+            triggerGlobalVolInteraction();
+            handleGlobalWheel(e);
+          }}
+          title={`System Volume: ${displaySysVolume}%${isEffectiveSysMuted ? ' (Muted)' : ''} (Click, drag, or scroll to adjust)`}
+        >
+          <button
+            type="button"
+            className="sidebar-global-vol-btn"
+            onClick={(e) => {
+              triggerGlobalVolInteraction();
+              toggleSystemMute(e);
+            }}
+            title={isEffectiveSysMuted ? 'Unmute System' : 'Mute System'}
+            aria-label="Toggle system mute"
+            tabIndex={isGlobalVolExpanded ? 0 : -1}
+          >
+            <SysVolumeIcon size={14} />
+          </button>
+
+          <div
+            ref={globalVolTrackRef}
+            className={`sidebar-global-vol-track ${isGlobalVolExpanded ? 'hovered' : ''} ${isGlobalDragging ? 'dragging' : ''}`}
+            onPointerDown={(e) => {
+              triggerGlobalVolInteraction();
+              handleGlobalPointerDown(e);
+            }}
+            onPointerMove={handleGlobalPointerMove}
+            onPointerUp={handleGlobalPointerUp}
+            onPointerCancel={handleGlobalPointerUp}
+            onKeyDown={(e) => {
+              triggerGlobalVolInteraction();
+              handleGlobalKeyDown(e);
+            }}
+            tabIndex={0}
+            role="slider"
+            aria-label="System volume slider"
+            aria-valuenow={displaySysVolume}
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <div className="sidebar-global-vol-fill" style={{ width: `${displaySysVolume}%` }} />
+            <div className="sidebar-global-vol-thumb" style={{ left: `${displaySysVolume}%` }} />
+          </div>
+
+          <span className="sidebar-global-vol-label">
+            {displaySysVolume}%
+          </span>
+        </div>
+      </div>
+
       {/* 3. IN THE MIDDLE: 5-LINE SYNCHRONIZED LYRICS (B4 2, CURRENT, NEXT 2) */}
       <div className="sidebar-middle-lyrics-zone">
         {displayLines.length > 0 ? (
@@ -516,38 +764,40 @@ export default function SidebarDock({
               </div>
             )}
 
-            {/* Volume Button with Popover */}
+            {/* Expandable Spotify Volume Slider matching Top Dock */}
             <div
-              className="sidebar-volume-anchor"
-              onMouseEnter={() => setShowVolumePopup(true)}
-              onMouseLeave={() => setShowVolumePopup(false)}
+              className="sidebar-volume-wrap"
+              onMouseEnter={() => setShowVolumeSlider(true)}
+              onMouseLeave={() => setShowVolumeSlider(false)}
             >
               <button
                 type="button"
                 className="sidebar-action-btn"
-                onClick={() => dispatchVolume(localVolume === 0 ? 50 : 0, true)}
-                onWheel={handleWheelVolume}
-                title={`Volume: ${localVolume}% (Scroll to adjust)`}
-                aria-label="Volume"
+                onClick={toggleSpotifyMute}
+                onWheel={handleWheelSpotifyVolume}
+                title={localVolume === 0 ? 'Unmute Spotify' : `Spotify Volume: ${localVolume}% (Scroll to adjust)`}
+                aria-label={localVolume === 0 ? 'Unmute Spotify' : 'Mute Spotify'}
               >
                 {localVolume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
 
-              {showVolumePopup && (
-                <div className="sidebar-volume-popup" onWheel={handleWheelVolume}>
-                  <div
-                    className="sidebar-vol-bar"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                      dispatchVolume(pct * 100, true);
-                    }}
-                  >
-                    <div className="sidebar-vol-bar-fill" style={{ width: `${localVolume}%` }} />
-                  </div>
-                  <span className="sidebar-vol-text">{localVolume}%</span>
+              <div
+                className={`sidebar-volume-slider ${showVolumeSlider ? 'expanded' : ''}`}
+                onClick={handleSpotifyVolumeClick}
+                onWheel={handleWheelSpotifyVolume}
+                onKeyDown={handleSpotifyVolumeKeyDown}
+                tabIndex={0}
+                role="slider"
+                aria-label="Spotify volume slider"
+                aria-valuenow={localVolume}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div className="sidebar-vol-track">
+                  <div className="sidebar-vol-fill" style={{ width: `${localVolume}%` }} />
+                  <div className="sidebar-vol-thumb" style={{ left: `${localVolume}%` }} />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
