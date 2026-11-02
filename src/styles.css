@@ -2165,15 +2165,14 @@ button:focus:not(:focus-visible),
 
 /* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (5 lines, zero scrollbars) */
 .sidebar-middle-lyrics-zone {
-  flex: 1 1 auto !important;
-  max-height: 240px !important;
-  min-height: 110px !important;
+  flex: 1 1 0% !important;
+  min-height: 100px !important;
   width: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
   overflow-y: hidden !important;
   position: relative !important;
-  margin: 6px 0 !important;
+  margin: 4px 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -2328,7 +2327,17 @@ button:focus:not(:focus-visible),
   100% { transform: scaleY(1.15); opacity: 0.95; }
 }
 
-/* 4. TRACK TITLE & ARTIST (Left) + QUICK ACTIONS (Heart, Device, Volume) (Right) */
+/* 4. COMPACT PLAYBACK SECTION (Track Info + Centered Controls + Seekbar) */
+.sidebar-playback-section {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  gap: 2px !important;
+  margin: 4px 0 6px 0 !important;
+}
+
+/* Track Title & Artist (Left) + Quick Actions (Heart, Device, Volume) (Right) */
 .sidebar-track-row {
   display: flex !important;
   align-items: center !important;
@@ -2337,7 +2346,7 @@ button:focus:not(:focus-visible),
   gap: 8px !important;
   flex-shrink: 0 !important;
   padding: 0 !important;
-  margin-bottom: 6px !important;
+  margin-bottom: 2px !important;
 }
 
 .sidebar-track-info-col {
@@ -2486,7 +2495,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   flex-shrink: 0 !important;
   padding: 0 2px !important;
-  margin: 4px 0 6px 0 !important;
+  margin: 0 !important;
 }
 
 .sidebar-ctrl-btn {
@@ -2525,8 +2534,8 @@ button:focus:not(:focus-visible),
 }
 
 .sidebar-main-play-circle {
-  width: 54px !important;
-  height: 54px !important;
+  width: 52px !important;
+  height: 52px !important;
   border-radius: 50% !important;
   background: #ffffff !important;
   border: none !important;
@@ -2551,7 +2560,8 @@ button:focus:not(:focus-visible),
   gap: 8px !important;
   width: 100% !important;
   flex-shrink: 0 !important;
-  margin-bottom: 8px !important;
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
 }
 
 .sidebar-seekbar-row .sidebar-seekbar-bar {
