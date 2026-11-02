@@ -2015,7 +2015,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   position: relative !important;
   overflow: hidden !important;
-  padding: 16px 18px 12px 18px !important;
+  padding: 16px 18px 24px 18px !important;
   box-sizing: border-box !important;
   justify-content: space-between !important;
   scrollbar-width: none !important;
@@ -2335,7 +2335,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   flex-shrink: 0 !important;
   gap: 2px !important;
-  margin: 4px 0 28px 0 !important; /* Generous space between progress bar and queue */
+  margin: 4px 0 38px 0 !important; /* Generous breathing space between progress bar and queue */
 }
 
 /* Track Title & Artist (Left) + Quick Actions (Heart, Device, Volume) (Right) */
@@ -2713,7 +2713,8 @@ button:focus:not(:focus-visible),
 .sidebar-next-song-card {
   position: relative !important;
   width: 100% !important;
-  margin-top: 4px !important;
+  margin-top: 6px !important;
+  margin-bottom: 4px !important;
   border-radius: 12px !important;
   background: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(24px) !important;
