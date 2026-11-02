@@ -2021,124 +2021,86 @@ button:focus:not(:focus-visible),
   gap: 6px !important;
 }
 
-/* 1. TOP HEADER: Context Badge + Title & Artist + Quick Actions */
-.sidebar-header-card {
+/* 1. TOP HEADER: Centered Playing From Context Badge */
+.sidebar-top-context-row {
+  position: relative !important;
   width: 100% !important;
   display: flex !important;
-  flex-direction: column !important;
-  gap: 3px !important;
-  padding: 2px 4px !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-}
-
-.sidebar-header-top-row {
-  display: flex !important;
-  justify-content: space-between !important;
   align-items: center !important;
-  width: 100% !important;
+  justify-content: center !important;
+  padding: 2px 26px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  min-height: 22px !important;
 }
 
-.sidebar-context-badge {
-  font-size: 9.5px !important;
+.sidebar-context-badge-centered {
+  font-size: 10px !important;
   font-weight: 700 !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
   color: var(--accent, #10b981) !important;
   opacity: 0.9 !important;
-  max-width: 190px !important;
+  text-align: center !important;
+  max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
-.sidebar-header-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
-
-.sidebar-icon-btn {
+.sidebar-icon-btn-corner {
+  position: absolute !important;
+  right: 2px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
   background: rgba(255, 255, 255, 0.06) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 8px !important;
-  width: 26px !important;
-  height: 26px !important;
+  border-radius: 6px !important;
+  width: 22px !important;
+  height: 22px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   color: #a1a1aa !important;
   cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
-.sidebar-icon-btn:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.14) !important;
-  transform: scale(1.05) !important;
-}
-
-.sidebar-icon-btn.liked {
-  color: var(--accent, #10b981) !important;
-  background: rgba(16, 185, 129, 0.12) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-}
-
-.sidebar-icon-btn.close-btn:hover {
+.sidebar-icon-btn-corner:hover {
   color: #f87171 !important;
-  background: rgba(239, 68, 68, 0.14) !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  transform: translateY(-50%) scale(1.08) !important;
 }
 
-.sidebar-meta-text {
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-}
-
-.sidebar-track-title {
-  font-size: 15px !important;
-  font-weight: 800 !important;
-  color: #ffffff !important;
-  line-height: 1.25 !important;
-  letter-spacing: -0.01em !important;
-}
-
-.sidebar-track-artist {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: #a1a1aa !important;
-  line-height: 1.25 !important;
-}
-
-/* 2. ALBUM ARTWORK */
-.sidebar-art-container {
+/* 2. BIG SQUARE ALBUM ARTWORK */
+.sidebar-art-container-square {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
-  margin: 4px 0 !important;
+  margin: 6px 0 8px 0 !important;
   flex-shrink: 0 !important;
 }
 
-.sidebar-art-wrapper {
+.sidebar-art-wrapper-square {
   position: relative !important;
-  width: clamp(120px, 15vh, 160px) !important;
-  height: clamp(120px, 15vh, 160px) !important;
-  border-radius: 14px !important;
+  width: clamp(150px, 20vh, 200px) !important;
+  height: clamp(150px, 20vh, 200px) !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 16px !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.75), 0 0 24px rgba(16, 185, 129, 0.14) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.8), 0 0 24px rgba(16, 185, 129, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s !important;
 }
 
-.sidebar-art-wrapper:hover {
+.sidebar-art-wrapper-square:hover {
   transform: scale(1.02) !important;
-  box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.85), 0 0 32px rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.9), 0 0 32px rgba(16, 185, 129, 0.28) !important;
 }
 
-.sidebar-art-img {
+.sidebar-art-img-square {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
@@ -2172,77 +2134,87 @@ button:focus:not(:focus-visible),
   100% { transform: scale(1.2); opacity: 1; }
 }
 
-/* 3. CENTER ZONE: LYRICS FEED (Smooth auto-scrolling with glow) */
-.sidebar-lyrics-zone {
+/* 3. 5-LINE LYRICS STACK (b4 2, current, next 2) */
+.sidebar-lyrics-five-stack {
   flex: 1 1 0% !important;
-  min-height: 0 !important;
+  min-height: 125px !important;
   width: 100% !important;
   overflow: hidden !important;
   position: relative !important;
-  margin: 2px 0 !important;
+  margin: 4px 0 6px 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
+  align-items: center !important;
+  mask-image: linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%) !important;
 }
 
-.sidebar-lyrics-scroll-feed {
-  width: 100% !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+.sidebar-five-lines-wrapper {
   display: flex !important;
   flex-direction: column !important;
+  justify-content: space-evenly !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  scroll-behavior: smooth !important;
-  gap: 8px !important;
-  padding: 24px 6px !important;
+  width: 100% !important;
+  height: 100% !important;
+  gap: 3px !important;
+  padding: 2px 4px !important;
   box-sizing: border-box !important;
-  scrollbar-width: none !important;
 }
 
-.sidebar-lyrics-scroll-feed::-webkit-scrollbar {
-  display: none !important;
-}
-
-.sidebar-lyric-line {
+.sidebar-lyric-line-slot {
   text-align: center !important;
   width: 100% !important;
-  line-height: 1.4 !important;
-  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  line-height: 1.35 !important;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   cursor: default !important;
   user-select: none !important;
   box-sizing: border-box !important;
-  padding: 2px 6px !important;
+  padding: 1px 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 22px !important;
 }
 
-.sidebar-lyric-line.is-seekable:hover {
+.sidebar-lyric-line-slot.empty-slot {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.sidebar-lyric-line-slot.is-seekable:hover {
   cursor: pointer !important;
   opacity: 1 !important;
   transform: scale(1.03) !important;
 }
 
-.sidebar-lyric-faded {
-  font-size: 13px !important;
+.lyric-slot-far {
+  font-size: 11.5px !important;
   font-weight: 500 !important;
-  color: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(0.96) !important;
+  color: rgba(255, 255, 255, 0.22) !important;
+  transform: scale(0.92) !important;
 }
 
-.sidebar-lyric-near {
-  font-size: 13.5px !important;
+.lyric-slot-near {
+  font-size: 13px !important;
   font-weight: 600 !important;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  transform: scale(0.97) !important;
 }
 
-.sidebar-lyric-active {
-  font-size: 16px !important;
+.lyric-slot-current {
+  font-size: 15.5px !important;
   font-weight: 800 !important;
   color: var(--lyrics-color, #ffffff) !important;
-  text-shadow: 0 0 18px var(--accent, #10b981), 0 0 32px rgba(16, 185, 129, 0.45) !important;
+  text-shadow: 0 0 16px var(--accent, #10b981), 0 0 30px rgba(16, 185, 129, 0.5) !important;
   transform: scale(1.05) !important;
+}
+
+.sidebar-lyric-text {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .sidebar-musical-interlude {
@@ -2251,7 +2223,7 @@ button:focus:not(:focus-visible),
   justify-content: center !important;
   gap: 6px !important;
   color: var(--accent, #10b981) !important;
-  padding: 4px 10px !important;
+  padding: 2px 10px !important;
 }
 
 .sidebar-soundwave-mini {
@@ -2276,15 +2248,15 @@ button:focus:not(:focus-visible),
   100% { transform: scaleY(1.1); }
 }
 
-.sidebar-instrumental-card {
+.sidebar-instrumental-card-compact {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 16px !important;
+  gap: 12px !important;
   height: 100% !important;
   width: 100% !important;
-  padding: 16px !important;
+  padding: 12px !important;
   box-sizing: border-box !important;
 }
 
@@ -2296,7 +2268,7 @@ button:focus:not(:focus-visible),
   font-weight: 600 !important;
   color: #a1a1aa !important;
   background: rgba(255, 255, 255, 0.05) !important;
-  padding: 5px 12px !important;
+  padding: 4px 10px !important;
   border-radius: 20px !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
@@ -2306,7 +2278,7 @@ button:focus:not(:focus-visible),
   align-items: center !important;
   justify-content: center !important;
   gap: 3.5px !important;
-  height: 40px !important;
+  height: 36px !important;
   width: 100% !important;
 }
 
@@ -2326,6 +2298,76 @@ button:focus:not(:focus-visible),
 @keyframes sidebarEqBounce {
   0% { transform: scaleY(0.3); opacity: 0.35; }
   100% { transform: scaleY(1.15); opacity: 0.95; }
+}
+
+/* 4. SONG NAME & ARTIST NAME (Both on New Line, Aligned Center) */
+.sidebar-track-info-centered {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 2px 8px !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  margin-bottom: 6px !important;
+}
+
+.sidebar-title-row-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: 290px !important;
+}
+
+.sidebar-track-title-centered {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+  text-align: center !important;
+}
+
+.sidebar-like-btn {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #a1a1aa !important;
+  transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-like-btn:hover {
+  color: #ffffff !important;
+  transform: scale(1.12) !important;
+}
+
+.sidebar-like-btn.liked {
+  color: var(--accent, #10b981) !important;
+}
+
+.sidebar-artist-row-centered {
+  width: 100% !important;
+  max-width: 270px !important;
+  text-align: center !important;
+}
+
+.sidebar-track-artist-centered {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #a1a1aa !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
 }
 
 /* 4. PROGRESS BAR & CONTROLS (Below Lyrics) */

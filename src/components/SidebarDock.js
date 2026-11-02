@@ -12,7 +12,6 @@ import {
   VolumeX,
   ListMusic,
   ChevronUp,
-  Monitor,
   Music,
   Sparkles,
   X,
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
-import { useSettings } from '../context/SettingsContext';
 
 const WAVE_BARS = [
   28, 44, 65, 85, 52, 36, 74, 98, 80, 55, 42, 78, 92, 100, 70, 46, 62, 88, 96,
@@ -79,39 +77,29 @@ export default function SidebarDock({
   volume = 50,
   shuffleState = false,
   repeatState = 'off',
-  devices = [],
-  currentDeviceId,
   lyrics = [],
   currentLyricIndex = -1,
-  lyricsProvider = null,
-  lyricsOffsetMs = 0,
   queue = null,
   isAuthenticated = false,
-  user = null,
-  settings = {},
   onPlayPause,
   onSkip,
   onVolumeChange,
   onProgressChange,
   onShuffle,
   onRepeat,
-  onDeviceChange,
   onSeek,
   onPlayTrack,
   onLogin,
-  onLogout,
   onHideDock,
 }) {
-  // Volume state & throttle
   const [localVolume, setLocalVolume] = useState(volume ?? 50);
   const [showVolumePopup, setShowVolumePopup] = useState(false);
-  const [showDevices, setShowDevices] = useState(false);
   const [showRemaining, setShowRemaining] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const volThrottleTimerRef = useRef(null);
   const latestVolRef = useRef(volume ?? 50);
 
-  // Queue Hover Drawer state
+  // Queue hover drawer state
   const [isQueueHovered, setIsQueueHovered] = useState(false);
   const queueLeaveTimerRef = useRef(null);
 
@@ -119,10 +107,6 @@ export default function SidebarDock({
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
   const [hoverPercent, setHoverPercent] = useState(0);
   const [hoverTime, setHoverTime] = useState(null);
-
-  // Lyrics container & scrolling refs
-  const lyricsContainerRef = useRef(null);
-  const activeLyricRef = useRef(null);
 
   useEffect(() => {
     if (typeof volume === 'number') {
@@ -261,18 +245,32 @@ export default function SidebarDock({
     }, 180);
   };
 
-  // Auto-scroll active lyric into center of lyrics view
-  useEffect(() => {
-    if (activeLyricRef.current && lyricsContainerRef.current) {
-      activeLyricRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      });
-    }
-  }, [currentLyricIndex]);
+  // Exactly 5 Lines: 2 before, 1 current, 2 next
+  const fiveLines = useMemo(() => {
+    if (!lyrics || lyrics.length === 0) return [];
+    const activeIdx = currentLyricIndex >= 0 ? currentLyricIndex : 0;
+    return [-2, -1, 0, 1, 2].map((offset) => {
+      const targetIdx = activeIdx + offset;
+      if (targetIdx >= 0 && targetIdx < lyrics.length) {
+        return {
+          ...lyrics[targetIdx],
+          originalIdx: targetIdx,
+          isCurrent: offset === 0,
+          offset,
+          isEmpty: false,
+        };
+      }
+      return {
+        text: '',
+        originalIdx: targetIdx,
+        isCurrent: offset === 0,
+        offset,
+        isEmpty: true,
+      };
+    });
+  }, [lyrics, currentLyricIndex]);
 
-  // Seekbar handlers
+  // Seekbar calculations
   const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (progress / duration) * 100)) : 0;
   const remaining = duration > progress ? duration - progress : 0;
 
@@ -301,79 +299,47 @@ export default function SidebarDock({
     else onRepeat('off');
   };
 
-  // Context Tag text
+  // Center-aligned context title
   const contextTag = useMemo(() => {
     if (queue?.rawSource) {
       const isPlaylist = /^playlist:\s*/i.test(queue.rawSource);
       const isAlbum = /^album:\s*/i.test(queue.rawSource);
       const clean = queue.rawSource.replace(/^(playlist:\s*|album:\s*)/i, '').trim();
-      if (isPlaylist) return `PLAYLIST · ${clean.toUpperCase()}`;
-      if (isAlbum) return `ALBUM · ${clean.toUpperCase()}`;
-      return clean.toUpperCase();
+      if (isPlaylist) return `Playing from playlist • ${clean}`;
+      if (isAlbum) return `Playing from album • ${clean}`;
+      return `Playing from • ${clean}`;
     }
-    if (currentTrack?.album) return `ALBUM · ${currentTrack.album.toUpperCase()}`;
-    return 'NOW PLAYING';
+    if (currentTrack?.album) return `Playing from album • ${currentTrack.album}`;
+    return 'Playing from Spotify';
   }, [queue?.rawSource, currentTrack?.album]);
 
   return (
     <div className="sidebar-dock-root">
-      {/* 1. TOP HEADER: Song Title & Metadata */}
-      <div className="sidebar-header-card">
-        <div className="sidebar-header-top-row">
-          <span className="sidebar-context-badge" title={contextTag}>
-            {contextTag}
-          </span>
-          <div className="sidebar-header-actions">
-            <button
-              type="button"
-              className={`sidebar-icon-btn ${isLiked ? 'liked' : ''}`}
-              onClick={handleToggleLike}
-              title={isLiked ? 'Remove from Library' : 'Save to Library'}
-              aria-label="Save to Library"
-            >
-              <Heart
-                size={15}
-                fill={isLiked ? 'var(--accent, #10b981)' : 'none'}
-                color={isLiked ? 'var(--accent, #10b981)' : 'currentColor'}
-              />
-            </button>
-            {onHideDock && (
-              <button
-                type="button"
-                className="sidebar-icon-btn close-btn"
-                onClick={onHideDock}
-                title="Hide Dock"
-                aria-label="Hide Dock"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
+      {/* 1. TOP: PLAYING FROM CONTEXT (Center Aligned) */}
+      <div className="sidebar-top-context-row">
+        <div className="sidebar-context-badge-centered" title={contextTag}>
+          {contextTag}
         </div>
-
-        <div className="sidebar-meta-text">
-          <MarqueeText
-            text={currentTrack?.title || 'No Track Playing'}
-            className="sidebar-track-title"
-            speed={28}
-            gap={32}
-          />
-          <MarqueeText
-            text={currentTrack?.artist || 'Open Spotify to start playback'}
-            className="sidebar-track-artist"
-            speed={22}
-            gap={26}
-          />
-        </div>
+        {onHideDock && (
+          <button
+            type="button"
+            className="sidebar-icon-btn-corner"
+            onClick={onHideDock}
+            title="Hide Dock"
+            aria-label="Hide Dock"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
-      {/* 2. ALBUM ARTWORK */}
-      <div className="sidebar-art-container">
-        <div className="sidebar-art-wrapper">
+      {/* 2. BIG SQUARE ALBUM ARTWORK */}
+      <div className="sidebar-art-container-square">
+        <div className="sidebar-art-wrapper-square">
           <img
             src={currentTrack?.albumArt || '/default-album-art.png'}
             alt=""
-            className="sidebar-art-img"
+            className="sidebar-art-img-square"
             onError={(e) => {
               e.currentTarget.src = '/default-album-art.png';
             }}
@@ -386,25 +352,32 @@ export default function SidebarDock({
         </div>
       </div>
 
-      {/* 3. CENTER ZONE: LYRICS (The Star of the Show) */}
-      <div className="sidebar-lyrics-zone" ref={lyricsContainerRef}>
+      {/* 3. 5-LINE LYRICS STACK: b4 2, current, next 2 */}
+      <div className="sidebar-lyrics-five-stack">
         {lyrics && lyrics.length > 0 ? (
-          <div className="sidebar-lyrics-scroll-feed">
-            {lyrics.map((line, idx) => {
-              const isActive = idx === currentLyricIndex;
-              const isPrev = idx === currentLyricIndex - 1;
-              const isNext = idx === currentLyricIndex + 1;
+          <div className="sidebar-five-lines-wrapper">
+            {fiveLines.map((line, idx) => {
+              if (line.isEmpty) {
+                return (
+                  <div key={`empty-${idx}`} className="sidebar-lyric-line-slot empty-slot">
+                    <span className="sidebar-lyric-placeholder">&nbsp;</span>
+                  </div>
+                );
+              }
+
+              const isCurrent = line.isCurrent;
+              const isPrev = line.offset === -1;
+              const isNext = line.offset === 1;
               const isSeekable = typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
 
-              let lineClass = 'sidebar-lyric-faded';
-              if (isActive) lineClass = 'sidebar-lyric-active';
-              else if (isPrev || isNext) lineClass = 'sidebar-lyric-near';
+              let lineClass = 'lyric-slot-far';
+              if (isCurrent) lineClass = 'lyric-slot-current';
+              else if (isPrev || isNext) lineClass = 'lyric-slot-near';
 
               return (
                 <div
-                  key={`${line.startTime ?? idx}-${idx}`}
-                  ref={isActive ? activeLyricRef : null}
-                  className={`sidebar-lyric-line ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
+                  key={`${line.startTime ?? line.originalIdx}-${line.offset}`}
+                  className={`sidebar-lyric-line-slot ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
                   onClick={() => {
                     if (isSeekable) onSeek(line.startTime);
                   }}
@@ -420,20 +393,20 @@ export default function SidebarDock({
                       </div>
                     </div>
                   ) : (
-                    <span>{line.text}</span>
+                    <span className="sidebar-lyric-text">{line.text}</span>
                   )}
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="sidebar-instrumental-card">
+          <div className="sidebar-instrumental-card-compact">
             <div className="sidebar-inst-badge">
-              <Sparkles size={12} />
+              <Sparkles size={11} />
               <span>{currentTrack?.title ? 'Synced Lyrics Unavailable • Pure Audio' : 'Waiting for music...'}</span>
             </div>
             <div className={`sidebar-ambient-eq ${isPlaying ? 'playing' : ''}`}>
-              {[20, 35, 60, 90, 75, 45, 80, 100, 65, 30, 50, 85, 95, 70, 40, 25].map((h, i) => (
+              {[25, 45, 75, 95, 70, 50, 85, 100, 65, 35, 55, 90, 80, 45, 30].map((h, i) => (
                 <span
                   key={i}
                   className="sidebar-eq-bar"
@@ -448,7 +421,40 @@ export default function SidebarDock({
         )}
       </div>
 
-      {/* 4. PROGRESS BAR & CONTROLS (Below Lyrics) */}
+      {/* 4. SONG NAME & ARTIST NAME (Both on New Line, Aligned Center) */}
+      <div className="sidebar-track-info-centered">
+        <div className="sidebar-title-row-centered">
+          <MarqueeText
+            text={currentTrack?.title || 'No Track Playing'}
+            className="sidebar-track-title-centered"
+            speed={26}
+            gap={30}
+          />
+          <button
+            type="button"
+            className={`sidebar-like-btn ${isLiked ? 'liked' : ''}`}
+            onClick={handleToggleLike}
+            title={isLiked ? 'Remove from Library' : 'Save to Library'}
+            aria-label="Save to Library"
+          >
+            <Heart
+              size={15}
+              fill={isLiked ? 'var(--accent, #10b981)' : 'none'}
+              color={isLiked ? 'var(--accent, #10b981)' : 'currentColor'}
+            />
+          </button>
+        </div>
+        <div className="sidebar-artist-row-centered">
+          <MarqueeText
+            text={currentTrack?.artist || 'Open Spotify to start playback'}
+            className="sidebar-track-artist-centered"
+            speed={20}
+            gap={24}
+          />
+        </div>
+      </div>
+
+      {/* 5. MUSIC CONTROLS (Seekbar + Playback Buttons) */}
       <div className="sidebar-player-controls-card">
         {/* Seekbar Row */}
         <div className="sidebar-seekbar-row">
@@ -468,8 +474,8 @@ export default function SidebarDock({
             )}
 
             <div className={`sidebar-wave-container ${isPlaying ? 'is-playing' : ''}`}>
-              {WAVE_BARS.slice(0, 26).map((baseH, idx) => {
-                const barPct = (idx / 25) * 100;
+              {WAVE_BARS.slice(0, 24).map((baseH, idx) => {
+                const barPct = (idx / 23) * 100;
                 const isPlayed = barPct <= progressPercent;
                 const isHovered = isHoveringSeek && barPct <= hoverPercent;
                 return (
@@ -485,7 +491,6 @@ export default function SidebarDock({
               })}
             </div>
 
-            <div className="sidebar-flat-fill" style={{ width: `${progressPercent}%` }} />
             <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
           </div>
           <button
@@ -554,7 +559,7 @@ export default function SidebarDock({
             {repeatState === 'track' ? <Repeat1 size={15} /> : <Repeat size={15} />}
           </button>
 
-          {/* Volume Button with Popout Slider */}
+          {/* Volume Button with Popover */}
           <div
             className="sidebar-volume-wrapper"
             onMouseEnter={() => setShowVolumePopup(true)}
@@ -593,7 +598,7 @@ export default function SidebarDock({
         </div>
       </div>
 
-      {/* 5. BOTTOM HOVER-EXPANDABLE "UP NEXT" QUEUE DRAWER */}
+      {/* 6. UP NEXT SONG & HOVER TO SHOW QUEUE */}
       <div
         className={`sidebar-queue-drawer ${isQueueHovered ? 'expanded' : ''}`}
         onMouseEnter={handleQueueMouseEnter}
@@ -674,4 +679,3 @@ export default function SidebarDock({
     </div>
   );
 }
-
