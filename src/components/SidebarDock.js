@@ -21,6 +21,11 @@ import {
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
 
+const WAVE_BARS = [
+  30, 42, 60, 80, 50, 38, 70, 95, 82, 58, 44, 76, 92, 100, 72, 48, 64, 88, 96,
+  78, 54, 40, 62, 82, 92, 74, 52, 66, 84, 98, 68, 46, 58, 48, 36, 26,
+];
+
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds === null || seconds === undefined) return '0:00';
   const totalSec = Math.max(0, Math.floor(seconds));
@@ -255,16 +260,52 @@ export default function SidebarDock({
     }, 180);
   };
 
-  // Auto-scroll active lyric into center of lyrics view
-  useEffect(() => {
-    if (activeLyricRef.current && lyricsScrollerRef.current) {
-      activeLyricRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      });
+  // Prepare display lines with instrumental intro if track starts after 2s
+  const { displayLines, hasIntro } = useMemo(() => {
+    if (!lyrics || lyrics.length === 0) return { displayLines: [], hasIntro: false };
+    const firstStart = lyrics[0]?.startTime || 0;
+    if (firstStart > 2) {
+      return {
+        displayLines: [
+          { text: 'Instrumental Intro', startTime: 0, isIntro: true },
+          ...lyrics,
+        ],
+        hasIntro: true,
+      };
     }
-  }, [currentLyricIndex]);
+    return { displayLines: lyrics, hasIntro: false };
+  }, [lyrics]);
+
+  // Compute active index
+  const activeIndex = useMemo(() => {
+    if (displayLines.length === 0) return 0;
+    if (hasIntro) {
+      return currentLyricIndex < 0 ? 0 : currentLyricIndex + 1;
+    }
+    return Math.max(0, currentLyricIndex);
+  }, [currentLyricIndex, hasIntro, displayLines.length]);
+
+  // Always compute exactly 5 windowed lines around activeIndex: [-2, -1, 0, 1, 2]
+  const windowedLyrics = useMemo(() => {
+    if (displayLines.length === 0) return [];
+    return [-2, -1, 0, 1, 2].map((delta) => {
+      const targetIdx = activeIndex + delta;
+      if (targetIdx >= 0 && targetIdx < displayLines.length) {
+        return {
+          ...displayLines[targetIdx],
+          delta,
+          key: `line-${targetIdx}`,
+          isEmpty: false,
+        };
+      }
+      return {
+        text: '',
+        delta,
+        key: `empty-${delta}-${targetIdx}`,
+        isEmpty: true,
+      };
+    });
+  }, [displayLines, activeIndex]);
 
   // Seekbar calculations
   const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (progress / duration) * 100)) : 0;
@@ -361,14 +402,22 @@ export default function SidebarDock({
         </div>
       </div>
 
-      {/* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS */}
+      {/* 3. IN THE MIDDLE: 5-LINE SYNCHRONIZED LYRICS (B4 2, CURRENT, NEXT 2) */}
       <div className="sidebar-middle-lyrics-zone">
-        {lyrics && lyrics.length > 0 ? (
+        {displayLines.length > 0 ? (
           <div className="sidebar-lyrics-scroller" ref={lyricsScrollerRef}>
-            {lyrics.map((line, idx) => {
-              const isActive = idx === currentLyricIndex;
-              const isNear = Math.abs(idx - currentLyricIndex) === 1;
-              const isSeekable = typeof line.startTime === 'number' && !line.isIntro && !!onSeek;
+            {windowedLyrics.map((item) => {
+              if (item.isEmpty) {
+                return (
+                  <div key={item.key} className="sidebar-lyric-item lyric-empty" aria-hidden="true">
+                    &nbsp;
+                  </div>
+                );
+              }
+
+              const isActive = item.delta === 0;
+              const isNear = Math.abs(item.delta) === 1;
+              const isSeekable = typeof item.startTime === 'number' && !item.isIntro && !!onSeek;
 
               let lineClass = 'lyric-far';
               if (isActive) lineClass = 'lyric-active';
@@ -376,21 +425,20 @@ export default function SidebarDock({
 
               return (
                 <div
-                  key={`${line.startTime ?? idx}-${idx}`}
-                  ref={isActive ? activeLyricRef : null}
+                  key={item.key}
                   className={`sidebar-lyric-item ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
                   onClick={() => {
-                    if (isSeekable) onSeek(line.startTime);
+                    if (isSeekable) onSeek(item.startTime);
                   }}
-                  title={isSeekable ? `Jump to ${formatTime(line.startTime)}` : line.text}
+                  title={isSeekable ? `Jump to ${formatTime(item.startTime)}` : item.text}
                 >
-                  {line.isIntro ? (
+                  {item.isIntro ? (
                     <div className="sidebar-interlude-pill">
                       <Music size={13} />
-                      <span>Instrumental Interlude</span>
+                      <span>Instrumental Intro</span>
                     </div>
                   ) : (
-                    <span className="lyric-content-text">{line.text}</span>
+                    <span className="lyric-content-text">{item.text}</span>
                   )}
                 </div>
               );
@@ -580,11 +628,11 @@ export default function SidebarDock({
           </button>
         </div>
 
-        {/* 6. SEEKBAR ROW: 0:37 ── Progress Scrubber Bar ── 4:13 */}
+        {/* 6. SEEKBAR ROW: Interactive Wave Scrubber (matching top dock) */}
         <div className="sidebar-seekbar-row">
           <span className="sidebar-time-val">{formatTime(progress)}</span>
           <div
-            className={`sidebar-seekbar-bar ${isHoveringSeek ? 'hovered' : ''}`}
+            className={`sidebar-seekbar-bar wave-seekbar-track ${isHoveringSeek ? 'hovered' : ''}`}
             onClick={handleProgressClick}
             onMouseEnter={() => setIsHoveringSeek(true)}
             onMouseLeave={() => setIsHoveringSeek(false)}
@@ -596,10 +644,40 @@ export default function SidebarDock({
                 {formatTime(hoverTime)}
               </div>
             )}
-            <div className="sidebar-seek-track-bg">
-              <div className="sidebar-seek-fill" style={{ width: `${progressPercent}%` }} />
+
+            {/* Bouncing Audio Wave Bars (Active when playing) */}
+            <div className={`wave-bars-container ${isPlaying ? 'is-playing' : 'is-paused'}`}>
+              {WAVE_BARS.map((baseHeight, idx) => {
+                const barPct = (idx / (WAVE_BARS.length - 1)) * 100;
+                const isPlayed = barPct <= progressPercent;
+                const isHovered = isHoveringSeek && barPct <= hoverPercent;
+
+                return (
+                  <span
+                    key={idx}
+                    className={`wave-bar ${isPlayed ? 'played' : 'unplayed'} ${isHovered ? 'hover-fill' : ''}`}
+                    style={{
+                      '--bar-base-h': `${baseHeight}%`,
+                      '--bar-delay': `${(idx % 8) * -0.12}s`,
+                    }}
+                  />
+                );
+              })}
             </div>
-            <div className="sidebar-seek-thumb" style={{ left: `${progressPercent}%` }} />
+
+            {/* Flat Progress Bar (Active when paused) */}
+            <div className={`flat-progress-container ${!isPlaying ? 'active' : ''}`}>
+              <div
+                className="flat-progress-fill"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            {/* Seek Thumb Scrubber */}
+            <div
+              className={`wave-thumb ${isHoveringSeek ? 'visible' : ''}`}
+              style={{ left: `${progressPercent}%` }}
+            />
           </div>
           <span
             className="sidebar-time-val time-toggle-btn"

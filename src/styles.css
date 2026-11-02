@@ -2166,7 +2166,7 @@ button:focus:not(:focus-visible),
 /* 3. IN THE MIDDLE: SYNCHRONIZED SCROLLING LYRICS (5 lines, zero scrollbars) */
 .sidebar-middle-lyrics-zone {
   flex: 1 1 0% !important;
-  min-height: 100px !important;
+  min-height: 120px !important;
   width: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
@@ -2176,8 +2176,8 @@ button:focus:not(:focus-visible),
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 14%, black 86%, transparent 100%) !important;
+  mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
@@ -2190,7 +2190,8 @@ button:focus:not(:focus-visible),
 
 .sidebar-lyrics-scroller {
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
+  max-height: 100% !important;
   overflow: hidden !important;
   overflow-x: hidden !important;
   overflow-y: hidden !important;
@@ -2198,8 +2199,8 @@ button:focus:not(:focus-visible),
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 10px !important;
-  padding: 6px 2px !important;
+  gap: 8px !important;
+  padding: 4px 2px !important;
   box-sizing: border-box !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
@@ -2291,13 +2292,13 @@ button:focus:not(:focus-visible),
   display: flex !important;
   align-items: center !important;
   gap: 6px !important;
-  font-size: 10.5px !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
-  color: #a1a1aa !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  padding: 4px 10px !important;
+  color: #f4f4f5 !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  padding: 5px 12px !important;
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
 
 .sidebar-ambient-eq {
@@ -2334,7 +2335,7 @@ button:focus:not(:focus-visible),
   width: 100% !important;
   flex-shrink: 0 !important;
   gap: 2px !important;
-  margin: 4px 0 6px 0 !important;
+  margin: 4px 0 16px 0 !important; /* Space between progress bar and queue */
 }
 
 /* Track Title & Artist (Left) + Quick Actions (Heart, Device, Volume) (Right) */
@@ -2560,56 +2561,120 @@ button:focus:not(:focus-visible),
   gap: 8px !important;
   width: 100% !important;
   flex-shrink: 0 !important;
-  margin-top: 2px !important;
-  margin-bottom: 2px !important;
+  margin-top: 3px !important;
+  margin-bottom: 3px !important;
 }
 
-.sidebar-seekbar-row .sidebar-seekbar-bar {
+.sidebar-seekbar-row .wave-seekbar-track {
   flex: 1 !important;
   position: relative !important;
   height: 14px !important;
+  max-height: 14px !important;
   display: flex !important;
   align-items: center !important;
   cursor: pointer !important;
-}
-
-.sidebar-seek-track-bg {
-  width: 100% !important;
-  height: 4px !important;
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-radius: 2px !important;
+  padding: 0 2px !important;
+  background: transparent !important;
   overflow: hidden !important;
-  position: relative !important;
 }
 
-.sidebar-seek-fill {
+.sidebar-seekbar-row .wave-bars-container {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 2px !important;
+  pointer-events: none !important;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sidebar-seekbar-row .wave-bars-container.is-paused {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.sidebar-seekbar-row .wave-bars-container.is-paused .wave-bar {
+  height: 3px !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+.sidebar-seekbar-row .wave-bar {
+  flex: 1 !important;
+  max-width: 4px !important;
+  min-width: 2px !important;
+  height: var(--bar-base-h, 50%) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  transition: height 0.25s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
+  transform-origin: center !important;
+}
+
+.sidebar-seekbar-row .wave-bars-container.is-playing .wave-bar.played {
+  animation: waveBarBounce 1.1s ease-in-out infinite alternate !important;
+  animation-delay: var(--bar-delay, 0s) !important;
+}
+
+.sidebar-seekbar-row .wave-bar.played {
+  background: #ffffff !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.45) !important;
+}
+
+.sidebar-seekbar-row .wave-bar.hover-fill:not(.played) {
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.sidebar-seekbar-row .flat-progress-container {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-radius: 999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), height 0.15s ease !important;
+  overflow: hidden !important;
+}
+
+.sidebar-seekbar-row .flat-progress-container.active {
+  opacity: 1 !important;
+}
+
+.sidebar-seekbar-row .wave-seekbar-track:hover .flat-progress-container {
+  height: 4px !important;
+}
+
+.sidebar-seekbar-row .flat-progress-fill {
   height: 100% !important;
   background: #ffffff !important;
-  border-radius: 2px !important;
-  transition: background 0.15s !important;
+  border-radius: 999px !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4) !important;
+  transition: width 0.1s linear !important;
 }
 
-.sidebar-seekbar-bar:hover .sidebar-seek-fill {
-  background: #ffffff !important;
-}
-
-.sidebar-seek-thumb {
-  position: absolute !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
+.sidebar-seekbar-row .wave-thumb {
   width: 9px !important;
   height: 9px !important;
   border-radius: 50% !important;
   background: #ffffff !important;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.7) !important;
-  opacity: 0.85 !important;
-  transition: opacity 0.15s, transform 0.15s !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9) !important;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
   pointer-events: none !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+  z-index: 10 !important;
 }
 
-.sidebar-seekbar-bar:hover .sidebar-seek-thumb {
+.sidebar-seekbar-row .wave-seekbar-track:hover .wave-thumb,
+.sidebar-seekbar-row .wave-thumb.visible {
   opacity: 1 !important;
-  transform: translate(-50%, -50%) scale(1.25) !important;
+  transform: translate(-50%, -50%) scale(1.2) !important;
 }
 
 .sidebar-seek-tooltip {

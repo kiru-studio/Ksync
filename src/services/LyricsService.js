@@ -137,10 +137,24 @@ function validateCandidate(item, title, artist, targetDurationSec) {
     durationScore = Math.max(0, 1 - (durDelta / 4.5));
   }
 
-  // Gate 4: Real Synchronized LRC Timestamps Required
-  // Live karaoke requires verified timestamps. Never fake timestamps for plain lyrics.
+  // Gate 4: Real Synchronized LRC Timestamps Required (with graceful plain lyrics fallback)
   if (!item.syncedLyrics || item.syncedLyrics.trim().length === 0) {
-    return { valid: false, reason: 'No verified synced LRC timestamps available' };
+    if (item.plainLyrics && item.plainLyrics.trim().length > 0) {
+      const rawLines = item.plainLyrics.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      if (rawLines.length >= 2) {
+        const totalDur = targetDurationSec || candDuration || item.duration || 180;
+        const startOffset = Math.min(15, totalDur * 0.08);
+        const endOffset = totalDur * 0.92;
+        const step = (endOffset - startOffset) / rawLines.length;
+        const lines = rawLines.map((text, i) => ({
+          text,
+          startTime: Math.round((startOffset + i * step) * 10) / 10,
+        }));
+        const totalScore = (titleScore * 40) + (artistScore * 40) + (durationScore * 20);
+        return { valid: true, lines, isSynced: false, score: totalScore * 0.85 };
+      }
+    }
+    return { valid: false, reason: 'No verified synced LRC timestamps or plain lyrics available' };
   }
 
   const lines = parseLrc(item.syncedLyrics);
@@ -179,6 +193,7 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
   const primaryArtist = cleanArtist.split(/[,&/]/)[0].trim();
   const cleanAlbum = cleanString(album);
   const userAgent = 'ksync/1.0.0 (https://github.com/KiruthikKumar16/ksync)';
+  let plainFallback = null;
 
   // Layer 1: Exact Cryptographic/Database Match via /api/get with all metadata
   try {
@@ -190,8 +205,9 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
     if (res.ok) {
       const data = await res.json();
       const v = validateCandidate(data, title, artist, targetDurationSec);
-      if (v.valid && v.isSynced) {
-        return { lines: v.lines, provider: 'LRCLIB (Exact Synced)' };
+      if (v.valid) {
+        if (v.isSynced) return { lines: v.lines, provider: 'LRCLIB (Exact Synced)' };
+        if (!plainFallback) plainFallback = { lines: v.lines, provider: 'LRCLIB (Plain)' };
       }
     }
   } catch (_) {}
@@ -205,8 +221,9 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
     if (res.ok) {
       const data = await res.json();
       const v = validateCandidate(data, title, artist, targetDurationSec);
-      if (v.valid && v.isSynced) {
-        return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+      if (v.valid) {
+        if (v.isSynced) return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+        if (!plainFallback) plainFallback = { lines: v.lines, provider: 'LRCLIB (Plain)' };
       }
     }
   } catch (_) {}
@@ -218,8 +235,9 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
     if (res.ok) {
       const data = await res.json();
       const v = validateCandidate(data, title, artist, targetDurationSec);
-      if (v.valid && v.isSynced) {
-        return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+      if (v.valid) {
+        if (v.isSynced) return { lines: v.lines, provider: 'LRCLIB (Synced)' };
+        if (!plainFallback) plainFallback = { lines: v.lines, provider: 'LRCLIB (Plain)' };
       }
     }
   } catch (_) {}
@@ -267,7 +285,7 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
     }
   } catch (_) {}
 
-  return null;
+  return plainFallback;
 }
 
 /**
