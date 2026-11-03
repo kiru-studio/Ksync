@@ -299,7 +299,7 @@ button:focus:not(:focus-visible),
   min-width: clamp(76px, 7.5vw, 118px);
   max-height: calc(100% - 16px);
   border-radius: var(--art-corner-radius, 10px);
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.60), 0 0 24px var(--accent-soft);
   flex-shrink: 0;
@@ -329,6 +329,7 @@ button:focus:not(:focus-visible),
   position: relative;
   border-radius: inherit;
   overflow: hidden;
+  z-index: 2;
 }
 
 .art-wrapper.circle-rotating-art .art-disc-inner {
@@ -344,13 +345,13 @@ button:focus:not(:focus-visible),
   transform: scale(1.04);
 }
 
-/* Compact Circular Waves (Top Dock) */
+/* Compact Circular & Square Waves (Top Dock) */
 .compact-circle-waves {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
-  z-index: -1;
+  z-index: 1;
 }
 
 .compact-wave-ripple {
@@ -378,6 +379,43 @@ button:focus:not(:focus-visible),
 }
 
 .compact-circle-waves.is-paused .compact-wave-ripple {
+  animation: none;
+  opacity: 0;
+}
+
+.compact-square-waves {
+  position: absolute;
+  inset: -2px;
+  border-radius: var(--art-corner-radius, 10px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.compact-square-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1.5px solid var(--accent, #1db954);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(29, 185, 84, 0.45));
+  opacity: 0;
+}
+
+.compact-square-waves.is-playing .compact-square-ripple.ripple-1 {
+  animation: compactSquareWaveRipple 2.2s cubic-bezier(0.1, 0.5, 0.2, 1) infinite;
+  animation-delay: 0s;
+}
+
+.compact-square-waves.is-playing .compact-square-ripple.ripple-2 {
+  animation: compactSquareWaveRipple 2.2s cubic-bezier(0.1, 0.5, 0.2, 1) infinite;
+  animation-delay: 1.1s;
+}
+
+@keyframes compactSquareWaveRipple {
+  0% { transform: scale(1); opacity: 0.85; }
+  100% { transform: scale(1.28); opacity: 0; }
+}
+
+.compact-square-waves.is-paused .compact-square-ripple {
   animation: none;
   opacity: 0;
 }
@@ -8535,7 +8573,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* 1. Artwork Crossfade & Morphing */
 .art-wrapper {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .art-img-prev {

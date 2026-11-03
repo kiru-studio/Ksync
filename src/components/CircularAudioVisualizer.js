@@ -74,6 +74,7 @@ export default function CircularAudioVisualizer({
   progress = 0,
   bpm = 120,
   discRadius = 137.5, // 275px diameter / 2
+  size,
   className = '',
 }) {
   const canvasRef = useRef(null);
@@ -83,6 +84,11 @@ export default function CircularAudioVisualizer({
   const prevPlayingRef = useRef(isPlaying);
   const bpmRef = useRef(bpm || 120);
   const progressRef = useRef(progress || 0);
+  const discRadiusRef = useRef(discRadius);
+
+  useEffect(() => {
+    discRadiusRef.current = discRadius;
+  }, [discRadius]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -161,7 +167,9 @@ export default function CircularAudioVisualizer({
 
       // High DPI support
       const dpr = window.devicePixelRatio || 1;
-      const displaySize = 340; // Canvas dimensions fitting the 340px dock
+      const effectiveDiscR = discRadiusRef.current || discRadius;
+      const isCompact = effectiveDiscR < 80;
+      const displaySize = size || (isCompact ? 180 : 340);
       const neededW = Math.round(displaySize * dpr);
       const neededH = Math.round(displaySize * dpr);
 
@@ -178,15 +186,17 @@ export default function CircularAudioVisualizer({
       const cy = displaySize / 2;
 
       // Accurately determine the inner radius from the actual rendered disc card
-      let currentDiscRadius = discRadius;
-      const artCard = canvas.parentElement?.querySelector('.sidebar-art-card');
+      let currentDiscRadius = effectiveDiscR;
+      const parent = canvas.parentElement;
+      const artCard = parent?.querySelector('.sidebar-art-card, .art-wrapper') ||
+                      (parent?.classList.contains('art-wrapper') ? parent : null);
       if (artCard) {
         const measured = artCard.getBoundingClientRect().width / 2;
-        if (measured > 60 && measured < 180) {
+        if (measured > 25 && measured < 220) {
           currentDiscRadius = measured;
         }
       }
-      const rInner = currentDiscRadius + 2.0; // Starts precisely along the outer rim of the rotating vinyl
+      const rInner = currentDiscRadius + (isCompact ? 1.5 : 2.0); // Starts precisely along the outer rim of the rotating vinyl
 
       // Mathematical audio spectrum simulation driven by BPM and audio frequency harmonics
       const t = accumulatedBeatTime;
@@ -239,26 +249,31 @@ export default function CircularAudioVisualizer({
         strokeStyle = cachedAccent;
       }
 
+      const barCount = isCompact ? 64 : BAR_COUNT;
+      const maxH = isCompact ? 13 : 24;
+      const baseH = isCompact ? 2.5 : 4.0;
+      const energyScale = isCompact ? 0.55 : 1.0;
+
       ctx.strokeStyle = strokeStyle;
-      ctx.lineWidth = 3.2; // Rounded capsule bar thickness
+      ctx.lineWidth = isCompact ? 2.2 : 3.2; // Rounded capsule bar thickness
       ctx.lineCap = 'round';
 
       // Soft tip bloom glow when active
       if (activePlaying) {
         ctx.shadowColor = `rgba(${cachedRgb}, 0.55)`;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = isCompact ? 4 : 6;
       } else {
         ctx.shadowColor = `rgba(${cachedRgb}, 0.25)`;
         ctx.shadowBlur = 2;
       }
 
-      for (let i = 0; i < BAR_COUNT; i++) {
+      for (let i = 0; i < barCount; i++) {
         // Uniform circular distribution
-        const angle = (i / BAR_COUNT) * (Math.PI * 2) - Math.PI / 2; // Starts from top (12 o'clock)
+        const angle = (i / barCount) * (Math.PI * 2) - Math.PI / 2; // Starts from top (12 o'clock)
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
 
-        let targetH = 4.0; // Base idle capsule dot length
+        let targetH = baseH; // Base idle capsule dot length
 
         if (activePlaying) {
           // Bottom frequency band (Bass & Sub-bass): peaks on kick beats (sinA > 0)
@@ -273,14 +288,14 @@ export default function CircularAudioVisualizer({
           const wave2 = Math.cos(5 * angle + t * beatFreq * Math.PI * 2 * 0.75);
           const wave3 = Math.sin(7 * angle - t * 3.8);
 
-          const bassEnergy = kick * bassWeight * 22 * (0.8 + 0.4 * swell);
-          const trebleEnergy = snare * trebleWeight * 18;
-          const midEnergy = (0.5 + 0.5 * wave1) * midWeight * 12;
-          const rippleEnergy = (0.5 + 0.5 * wave2) * 5 + wave3 * 2.5;
+          const bassEnergy = kick * bassWeight * 22 * (0.8 + 0.4 * swell) * energyScale;
+          const trebleEnergy = snare * trebleWeight * 18 * energyScale;
+          const midEnergy = (0.5 + 0.5 * wave1) * midWeight * 12 * energyScale;
+          const rippleEnergy = ((0.5 + 0.5 * wave2) * 5 + wave3 * 2.5) * energyScale;
 
-          targetH = 4.0 + Math.max(0, bassEnergy + trebleEnergy + midEnergy + rippleEnergy);
+          targetH = baseH + Math.max(0, bassEnergy + trebleEnergy + midEnergy + rippleEnergy);
           // Keep maximum visualizer extension comfortably within dock boundaries
-          targetH = Math.min(24, targetH);
+          targetH = Math.min(maxH, targetH);
         }
 
         // Spring-physics smoothing: fast attack on peaks, smooth elastic decay
@@ -316,7 +331,10 @@ export default function CircularAudioVisualizer({
         animFrameRef.current = null;
       }
     };
-  }, [discRadius]);
+  }, [discRadius, size]);
+
+  const isCompactCanvas = discRadius < 80;
+  const canvasPx = size || (isCompactCanvas ? 180 : 340);
 
   return (
     <canvas
@@ -327,10 +345,10 @@ export default function CircularAudioVisualizer({
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '340px',
-        height: '340px',
-        maxWidth: '340px',
-        maxHeight: '340px',
+        width: `${canvasPx}px`,
+        height: `${canvasPx}px`,
+        maxWidth: `${canvasPx}px`,
+        maxHeight: `${canvasPx}px`,
         pointerEvents: 'none',
         zIndex: 1,
       }}

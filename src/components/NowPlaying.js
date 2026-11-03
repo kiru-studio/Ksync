@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
+import CircularAudioVisualizer from './CircularAudioVisualizer';
 
 const WAVE_BARS = [
   30, 42, 60, 80, 50, 38, 70, 95, 82, 58, 44, 76, 92, 100, 72, 48, 64, 88, 96,
@@ -236,6 +237,42 @@ const NowPlaying = ({
   const [hoverPercent, setHoverPercent] = useState(0);
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
 
+  // Dynamic Song BPM tracking for audio visualizer pulse
+  const [trackBpm, setTrackBpm] = useState(120);
+  useEffect(() => {
+    if (!track) {
+      setTrackBpm(120);
+      return;
+    }
+    let isMounted = true;
+    if (typeof track.tempo === 'number' && track.tempo > 40) {
+      setTrackBpm(Math.round(track.tempo));
+      return;
+    }
+    if (typeof track.bpm === 'number' && track.bpm > 40) {
+      setTrackBpm(Math.round(track.bpm));
+      return;
+    }
+    SpotifyService.getAudioFeatures({
+      trackId: track.id,
+      title: track.title,
+      artist: track.artist,
+    }).then((features) => {
+      if (isMounted && features && typeof features.tempo === 'number' && features.tempo > 40) {
+        setTrackBpm(Math.round(features.tempo));
+      }
+    }).catch(() => {});
+
+    let hash = 0;
+    const str = `${track.title || ''} ${track.artist || ''}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    setTrackBpm(95 + (Math.abs(hash) % 45));
+    return () => { isMounted = false; };
+  }, [track?.id, track?.title, track?.artist]);
+
   // Synchronized reset on track change (disabling backward sweep transition)
   const lastTrackIdRef = useRef(track?.id || track?.title);
   const [skipTransition, setSkipTransition] = useState(false);
@@ -331,10 +368,26 @@ const NowPlaying = ({
         tabIndex={0}
         title={isCircleArt ? "Click to switch to standard album art" : "Click to switch to rotating circular vinyl art"}
       >
+        {/* Dynamic Circular Audio Spectrum Visualizer (on rotating circular vinyl) */}
         {isCircleArt && (
+          <CircularAudioVisualizer
+            isPlaying={isPlaying}
+            progress={progress}
+            bpm={trackBpm}
+            discRadius={48}
+            size={180}
+          />
+        )}
+        {/* Propagating Harmonic Wave Ripples */}
+        {isCircleArt ? (
           <div className={`compact-circle-waves ${isPlaying ? 'is-playing' : 'is-paused'}`} aria-hidden="true">
             <div className="compact-wave-ripple ripple-1" />
             <div className="compact-wave-ripple ripple-2" />
+          </div>
+        ) : (
+          <div className={`compact-square-waves ${isPlaying ? 'is-playing' : 'is-paused'}`} aria-hidden="true">
+            <div className="compact-square-ripple ripple-1" />
+            <div className="compact-square-ripple ripple-2" />
           </div>
         )}
         <div className="art-ambient-tint" />
@@ -360,7 +413,6 @@ const NowPlaying = ({
             <div className="art-vinyl-spindle-dot" />
           </div>
         )}
-        {isPlaying && !isCircleArt && <div className="art-pulse-glow" />}
       </div>
 
       <div className="track-meta">
