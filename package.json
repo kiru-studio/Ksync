@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/KiruthikKumar16/ksync.git"
+    "url": "https://github.com/kiru-studio/Ksync.git"
   },
   "keywords": [
     "spotify",
@@ -60,8 +60,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "KiruthikKumar16",
-        "repo": "ksync"
+        "owner": "kiru-studio",
+        "repo": "Ksync"
       }
     ],
     "directories": {

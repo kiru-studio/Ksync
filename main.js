@@ -1069,7 +1069,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     const cleanTitle = cleanLyricsString(rawTitle);
     const cleanArtist = cleanLyricsString(rawArtist);
     const primaryArtist = cleanArtist.split(/[,&/]/)[0].trim();
-    const userAgent = 'ksync/1.0.0 (https://github.com/KiruthikKumar16/ksync)';
+    const userAgent = 'ksync/1.0.0 (https://github.com/kiru-studio/Ksync)';
 
     console.log('[Lyrics Multi-Layer] Checking:', { cleanTitle, cleanArtist, primaryArtist, duration });
 
