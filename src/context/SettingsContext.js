@@ -385,7 +385,7 @@ export function SettingsProvider({ children }) {
     root.style.setProperty('--progress-color', theming.progressColor || accent);
 
     // 4. Karaoke & Typography
-    const isArtworkReactive = theming.backdropStyle === 'artwork' || theming.preset === 'artwork' || theming.artworkSampling;
+    const isArtworkReactive = (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && theming.artworkSampling !== false;
     const isDynamicLyrics = isArtworkReactive && (!theming.lyricsActiveColor || theming.lyricsActiveColor === 'dynamic' || theming.preset === 'artwork' || theming.lyricsActiveColor === '#1db954');
     const activeLyricsColor = isDynamicLyrics ? 'var(--accent)' : (theming.lyricsActiveColor || accent);
     const lyricsGlowColor = isDynamicLyrics ? 'var(--accent-glow, var(--accent))' : (theming.lyricsGlowColor || activeLyricsColor);

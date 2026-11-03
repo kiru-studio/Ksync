@@ -289,8 +289,8 @@ function App() {
   // Sample vibrant accent color from current album artwork & sync dynamic lyrics
   useEffect(() => {
     const isArtworkReactive =
-      settings.theming?.backdropStyle === 'artwork' ||
-      settings.theming?.preset === 'artwork' ||
+      (settings.theming?.backdropStyle === 'artwork' ||
+      settings.theming?.preset === 'artwork') &&
       settings.theming?.artworkSampling !== false;
 
     if (isArtworkReactive && currentTrack?.albumArt) {
@@ -309,6 +309,8 @@ function App() {
       if (settings.theming?.accentColor) {
         document.documentElement.style.setProperty('--accent', settings.theming.accentColor);
         document.documentElement.style.setProperty('--accent-rgb', hexToRgb(settings.theming.accentColor));
+        document.documentElement.style.setProperty('--accent-soft', `${settings.theming.accentColor}26`);
+        document.documentElement.style.setProperty('--accent-glow', `${settings.theming.accentColor}59`);
       }
       const lyricsColor = settings.theming?.lyricsActiveColor || settings.theming?.accentColor || '#1db954';
       const glowColor = settings.theming?.lyricsGlowColor || lyricsColor;

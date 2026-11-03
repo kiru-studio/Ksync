@@ -1471,6 +1471,10 @@ export default function SettingsApp() {
             {/* SECTION 4: GLOBAL COLOR SYSTEM */}
             {matchesSearch('Global Color System', ['color', 'accent', 'palette', 'swatch', 'hex', 'contrast', 'wcag', 'surface', 'text', 'background']) && (() => {
               const isOpen = appearanceSearch.trim() ? true : !collapsedSections['appearance-colors'];
+              const isDynamicArtwork =
+                (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') &&
+                theming.artworkSampling !== false;
+
               return (
                 <section className="settings-level1-card">
                   <div
@@ -1520,47 +1524,122 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
-                      {/* Primary Accent Color Picker */}
-                      <div className="studio-sub-section" style={{ padding: '4px 0' }}>
-                        <div className="color-picker-composite-row">
-                          <div className="picker-color-stage">
-                            <label className="native-color-label" style={{ backgroundColor: theming.accentColor || '#1db954' }}>
-                              <input
-                                type="color"
-                                value={theming.accentColor || '#1db954'}
-                                onChange={(e) => updateThemingWithHistory({ 
-                                  accentColor: e.target.value,
-                                  progressColor: e.target.value,
-                                })}
-                                className="hidden-color-picker"
-                              />
-                            </label>
-                            <div className="picker-text-details">
-                              <span className="picker-title-label">Primary Accent Color</span>
-                              <span className="picker-hsl-value">{theming.accentColor || '#1db954'}</span>
+                      {isDynamicArtwork ? (
+                        /* Dynamic Album Art Extraction Active Notice */
+                        <div className="studio-sub-section" style={{ padding: '8px 0' }}>
+                          <div className="card-hairline-row flex-between" style={{ padding: '14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div
+                                style={{
+                                  width: '34px',
+                                  height: '34px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, var(--accent, #38bdf8), var(--accent-secondary, #0ea5e9))',
+                                  boxShadow: '0 0 16px var(--accent-glow, rgba(56, 189, 248, 0.45))',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Sparkles size={16} color="#ffffff" />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '13.5px', fontWeight: '600', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span>Dynamic Album Artwork Extraction</span>
+                                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Active
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '2px' }}>
+                                  Accent, visualizer bars, progress, and lyric glow hues are derived in real-time from the currently playing album artwork.
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="card-action-btn"
+                              style={{
+                                fontSize: '12px',
+                                padding: '6px 12px',
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                borderRadius: '8px',
+                                color: '#e4e4e7',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={() => updateThemingWithHistory({ artworkSampling: false })}
+                              title="Switch to manual static accent color"
+                            >
+                              Use Fixed Color Instead
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Manual Primary Accent Color Picker & Swatches */
+                        <div className="studio-sub-section" style={{ padding: '4px 0' }}>
+                          <div className="color-picker-composite-row">
+                            <div className="picker-color-stage">
+                              <label className="native-color-label" style={{ backgroundColor: theming.accentColor || '#1db954' }}>
+                                <input
+                                  type="color"
+                                  value={theming.accentColor || '#1db954'}
+                                  onChange={(e) => updateThemingWithHistory({ 
+                                    accentColor: e.target.value,
+                                    progressColor: e.target.value,
+                                    lyricsActiveColor: e.target.value,
+                                  })}
+                                  className="hidden-color-picker"
+                                />
+                              </label>
+                              <div className="picker-text-details">
+                                <span className="picker-title-label">Primary Accent Color</span>
+                                <span className="picker-hsl-value">{theming.accentColor || '#1db954'}</span>
+                              </div>
+                            </div>
+
+                            {(theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && (
+                              <button
+                                type="button"
+                                className="card-action-btn"
+                                style={{
+                                  fontSize: '11.5px',
+                                  padding: '5px 10px',
+                                  background: 'rgba(56, 189, 248, 0.12)',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                  borderRadius: '6px',
+                                  color: '#38bdf8',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => updateThemingWithHistory({ artworkSampling: true })}
+                              >
+                                Re-enable Album Art Sync
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Quick Accent Swatches */}
+                          <div className="swatches-hairline-tray" style={{ marginTop: '14px' }}>
+                            <span className="swatch-row-tag">ACCENT SWATCHES</span>
+                            <div className="circular-swatches-row">
+                              {['#1db954', '#00e676', '#10b981', '#06b6d4', '#38bdf8', '#6366f1', '#a855f7', '#ec4899', '#f97316', '#eab308'].map(
+                                (hex) => (
+                                  <button
+                                    key={hex}
+                                    type="button"
+                                    className={`circular-color-swatch ${theming.accentColor === hex ? 'selected' : ''}`}
+                                    style={{ backgroundColor: hex }}
+                                    onClick={() => updateThemingWithHistory({ accentColor: hex, progressColor: hex, lyricsActiveColor: hex })}
+                                    title={hex}
+                                  />
+                                )
+                              )}
                             </div>
                           </div>
                         </div>
-
-                        {/* Quick Accent Swatches */}
-                        <div className="swatches-hairline-tray" style={{ marginTop: '14px' }}>
-                          <span className="swatch-row-tag">ACCENT SWATCHES</span>
-                          <div className="circular-swatches-row">
-                            {['#1db954', '#00e676', '#10b981', '#06b6d4', '#38bdf8', '#6366f1', '#a855f7', '#ec4899', '#f97316', '#eab308'].map(
-                              (hex) => (
-                                <button
-                                  key={hex}
-                                  type="button"
-                                  className={`circular-color-swatch ${theming.accentColor === hex ? 'selected' : ''}`}
-                                  style={{ backgroundColor: hex }}
-                                  onClick={() => updateThemingWithHistory({ accentColor: hex, progressColor: hex, lyricsActiveColor: hex })}
-                                  title={hex}
-                                />
-                              )
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </>
                   )}
                 </section>
