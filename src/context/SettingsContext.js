@@ -334,12 +334,13 @@ export function SettingsProvider({ children }) {
 
     // 2. Glass & Materials System
     const opacityVal = theming.opacity ?? 0.92;
-    const blurVal = theming.blurStrength ?? 24;
+    const blurVal = theming.blurStrength ?? (theming.backdropStyle === 'artwork' ? 50 : 24);
     root.style.setProperty('--dock-opacity', String(opacityVal));
     root.style.setProperty('--dock-blur', `${blurVal}px`);
     root.style.setProperty('--panel-opacity', String(theming.panelOpacity ?? 0.95));
     root.style.setProperty('--panel-blur', `${theming.panelBlur ?? 16}px`);
-    root.style.setProperty('--dock-corner-radius', `${theming.cornerRadius ?? 14}px`);
+    root.style.setProperty('--dock-corner-radius', `${theming.cornerRadius ?? 24}px`);
+    root.style.setProperty('--dock-border-radius', `${theming.cornerRadius ?? 24}px`);
     root.style.setProperty('--border-opacity', `${(theming.borderOpacity ?? 12) / 100}`);
     root.style.setProperty(
       '--panel-border-color',

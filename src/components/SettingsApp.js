@@ -196,7 +196,6 @@ export default function SettingsApp() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [collapsedSections, setCollapsedSections] = useState({
     'appearance-background': true,
-    'appearance-glass': true,
     'appearance-colors': true,
     'appearance-typography': true,
     'appearance-components': true,
@@ -745,7 +744,6 @@ export default function SettingsApp() {
       ...prev,
       'appearance-presets': true,
       'appearance-background': true,
-      'appearance-glass': true,
       'appearance-colors': true,
       'appearance-typography': true,
       'appearance-components': true,
@@ -758,7 +756,6 @@ export default function SettingsApp() {
       ...prev,
       'appearance-presets': false,
       'appearance-background': false,
-      'appearance-glass': false,
       'appearance-colors': false,
       'appearance-typography': false,
       'appearance-components': false,
@@ -769,7 +766,6 @@ export default function SettingsApp() {
   const areAllAppearanceCollapsed = [
     'appearance-presets',
     'appearance-background',
-    'appearance-glass',
     'appearance-colors',
     'appearance-typography',
     'appearance-components',
@@ -1080,7 +1076,7 @@ export default function SettingsApp() {
             })()}
 
             {/* SECTION 2: BACKGROUND & ARTWORK */}
-            {matchesSearch('Background & Artwork', ['solid', 'gradient', 'linear', 'radial', 'angle', 'stops', 'vignette', 'blend', 'zoom', 'album', 'artwork']) && (() => {
+            {matchesSearch('Background & Artwork', ['solid', 'gradient', 'linear', 'radial', 'angle', 'stops', 'vignette', 'blend', 'zoom', 'album', 'artwork', 'blur', 'glass', 'acrylic', 'opacity', 'border', 'materials']) && (() => {
               const isOpen = appearanceSearch.trim() ? true : !collapsedSections['appearance-background'];
               return (
                 <section className="settings-level1-card">
@@ -1377,133 +1373,79 @@ export default function SettingsApp() {
                         <span className="toggle-thumb" />
                       </button>
                     </div>
+
+                    {/* Dynamic Blur for Album Art Reactive Mode */}
+                    <div className="bento-control-pad" style={{ marginTop: '12px' }}>
+                      <div className="bento-header-row">
+                        <span className="bento-label">Artwork Backdrop Blur</span>
+                        <span className="tabular-num-pill">{theming.blurStrength ?? 50}px</span>
+                      </div>
+                      <div className="thick-slider-wrapper">
+                        <input
+                          type="range"
+                          min="0"
+                          max="80"
+                          value={theming.blurStrength ?? 50}
+                          onChange={(e) =>
+                            updateThemingWithHistory({ blurStrength: parseInt(e.target.value, 10) })
+                          }
+                          className="thick-slider-input"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Common Slider: Backdrop Opacity */}
-                <div className="bento-control-pad" style={{ marginTop: '14px' }}>
-                  <div className="bento-header-row">
-                    <span className="bento-label">Global Backdrop Opacity</span>
-                    <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.92) * 100)}%</span>
-                  </div>
-                  <div className="thick-slider-wrapper">
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={Math.round((theming.opacity ?? 0.92) * 100)}
-                      onChange={(e) =>
-                        updateThemingWithHistory({
-                          opacity: parseFloat(e.target.value) / 100,
-                        })
-                      }
-                      className="thick-slider-input"
-                    />
-                  </div>
-                </div>
-                    </>
-                  )}
-                </section>
-              );
-            })()}
-
-            {/* SECTION 3: GLASS & MATERIALS */}
-            {matchesSearch('Glass & Materials', ['blur', 'opacity', 'acrylic', 'saturation', 'tint', 'border', 'radius', 'corner', 'shadow', 'elevation', 'noise', 'oled']) && (() => {
-              const isOpen = appearanceSearch.trim() ? true : !collapsedSections['appearance-glass'];
-              return (
-                <section className="settings-level1-card">
-                  <div
-                    className="card-top-header flex-between"
-                    onClick={() => toggleSectionCollapse('appearance-glass')}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleSectionCollapse('appearance-glass');
-                      }
-                    }}
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
-                  >
-                    <div className="header-left-cluster">
-                      <div className="card-icon-badge">
-                        <Layers size={16} />
+                {/* 2.5: Frosted Acrylic Mode */}
+                {theming.backdropStyle === 'acrylic' && (
+                  <div className="studio-sub-section">
+                    <div className="bento-control-pad">
+                      <div className="bento-header-row">
+                        <span className="bento-label">Acrylic Diffusion Blur</span>
+                        <span className="tabular-num-pill">{theming.blurStrength ?? 24}px</span>
                       </div>
-                      <div>
-                        <h3 className="card-title-text">Glass & Materials</h3>
-                        <p className="card-desc-text">Independent diffusion blurs, panel opacities, corner rounding, and shadows.</p>
-                      </div>
-                    </div>
-                    <div className="header-right-cluster">
-                      <button
-                        type="button"
-                        className="card-action-btn ghost icon-only"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSectionCollapse('appearance-glass');
-                        }}
-                        title={isOpen ? "Collapse section" : "Expand section"}
-                        aria-expanded={isOpen}
-                      >
-                        <ChevronDown
-                          size={16}
-                          style={{
-                            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.22s ease',
-                            color: '#a1a1aa',
-                          }}
+                      <div className="thick-slider-wrapper">
+                        <input
+                          type="range"
+                          min="0"
+                          max="60"
+                          value={theming.blurStrength ?? 24}
+                          onChange={(e) =>
+                            updateThemingWithHistory({ blurStrength: parseInt(e.target.value, 10) })
+                          }
+                          className="thick-slider-input"
                         />
-                      </button>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {isOpen && (
-                    <>
-                      <div className="bento-two-columns">
-                  {/* Backdrop Blur */}
+                {/* Common Sliders: Backdrop Opacity & Dock Border Opacity */}
+                <div className="bento-two-columns" style={{ marginTop: '14px' }}>
                   <div className="bento-control-pad">
                     <div className="bento-header-row">
-                      <span className="bento-label">Backdrop Glass Blur</span>
-                      <span className="tabular-num-pill">{theming.blurStrength ?? 24}px</span>
+                      <span className="bento-label">Global Backdrop Opacity</span>
+                      <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.92) * 100)}%</span>
                     </div>
                     <div className="thick-slider-wrapper">
                       <input
                         type="range"
-                        min="0"
-                        max="60"
-                        value={theming.blurStrength ?? 24}
+                        min="10"
+                        max="100"
+                        value={Math.round((theming.opacity ?? 0.92) * 100)}
                         onChange={(e) =>
-                          updateThemingWithHistory({ blurStrength: parseInt(e.target.value, 10) })
+                          updateThemingWithHistory({
+                            opacity: parseFloat(e.target.value) / 100,
+                          })
                         }
                         className="thick-slider-input"
                       />
                     </div>
                   </div>
 
-                  {/* Corner Radius */}
                   <div className="bento-control-pad">
                     <div className="bento-header-row">
-                      <span className="bento-label">Interface Corner Radius</span>
-                      <span className="tabular-num-pill">{theming.cornerRadius ?? 14}px</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="0"
-                        max="28"
-                        value={theming.cornerRadius ?? 14}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ cornerRadius: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Border Opacity */}
-                  <div className="bento-control-pad" style={{ gridColumn: 'span 2' }}>
-                    <div className="bento-header-row">
-                      <span className="bento-label">Border Line Opacity</span>
+                      <span className="bento-label">Dock Edge Border Opacity</span>
                       <span className="tabular-num-pill">{theming.borderOpacity ?? 12}%</span>
                     </div>
                     <div className="thick-slider-wrapper">
@@ -2289,6 +2231,7 @@ export default function SettingsApp() {
                   </div>
 
                   {isFramingOpen && (
+                    <>
                     <div className="framing-two-grid">
                       {/* Full Screen Width (Edge to Edge) */}
                       <button
@@ -2379,6 +2322,51 @@ export default function SettingsApp() {
                         </div>
                       </button>
                     </div>
+
+                    {/* Dynamic Island Geometry Settings: Only visible when Island Mode is active */}
+                    {isIsland && (
+                      <div className="bento-two-columns" style={{ marginTop: '16px' }}>
+                        <div className="bento-control-pad">
+                          <div className="bento-header-row">
+                            <span className="bento-label">Island Corner Radius</span>
+                            <span className="tabular-num-pill">{theming.cornerRadius ?? 24}px</span>
+                          </div>
+                          <div className="thick-slider-wrapper">
+                            <input
+                              type="range"
+                              min="8"
+                              max="36"
+                              value={theming.cornerRadius ?? 24}
+                              onChange={(e) =>
+                                updateThemingWithHistory({ cornerRadius: parseInt(e.target.value, 10) })
+                              }
+                              className="thick-slider-input"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bento-control-pad">
+                          <div className="bento-header-row">
+                            <span className="bento-label">Island Width</span>
+                            <span className="tabular-num-pill">{position.islandWidth || 1180}px</span>
+                          </div>
+                          <div className="thick-slider-wrapper">
+                            <input
+                              type="range"
+                              min="850"
+                              max="1650"
+                              step="25"
+                              value={position.islandWidth || 1180}
+                              onChange={(e) =>
+                                updateSettings({ position: { islandWidth: parseInt(e.target.value, 10) } })
+                              }
+                              className="thick-slider-input"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    </>
                   )}
                 </section>
               );
