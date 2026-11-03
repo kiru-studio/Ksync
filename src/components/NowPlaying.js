@@ -317,6 +317,12 @@ const NowPlaying = ({
         tabIndex={0}
         title={isCircleArt ? "Click to switch to standard album art" : "Click to switch to rotating circular vinyl art"}
       >
+        {isCircleArt && (
+          <div className={`compact-circle-waves ${isPlaying ? 'is-playing' : 'is-paused'}`} aria-hidden="true">
+            <div className="compact-wave-ripple ripple-1" />
+            <div className="compact-wave-ripple ripple-2" />
+          </div>
+        )}
         <div className="art-ambient-tint" />
         <div className="art-disc-inner">
           {prevArt && (

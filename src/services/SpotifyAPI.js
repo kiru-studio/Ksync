@@ -435,6 +435,25 @@ async function removeUserTracks(tokenStore, config, trackIds) {
   });
 }
 
+async function getAudioFeatures(tokenStore, config, trackId) {
+  if (!trackId) return null;
+  const cleanId = String(trackId).replace('spotify:track:', '').trim();
+  try {
+    return await request(tokenStore, config, `/audio-features/${cleanId}`);
+  } catch (err) {
+    try {
+      const token = await getClientCredentialsToken(config);
+      if (token) {
+        const res = await fetch(`${SPOTIFY_API_BASE}/audio-features/${cleanId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (_) {}
+    return null;
+  }
+}
+
 module.exports = {
   getValidToken,
   getPlayer,
@@ -459,5 +478,6 @@ module.exports = {
   checkUserSavedTracks,
   saveUserTracks,
   removeUserTracks,
+  getAudioFeatures,
   request,
 };

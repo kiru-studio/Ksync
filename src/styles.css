@@ -344,6 +344,44 @@ button:focus:not(:focus-visible),
   transform: scale(1.04);
 }
 
+/* Compact Circular Waves (Top Dock) */
+.compact-circle-waves {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.compact-wave-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #1db954);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(29, 185, 84, 0.45));
+  opacity: 0;
+}
+
+.compact-circle-waves.is-playing .compact-wave-ripple.ripple-1 {
+  animation: compactCircleWaveRipple 2.2s cubic-bezier(0.1, 0.5, 0.2, 1) infinite;
+  animation-delay: 0s;
+}
+
+.compact-circle-waves.is-playing .compact-wave-ripple.ripple-2 {
+  animation: compactCircleWaveRipple 2.2s cubic-bezier(0.1, 0.5, 0.2, 1) infinite;
+  animation-delay: 1.1s;
+}
+
+@keyframes compactCircleWaveRipple {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.compact-circle-waves.is-paused .compact-wave-ripple {
+  animation: none;
+  opacity: 0;
+}
+
 .art-ambient-tint {
   position: absolute;
   inset: -16px;
@@ -2147,6 +2185,7 @@ button:focus:not(:focus-visible),
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
+  position: relative !important;
   margin: 0 0 10px 0 !important; /* Space between album art and global volume */
   flex-shrink: 0 !important;
 }
@@ -2164,6 +2203,7 @@ button:focus:not(:focus-visible),
   cursor: pointer !important;
   transition: border-radius 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease !important;
   user-select: none !important;
+  z-index: 2 !important;
 }
 
 .sidebar-art-card.circle-rotating-art {
@@ -2177,6 +2217,119 @@ button:focus:not(:focus-visible),
 
 .sidebar-art-card.circle-rotating-art:hover {
   transform: scale(1.03) !important;
+}
+
+/* ==========================================================================
+   DYNAMIC CLEAR WAVES AROUND ROTATING CIRCULAR ARTWORK (NOT on square)
+   ========================================================================== */
+.sidebar-circle-waves {
+  position: absolute !important;
+  width: 100% !important;
+  max-width: 275px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Clear Concentric Acoustic Wave Ripple Rings */
+.circle-wave-ripple {
+  position: absolute !important;
+  inset: -2px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--accent, #1db954) !important;
+  box-shadow: 0 0 14px var(--accent-glow, rgba(29, 185, 84, 0.45)), inset 0 0 8px var(--accent-soft, rgba(29, 185, 84, 0.2)) !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  transform-origin: center center !important;
+}
+
+.sidebar-circle-waves.is-playing .circle-wave-ripple.ripple-1 {
+  animation: circleWaveRippleAnim 2.8s cubic-bezier(0.1, 0.5, 0.2, 1) infinite !important;
+  animation-delay: 0s !important;
+}
+
+.sidebar-circle-waves.is-playing .circle-wave-ripple.ripple-2 {
+  animation: circleWaveRippleAnim 2.8s cubic-bezier(0.1, 0.5, 0.2, 1) infinite !important;
+  animation-delay: 0.93s !important;
+}
+
+.sidebar-circle-waves.is-playing .circle-wave-ripple.ripple-3 {
+  animation: circleWaveRippleAnim 2.8s cubic-bezier(0.1, 0.5, 0.2, 1) infinite !important;
+  animation-delay: 1.86s !important;
+}
+
+@keyframes circleWaveRippleAnim {
+  0% {
+    transform: scale(1);
+    opacity: 0.95;
+    border-width: 2px;
+  }
+  30% {
+    opacity: 0.7;
+  }
+  70% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.24);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.sidebar-circle-waves.is-paused .circle-wave-ripple {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* 360-Degree Radial Equalizer Wave Bars */
+.circle-wave-svg {
+  position: absolute !important;
+  width: 138% !important;
+  height: 138% !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+  filter: drop-shadow(0 0 6px var(--accent-glow, rgba(29, 185, 84, 0.5))) !important;
+}
+
+.circle-wave-bar-line {
+  stroke: var(--accent, #1db954);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+  opacity: 0.85;
+  transform-origin: 170px 170px;
+  transition: opacity 0.3s ease, stroke-width 0.3s ease;
+}
+
+.sidebar-circle-waves.is-playing .circle-wave-bar-line {
+  animation: circleWaveBarDance 1.2s ease-in-out infinite alternate !important;
+  animation-delay: var(--bar-delay, 0s) !important;
+}
+
+.sidebar-circle-waves.is-paused .circle-wave-bar-line {
+  animation: none !important;
+  opacity: 0.28 !important;
+  stroke-width: 1.5px !important;
+}
+
+@keyframes circleWaveBarDance {
+  0% {
+    transform: scale(0.93);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.09);
+    opacity: 1;
+    stroke: #ffffff;
+  }
+  100% {
+    transform: scale(0.97);
+    opacity: 0.75;
+  }
 }
 
 .sidebar-art-disc-inner {
@@ -2504,7 +2657,7 @@ button:focus:not(:focus-visible),
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 7px !important;
+  gap: 8px !important;
   padding: 4px 6px !important;
   box-sizing: border-box !important;
   scrollbar-width: none !important;
@@ -2521,15 +2674,16 @@ button:focus:not(:focus-visible),
   text-align: center !important;
   width: 100% !important;
   max-width: 100% !important;
-  line-height: 1.35 !important;
+  line-height: 1.4 !important;
   font-family: var(--dock-lyrics-font-family, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
-  letter-spacing: var(--dock-lyrics-letter-spacing, -0.2px) !important;
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  letter-spacing: var(--dock-lyrics-letter-spacing, -0.15px) !important;
+  transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   user-select: none !important;
   box-sizing: border-box !important;
-  padding: 3px 6px !important;
+  padding: 3px 8px !important;
   height: auto !important;
   min-height: 22px !important;
+  flex-shrink: 0 !important;
   transform-origin: center center !important;
   white-space: normal !important;
   text-overflow: clip !important;
@@ -2540,32 +2694,50 @@ button:focus:not(:focus-visible),
 
 .sidebar-lyric-item.is-seekable:hover {
   cursor: pointer !important;
-  opacity: 1 !important;
-  transform: scale(1.02) !important;
+  opacity: 0.95 !important;
+  transform: scale(1.01) !important;
 }
 
 .lyric-far {
-  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.65) !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.64) !important;
   font-weight: 500 !important;
-  color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.28)) !important;
-  opacity: var(--dock-lyrics-fade, 0.28) !important;
-  transform: scale(0.96) !important;
+  color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.32)) !important;
+  opacity: var(--dock-lyrics-fade, 0.32) !important;
+  line-height: 1.36 !important;
+}
+
+.lyric-far.is-long-lyric {
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.58) !important;
 }
 
 .lyric-near {
-  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.78) !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.76) !important;
   font-weight: 600 !important;
   color: var(--dock-lyrics-inactive, rgba(255, 255, 255, 0.6)) !important;
   opacity: 0.65 !important;
-  transform: scale(0.98) !important;
+  line-height: 1.38 !important;
+}
+
+.lyric-near.is-long-lyric {
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.7) !important;
 }
 
 .lyric-active {
-  font-size: calc(var(--dock-lyrics-font-size, 20px) * var(--dock-lyrics-scale, 1.04)) !important;
-  font-weight: var(--dock-lyrics-font-weight, 800) !important;
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * var(--dock-lyrics-scale, 1.02)) !important;
+  font-weight: var(--dock-lyrics-font-weight, 750) !important;
   color: var(--dock-lyrics-active, var(--accent, #ffffff)) !important;
   text-shadow: 0 0 var(--dock-lyrics-glow-radius, 20px) var(--dock-lyrics-active-glow, var(--accent-glow, rgba(29, 185, 84, 0.4))), 0 2px 14px rgba(0, 0, 0, 0.7) !important;
-  transform: scale(1.03) !important;
+  line-height: 1.4 !important;
+}
+
+.lyric-active.is-long-lyric {
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.92) !important;
+  line-height: 1.38 !important;
+}
+
+.lyric-active.is-very-long-lyric {
+  font-size: calc(var(--dock-lyrics-font-size, 20px) * 0.84) !important;
+  line-height: 1.36 !important;
 }
 
 .lyric-empty {
@@ -2583,7 +2755,7 @@ button:focus:not(:focus-visible),
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
   text-wrap: balance !important;
-  line-height: 1.35 !important;
+  line-height: inherit !important;
   overflow: visible !important;
 }
 
@@ -3046,30 +3218,30 @@ button:focus:not(:focus-visible),
   color: #ffffff !important;
 }
 
-/* 7. BELOW SPACE: SHOW NEXT SONG (Box E: Queue card) */
+/* 7. BELOW SPACE: SHOW NEXT SONG (Queue section - seamless transparent background) */
 .sidebar-next-song-card {
   position: relative !important;
   width: 100% !important;
   margin: 0 !important;
   border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid transparent !important;
   overflow: hidden !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
   flex-shrink: 0 !important;
   z-index: 40 !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: none !important;
   max-height: 48px !important;
   cursor: pointer !important;
 }
 
 .sidebar-next-song-card.expanded {
   max-height: 280px !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.9) !important;
-  background: rgba(18, 20, 29, 0.96) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 .sidebar-next-song-header {
@@ -3080,6 +3252,7 @@ button:focus:not(:focus-visible),
   height: 48px !important;
   box-sizing: border-box !important;
   user-select: none !important;
+  background: transparent !important;
 }
 
 .sidebar-next-song-left {
@@ -3153,6 +3326,7 @@ button:focus:not(:focus-visible),
   gap: 6px !important;
   height: 232px !important;
   box-sizing: border-box !important;
+  background: transparent !important;
 }
 
 .sidebar-queue-slideout-header {

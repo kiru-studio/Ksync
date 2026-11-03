@@ -72,6 +72,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   spotifyCheckSavedTracks: (payload) => ipcRenderer.invoke('spotify-check-saved-tracks', payload),
   spotifySaveTrack: (payload) => ipcRenderer.invoke('spotify-save-track', payload),
   spotifyRemoveTrack: (payload) => ipcRenderer.invoke('spotify-remove-track', payload),
+  spotifyGetAudioFeatures: (payload) => ipcRenderer.invoke('spotify-get-audio-features', payload),
 
   // Settings & Configuration APIs
   getSettings: () => ipcRenderer.invoke('get-settings'),

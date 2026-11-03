@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
+import CircularAudioVisualizer from './CircularAudioVisualizer';
 
 const WAVE_BARS = [
   30, 42, 60, 80, 50, 38, 70, 95, 82, 58, 44, 76, 92, 100, 72, 48, 64, 88, 96,
@@ -162,6 +163,69 @@ export default function SidebarDock({
   const [showDevices, setShowDevices] = useState(false);
   const [showRemaining, setShowRemaining] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [trackBpm, setTrackBpm] = useState(120);
+
+  // Dynamic Song BPM tracking (from Spotify audio features or timed lyrics cadence)
+  useEffect(() => {
+    if (!currentTrack) {
+      setTrackBpm(120);
+      return;
+    }
+
+    let isMounted = true;
+
+    // 1. Direct track properties if already populated
+    if (typeof currentTrack.tempo === 'number' && currentTrack.tempo > 40) {
+      setTrackBpm(Math.round(currentTrack.tempo));
+      return;
+    }
+    if (typeof currentTrack.bpm === 'number' && currentTrack.bpm > 40) {
+      setTrackBpm(Math.round(currentTrack.bpm));
+      return;
+    }
+
+    // 2. Fetch official audio features via Spotify Web API
+    SpotifyService.getAudioFeatures({
+      trackId: currentTrack.id,
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+    }).then((features) => {
+      if (isMounted && features && typeof features.tempo === 'number' && features.tempo > 40) {
+        setTrackBpm(Math.round(features.tempo));
+      }
+    }).catch(() => {});
+
+    // 3. Estimate rhythm cadence from synchronized lyrics timestamps
+    if (Array.isArray(lyrics) && lyrics.length >= 4) {
+      const intervals = [];
+      for (let i = 0; i < lyrics.length - 1; i++) {
+        const dt = (lyrics[i + 1]?.startTime || 0) - (lyrics[i]?.startTime || 0);
+        if (dt >= 1.5 && dt <= 10) intervals.push(dt);
+      }
+      if (intervals.length >= 3) {
+        intervals.sort((a, b) => a - b);
+        const median = intervals[Math.floor(intervals.length / 2)];
+        let calculated = Math.round((8 / median) * 60);
+        while (calculated < 75) calculated *= 2;
+        while (calculated > 175) calculated /= 2;
+        setTrackBpm(Math.round(calculated));
+        return;
+      }
+    }
+
+    // 4. Deterministic fallback seeded by track title and artist
+    let hash = 0;
+    const str = `${currentTrack.title || ''} ${currentTrack.artist || ''}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    setTrackBpm(95 + (Math.abs(hash) % 45));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist, lyrics?.length]);
 
   const deviceList = useMemo(() => (Array.isArray(devices) ? devices : []), [devices]);
   const currentDevice = useMemo(
@@ -600,6 +664,16 @@ export default function SidebarDock({
 
       {/* 2. BIG ALBUM ARTWORK (Square / Rotating Circle Disc on Click) */}
       <div className="sidebar-art-container">
+        {/* Dynamic Circular Audio Spectrum Visualizer (ONLY on rotating circular vinyl, NOT on square) */}
+        {isCircleArt && (
+          <CircularAudioVisualizer
+            isPlaying={isPlaying}
+            progress={progress}
+            bpm={trackBpm}
+            discRadius={137.5}
+          />
+        )}
+
         <div
           className={`sidebar-art-card ${isCircleArt ? 'circle-rotating-art' : ''} ${isPlaying ? 'is-playing' : 'is-paused'}`}
           onClick={toggleCircleArt}
@@ -703,10 +777,18 @@ export default function SidebarDock({
               if (isActive) lineClass = 'lyric-active';
               else if (isNear) lineClass = 'lyric-near';
 
+              const textLen = (item.text || '').trim().length;
+              let lengthClass = '';
+              if (textLen >= 48) {
+                lengthClass = 'is-very-long-lyric';
+              } else if (textLen >= 28) {
+                lengthClass = 'is-long-lyric';
+              }
+
               return (
                 <div
                   key={item.key}
-                  className={`sidebar-lyric-item ${lineClass} ${isSeekable ? 'is-seekable' : ''}`}
+                  className={`sidebar-lyric-item ${lineClass} ${lengthClass} ${isSeekable ? 'is-seekable' : ''}`}
                   onClick={() => {
                     if (isSeekable) onSeek(item.startTime);
                   }}
@@ -715,6 +797,7 @@ export default function SidebarDock({
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
                     overflowWrap: 'anywhere',
+                    flexShrink: 0,
                   }}
                 >
                   {item.isIntro ? (
@@ -730,7 +813,6 @@ export default function SidebarDock({
                         textOverflow: 'clip',
                         wordBreak: 'break-word',
                         overflowWrap: 'anywhere',
-                        lineHeight: 1.35,
                         display: 'block',
                         width: '100%',
                         maxWidth: '100%',

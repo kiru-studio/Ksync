@@ -366,6 +366,15 @@ export default {
     }
   },
 
+  async getAudioFeatures(payload) {
+    if (!api || !api.spotifyGetAudioFeatures) return null;
+    try {
+      return await api.spotifyGetAudioFeatures(payload);
+    } catch (_) {
+      return null;
+    }
+  },
+
   logout() {
     if (api) api.spotifyLogout();
   },

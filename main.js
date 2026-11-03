@@ -1313,6 +1313,17 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     }
   });
 
+  ipcMain.handle('spotify-get-audio-features', async (_, payload) => {
+    try {
+      const { trackId, title, artist } = typeof payload === 'object' && payload !== null ? payload : { trackId: payload };
+      const canonicalId = await resolveCanonicalTrackId(trackId, title, artist);
+      if (!canonicalId) return null;
+      return await SpotifyAPI.getAudioFeatures(tokenStore, spotifyConfig, canonicalId);
+    } catch (_) {
+      return null;
+    }
+  });
+
   // SMTC IPC Commands
   ipcMain.handle('smtc-play', () => sendSmtcCommand({ cmd: 'play' }));
   ipcMain.handle('smtc-pause', () => sendSmtcCommand({ cmd: 'pause' }));
