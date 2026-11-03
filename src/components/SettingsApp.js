@@ -254,23 +254,24 @@ export default function SettingsApp() {
   useEffect(() => {
     document.title = 'ksync Settings & Configurator';
     const api = typeof window !== 'undefined' && window.electronAPI;
+
+    const handleFocus = () => {
+      if (api && api.showDock) api.showDock();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && api && api.showDock) {
+        api.showDock();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     if (api) {
       // Ensure dock is visible and restored in its reserved housing
       if (api.showDock) {
         api.showDock();
       }
-
-      const handleFocus = () => {
-        if (api.showDock) api.showDock();
-      };
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible' && api.showDock) {
-          api.showDock();
-        }
-      };
-
-      window.addEventListener('focus', handleFocus);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
 
       if (api.getDockDimensions) {
         api.getDockDimensions().then((dims) => {
