@@ -13,7 +13,6 @@ import {
   Volume2,
   VolumeX,
   Monitor,
-  ChevronUp,
   Music,
   Sparkles,
   LogIn,
@@ -1127,12 +1126,11 @@ export default function SidebarDock({
               <span className="sidebar-next-label">UP NEXT</span>
               <span className="sidebar-next-title">
                 {nextTrack
-                  ? `${nextTrack.title || 'Unknown Title'} • ${nextTrack.artist || 'Unknown Artist'}`
+                  ? (nextTrack.title || 'Unknown Title')
                   : 'Open queue to view upcoming tracks'}
               </span>
             </div>
           </div>
-          <ChevronUp size={16} className={`sidebar-next-chevron ${isQueueHovered ? 'open' : ''}`} />
         </div>
 
         {/* Expanded Queue List (Reveals on hover) */}
