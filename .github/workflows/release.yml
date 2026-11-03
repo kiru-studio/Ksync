@@ -29,7 +29,7 @@ jobs:
 
       - name: Publish SMTC Bridge Native Component
         run: |
-          dotnet publish smtc-bridge/smtc-bridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o smtc-bridge/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish
+          dotnet publish smtc-bridge/smtc-bridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o smtc-bridge/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish_compressed
 
       - name: Install dependencies
         run: npm ci

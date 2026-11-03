@@ -1,6 +1,42 @@
 # 🎵 ksync
 
-A beautiful, auto-hiding Spotify dock that behaves like the Windows taskbar but at the top of your screen. Control Spotify, view synced lyrics, and see your queue without opening the main app.
+A beautiful, auto-hiding Spotify desktop dock for Windows that behaves like an intelligent taskbar. Control Spotify playback, experience real-time synchronized karaoke lyrics, watch dynamic BPM-reactive audio spectrums, and track your queue without keeping the Spotify desktop client in view.
+
+---
+
+## 📥 Downloads (v2.4.2)
+
+Download the latest stable release for Windows 10 / 11 (64-bit):
+
+| Package | Download Link | Description |
+| :--- | :--- | :--- |
+| **Windows Installer** | [**Download ksync Setup v2.4.2 (.exe)**](https://github.com/kiru-studio/Ksync/releases/download/v2.4.2/ksync-Setup-2.4.2.exe) | Standard Windows NSIS installer with auto-update support & Start Menu shortcuts. |
+| **Portable Standalone** | [**Download ksync Portable v2.4.2 (.exe)**](https://github.com/kiru-studio/Ksync/releases/download/v2.4.2/ksync-2.4.2.exe) | Single standalone executable. No installation required—run from anywhere. |
+
+> [!NOTE]
+> View all versions, release notes, and source code on the [GitHub Releases page](https://github.com/kiru-studio/Ksync/releases).
+
+---
+
+## 📋 What's New in v2.4.2
+
+### 🌟 New Features & Implementations
+- **Dynamic BPM Circular Audio Spectrum**: Live reactive circular audio spectrum visualizer dynamically synced to the track's tempo, volume, and playback state.
+- **Interactive Vinyl Album Artwork**: Click on album artwork to seamlessly toggle between classic square cover view and a smoothly rotating vinyl disc animation across top and sidebar docks.
+- **Top Dock & Vertical Sidebar Modes**: Flexible dock orientations with smooth slide-in auto-hide animations when moving your cursor to the edge of your monitor.
+- **Windows SMTC Native Bridge**: Direct C# / .NET 10 System Media Transport Controls integration—enables instant media control (Play/Pause/Skip/Seek) for **Free Spotify accounts** without requiring Spotify Premium Web API permissions.
+
+### ⚡ Improvements
+- **Adaptive Lyrics Formatting**: Synced lyrics display now renders with explicit responsive line wrapping to prevent unexpected text truncation or ellipsis clipping in narrow dock widths.
+- **Persistent Playback Loop**: Improved audio spectrum and playback state loop persistence when resuming from sleep or background minimize.
+- **Lightweight System Tray**: Minimalist tray menu with instant Dock Toggle, lyrics color customization, and low idle CPU footprint.
+
+### 🐛 Bug Fixes
+- Fixed race conditions during fast track switching in SMTC sidecar events.
+- Resolved lyrics container clipping on multi-monitor high-DPI displays.
+- Updated repository endpoints, auto-updater manifests, and branding to `kiru-studio/Ksync`.
+
+---
 
 ## ✨ Features
 
@@ -34,7 +70,7 @@ The dock normally stays hidden above your screen. When you flick your mouse to t
 
 1. **Clone and install**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/kiru-studio/Ksync.git
    cd ksync
    npm install
    ```

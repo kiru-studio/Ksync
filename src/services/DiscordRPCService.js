@@ -425,7 +425,7 @@ class DiscordRPCService {
         url: spotifyUrl,
       },
       {
-        label: '⚡ Get ksync',
+        label: 'Get ksync',
         url: 'https://github.com/kiru-studio/Ksync',
       },
     ];
