@@ -230,6 +230,17 @@ namespace smtc_bridge
                         isMuted = isMuted
                     }));
                     Console.Out.Flush();
+
+                    int spotifyVol = GetProcessVolume("Spotify");
+                    if (spotifyVol >= 0)
+                    {
+                        Console.WriteLine(JsonSerializer.Serialize(new
+                        {
+                            type = "spotifyVolume",
+                            volume = spotifyVol
+                        }));
+                        Console.Out.Flush();
+                    }
                 }
                 catch { }
             }
@@ -341,6 +352,60 @@ namespace smtc_bridge
                 {
                     Console.Error.WriteLine($"[SystemAudio] SetProcessVolume error: {ex.Message}");
                     return false;
+                }
+            }
+        }
+
+        public static int GetProcessVolume(string processName)
+        {
+            lock (_syncRoot)
+            {
+                try
+                {
+                    var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+                    if (enumerator == null) return -1;
+
+                    int hr = enumerator.GetDefaultAudioEndpoint(0, 1, out IMMDevice dev);
+                    if (hr != 0 || dev == null) return -1;
+
+                    var iid = typeof(IAudioSessionManager2).GUID;
+                    hr = dev.Activate(ref iid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out object iface);
+                    if (hr != 0 || iface == null) return -1;
+
+                    var mgr = (IAudioSessionManager2)iface;
+                    hr = mgr.GetSessionEnumerator(out IAudioSessionEnumerator sessionEnum);
+                    if (hr != 0 || sessionEnum == null) return -1;
+
+                    sessionEnum.GetCount(out int count);
+                    for (int i = 0; i < count; i++)
+                    {
+                        sessionEnum.GetSession(i, out IAudioSessionControl ctrl);
+                        if (ctrl is IAudioSessionControl2 ctrl2)
+                        {
+                            ctrl2.GetProcessId(out uint pid);
+                            if (pid > 0)
+                            {
+                                try
+                                {
+                                    var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                                    if (proc.ProcessName.Contains(processName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (ctrl is ISimpleAudioVolume simpleVol)
+                                        {
+                                            simpleVol.GetMasterVolume(out float level);
+                                            return (int)Math.Round(level * 100f);
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    return -1;
+                }
+                catch
+                {
+                    return -1;
                 }
             }
         }

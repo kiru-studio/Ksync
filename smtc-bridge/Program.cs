@@ -211,6 +211,13 @@ namespace smtc_bridge
                         }
                         continue;
                     }
+                    if (cmd == "getSpotifyVolume")
+                    {
+                        int vol = SystemAudio.GetProcessVolume("Spotify");
+                        Console.WriteLine(JsonSerializer.Serialize(new { type = "spotifyVolume", volume = vol }));
+                        Console.Out.Flush();
+                        continue;
+                    }
                     if (cmd == "setSpotifyVolume")
                     {
                         if (doc.RootElement.TryGetProperty("volume", out var volProp))

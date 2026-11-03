@@ -94,6 +94,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemVolume: () => ipcRenderer.invoke('get-system-volume'),
   setSystemVolume: (volume) => ipcRenderer.invoke('set-system-volume', volume),
   setSystemMute: (isMuted) => ipcRenderer.invoke('set-system-mute', isMuted),
+  getSpotifyVolume: () => ipcRenderer.invoke('get-spotify-volume'),
+  onSpotifyVolumeChanged: (callback) => {
+    const sub = (event, data) => callback(data);
+    ipcRenderer.on('spotify-volume-changed', sub);
+    return () => ipcRenderer.removeListener('spotify-volume-changed', sub);
+  },
   onSystemVolumeChanged: (callback) => {
     const sub = (event, data) => callback(data);
     ipcRenderer.on('system-volume-changed', sub);

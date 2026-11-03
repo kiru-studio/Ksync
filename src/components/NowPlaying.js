@@ -41,8 +41,22 @@ const NowPlaying = ({
   const [showDevices, setShowDevices] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [localVolume, setLocalVolume] = useState(volume ?? 50);
-  const [prevVolume, setPrevVolume] = useState(volume || 50);
+  const [localVolume, setLocalVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevVolume, setPrevVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
   const volThrottleTimerRef = useRef(null);
   const latestVolRef = useRef(volume ?? 50);
 

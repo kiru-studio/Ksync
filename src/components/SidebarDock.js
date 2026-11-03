@@ -102,15 +102,43 @@ export default function SidebarDock({
   onHideDock,
 }) {
   // Spotify Volume state (matching top dock expandable slider)
-  const [localVolume, setLocalVolume] = useState(volume ?? 50);
-  const [prevSpotifyVolume, setPrevSpotifyVolume] = useState(volume || 50);
+  const [localVolume, setLocalVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevSpotifyVolume, setPrevSpotifyVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const latestVolRef = useRef(volume ?? 50);
   const volThrottleTimerRef = useRef(null);
 
   // Global System Volume state (matching top dock lyrics-volume-pill)
-  const [displaySysVolume, setDisplaySysVolume] = useState(systemVolume ?? 50);
-  const [prevSysVolume, setPrevSysVolume] = useState(systemVolume || 50);
+  const [displaySysVolume, setDisplaySysVolume] = useState(() => {
+    if (typeof systemVolume === 'number') return systemVolume;
+    try {
+      const saved = localStorage.getItem('ksync_last_system_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevSysVolume, setPrevSysVolume] = useState(() => {
+    if (typeof systemVolume === 'number') return systemVolume;
+    try {
+      const saved = localStorage.getItem('ksync_last_system_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
   const [isSysMuted, setIsSysMuted] = useState(systemMuted || false);
   const [isHoveringGlobalVol, setIsHoveringGlobalVol] = useState(false);
   const [isGlobalDragging, setIsGlobalDragging] = useState(false);

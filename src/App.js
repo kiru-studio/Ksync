@@ -29,9 +29,49 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(50);
-  const [systemVolume, setSystemVolume] = useState(50);
-  const [systemMuted, setSystemMuted] = useState(false);
+
+  // Dynamic Volume State: seamlessly restores last known volume, preventing 50% flash
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return typeof settings?.audio?.lastSpotifyVolume === 'number' ? settings.audio.lastSpotifyVolume : 50;
+  });
+
+  const [systemVolume, setSystemVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ksync_last_system_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return typeof settings?.audio?.lastSystemVolume === 'number' ? settings.audio.lastSystemVolume : 50;
+  });
+
+  const [systemMuted, setSystemMuted] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ksync_last_system_muted');
+      if (saved !== null) return saved === 'true';
+    } catch (_) {}
+    return !!settings?.audio?.lastSystemMuted;
+  });
+
+  const updateSystemVolumeState = useCallback((vol, isMuted) => {
+    if (typeof vol === 'number') {
+      setSystemVolume(vol);
+      try { localStorage.setItem('ksync_last_system_volume', String(vol)); } catch (_) {}
+    }
+    if (typeof isMuted === 'boolean') {
+      setSystemMuted(isMuted);
+      try { localStorage.setItem('ksync_last_system_muted', String(isMuted)); } catch (_) {}
+    }
+  }, []);
+
+  const updateSpotifyVolumeState = useCallback((vol) => {
+    if (typeof vol === 'number') {
+      setVolume(vol);
+      try { localStorage.setItem('ksync_last_volume', String(vol)); } catch (_) {}
+    }
+  }, []);
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [isDeepSleep, setIsDeepSleep] = useState(false);
   const isDeepSleepRef = useRef(false);
@@ -329,12 +369,11 @@ function App() {
 
     SpotifyService.init();
 
-    // Query and subscribe to native Windows Master System Volume
+    // Query and subscribe to dynamic Windows Master System Volume
     if (window.electronAPI && window.electronAPI.getSystemVolume) {
       window.electronAPI.getSystemVolume().then((res) => {
         if (res && typeof res.volume === 'number') {
-          setSystemVolume(res.volume);
-          if (typeof res.isMuted === 'boolean') setSystemMuted(res.isMuted);
+          updateSystemVolumeState(res.volume, res.isMuted);
         }
       }).catch(() => {});
     }
@@ -342,8 +381,24 @@ function App() {
     if (window.electronAPI && window.electronAPI.onSystemVolumeChanged) {
       window.electronAPI.onSystemVolumeChanged((data) => {
         if (data && typeof data.volume === 'number') {
-          setSystemVolume(data.volume);
-          if (typeof data.isMuted === 'boolean') setSystemMuted(data.isMuted);
+          updateSystemVolumeState(data.volume, data.isMuted);
+        }
+      });
+    }
+
+    // Query and subscribe to dynamic Spotify process volume
+    if (window.electronAPI && window.electronAPI.getSpotifyVolume) {
+      window.electronAPI.getSpotifyVolume().then((res) => {
+        if (res && typeof res.volume === 'number') {
+          updateSpotifyVolumeState(res.volume);
+        }
+      }).catch(() => {});
+    }
+
+    if (window.electronAPI && window.electronAPI.onSpotifyVolumeChanged) {
+      window.electronAPI.onSpotifyVolumeChanged((data) => {
+        if (data && typeof data.volume === 'number') {
+          updateSpotifyVolumeState(data.volume);
         }
       });
     }
@@ -523,7 +578,7 @@ function App() {
       baseTimestampMsRef.current = Date.now();
       setProgress(progressSec);
       setDuration(durationSec);
-      if (typeof trackData.volume === 'number') setVolume(trackData.volume);
+      if (typeof trackData.volume === 'number') updateSpotifyVolumeState(trackData.volume);
       if (typeof trackData.shuffleState === 'boolean') setShuffleState(trackData.shuffleState);
       if (trackData.repeatState) setRepeatState(trackData.repeatState);
     } else {
@@ -683,7 +738,7 @@ function App() {
   };
 
   const handleVolumeChange = async (newVolume) => {
-    setVolume(newVolume);
+    updateSpotifyVolumeState(newVolume);
     try {
       await SpotifyService.setVolume(newVolume);
     } catch (error) {
@@ -692,7 +747,7 @@ function App() {
   };
 
   const handleSystemVolumeChange = async (newVolume) => {
-    setSystemVolume(newVolume);
+    updateSystemVolumeState(newVolume);
     if (window.electronAPI && window.electronAPI.setSystemVolume) {
       try {
         await window.electronAPI.setSystemVolume(newVolume);
@@ -703,7 +758,7 @@ function App() {
   };
 
   const handleSystemMuteToggle = async (muted) => {
-    setSystemMuted(muted);
+    updateSystemVolumeState(undefined, muted);
     if (window.electronAPI && window.electronAPI.setSystemMute) {
       try {
         await window.electronAPI.setSystemMute(muted);

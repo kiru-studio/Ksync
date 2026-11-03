@@ -9,7 +9,12 @@ const path = require('path');
 const SETTINGS_FILE = 'ksync-settings.json';
 
 const DEFAULT_SETTINGS = {
-  version: '2.4.2',
+  version: '2.4.3',
+  audio: {
+    lastSystemVolume: null,
+    lastSystemMuted: false,
+    lastSpotifyVolume: null,
+  },
   position: {
     mode: 'top',               // 'top' | 'left' | 'right'
     style: 'full',             // 'full' | 'island'

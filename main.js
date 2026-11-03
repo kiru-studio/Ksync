@@ -319,8 +319,17 @@ let showGraceUntil = Date.now() + 6000;
 let initialLaunchPending = true;
 
 let smtcProcess = null;
-let cachedSystemVolume = 50;
-let cachedSystemMute = false;
+let cachedSystemVolume = typeof initialSettings.audio?.lastSystemVolume === 'number'
+  ? initialSettings.audio.lastSystemVolume
+  : null;
+let cachedSystemMute = typeof initialSettings.audio?.lastSystemMuted === 'boolean'
+  ? initialSettings.audio.lastSystemMuted
+  : false;
+let cachedSpotifyVolume = typeof initialSettings.audio?.lastSpotifyVolume === 'number'
+  ? initialSettings.audio.lastSpotifyVolume
+  : null;
+let hasReceivedRealSystemVolume = false;
+let pendingSystemVolumeResolvers = [];
 let lastSetVolumeTime = 0;
 
 function startSmtcSidecar() {
@@ -363,11 +372,34 @@ function startSmtcSidecar() {
           }
           if (typeof state.volume === 'number') cachedSystemVolume = state.volume;
           if (typeof state.isMuted === 'boolean') cachedSystemMute = state.isMuted;
+          hasReceivedRealSystemVolume = true;
+          while (pendingSystemVolumeResolvers.length > 0) {
+            const resolve = pendingSystemVolumeResolvers.shift();
+            resolve({ volume: cachedSystemVolume, isMuted: cachedSystemMute });
+          }
           lastBroadcastedVolume = {
             volume: cachedSystemVolume,
             isMuted: cachedSystemMute,
           };
           broadcastToDocks('system-volume-changed', lastBroadcastedVolume);
+          try {
+            settingsStore.saveSettings({
+              audio: {
+                lastSystemVolume: cachedSystemVolume,
+                lastSystemMuted: cachedSystemMute,
+              }
+            });
+          } catch (_) {}
+        } else if (state.type === 'spotifyVolume' && typeof state.volume === 'number' && state.volume >= 0) {
+          cachedSpotifyVolume = state.volume;
+          broadcastToDocks('spotify-volume-changed', { volume: cachedSpotifyVolume });
+          try {
+            settingsStore.saveSettings({
+              audio: {
+                lastSpotifyVolume: cachedSpotifyVolume,
+              }
+            });
+          } catch (_) {}
         } else {
           lastBroadcastedPlayerState = state;
           broadcastToDocks('smtc-player-state', state);
@@ -468,6 +500,11 @@ function createDockWindowForDisplay(display) {
     }
     if (lastBroadcastedVolume) {
       win.webContents.send('system-volume-changed', lastBroadcastedVolume);
+    } else if (cachedSystemVolume !== null) {
+      win.webContents.send('system-volume-changed', { volume: cachedSystemVolume, isMuted: cachedSystemMute });
+    }
+    if (cachedSpotifyVolume !== null) {
+      win.webContents.send('spotify-volume-changed', { volume: cachedSpotifyVolume });
     }
     if (isSettingsOpen()) {
       win.webContents.send('settings-window-state', { isOpen: true });
@@ -1358,7 +1395,25 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     if (smtcProcess && smtcProcess.stdin) {
       sendSmtcCommand({ cmd: 'getSystemVolume' });
     }
-    return { volume: cachedSystemVolume, isMuted: cachedSystemMute };
+    if (!hasReceivedRealSystemVolume && smtcProcess) {
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          resolve({ volume: cachedSystemVolume ?? 50, isMuted: cachedSystemMute });
+        }, 800);
+        pendingSystemVolumeResolvers.push((val) => {
+          clearTimeout(timer);
+          resolve(val);
+        });
+      });
+    }
+    return { volume: cachedSystemVolume ?? 50, isMuted: cachedSystemMute };
+  });
+
+  ipcMain.handle('get-spotify-volume', async () => {
+    if (smtcProcess && smtcProcess.stdin) {
+      sendSmtcCommand({ cmd: 'getSpotifyVolume' });
+    }
+    return { volume: cachedSpotifyVolume ?? 50 };
   });
 
   ipcMain.handle('set-system-volume', async (_, volume) => {
@@ -2151,9 +2206,9 @@ process.on('uncaughtException', (err) => {
 });
 
 app.whenReady().then(() => {
+  startSmtcSidecar();
   createWindow();
   createTray();
-  startSmtcSidecar();
 
   try {
     globalShortcut.register('CommandOrControl+Alt+S', () => {

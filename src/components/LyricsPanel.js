@@ -30,8 +30,22 @@ const LyricsPanel = ({
   const lyricsFontWeight = theming.lyricsFontWeight ?? 700;
   const lyricsScale = theming.lyricsScale ?? 1.04;
 
-  const [displayVolume, setDisplayVolume] = useState(volume ?? 50);
-  const [prevVolume, setPrevVolume] = useState(volume || 50);
+  const [displayVolume, setDisplayVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_system_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevVolume, setPrevVolume] = useState(() => {
+    if (typeof volume === 'number') return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_system_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
   const [isMutedState, setIsMutedState] = useState(isMuted || false);
   const [isHoveringPill, setIsHoveringPill] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
