@@ -9,6 +9,9 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Company>kiru studio</Company>
+    <Product>ksync</Product>
+    <Copyright>Copyright © 2026 kiru studio</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

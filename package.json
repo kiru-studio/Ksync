@@ -1,6 +1,6 @@
 {
   "name": "ksync",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "A Spotify dock with auto-hide and lyrics display",
   "main": "main.js",
   "scripts": {
@@ -55,6 +55,7 @@
   "build": {
     "appId": "com.ksync",
     "productName": "ksync",
+    "copyright": "Copyright © 2026 kiru studio",
     "compression": "maximum",
     "publish": [
       {
@@ -89,6 +90,10 @@
     ],
     "win": {
       "icon": "build/icon.ico",
+      "legalTrademarks": "kiru studio",
+      "publisherName": [
+        "kiru studio"
+      ],
       "target": [
         {
           "target": "nsis",
