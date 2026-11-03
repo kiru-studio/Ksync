@@ -29,8 +29,8 @@ async function patch() {
         'ProductName': 'ksync',
         'FileDescription': 'ksync',
         'InternalName': 'ksync',
-        'CompanyName': 'Kiruthik Kumar M',
-        'LegalCopyright': 'Copyright © 2026 Kiruthik Kumar M',
+        'CompanyName': 'kiru studio',
+        'LegalCopyright': 'Copyright © 2026 kiru studio',
       },
     });
     console.log('[patch-electron] Successfully patched electron.exe with ksync logo and metadata!');

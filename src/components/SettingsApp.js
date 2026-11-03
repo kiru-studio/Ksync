@@ -3210,7 +3210,7 @@ export default function SettingsApp() {
               <div className="product-hero-footer">
                 <div className="developer-badge">
                   <span className="dev-glyph">✦</span>
-                  <span>Created by <strong>Kiruthik Kumar M</strong></span>
+                  <span>Created by <strong>kiru studio</strong></span>
                 </div>
 
                 <div className="hero-links-cluster">
@@ -3219,7 +3219,7 @@ export default function SettingsApp() {
                     className="ghost-pill-link"
                     onClick={() => {
                       if (typeof window !== 'undefined') {
-                        window.open?.('https://github.com/KiruthikKumar16/ksync', '_blank');
+                        window.open?.('https://github.com/kiru-studio/Ksync', '_blank');
                       }
                     }}
                   >
@@ -3425,7 +3425,7 @@ export default function SettingsApp() {
                   className="ghost-pill-link"
                   onClick={() => {
                     if (typeof window !== 'undefined') {
-                      window.open?.('https://github.com/KiruthikKumar16/ksync/releases', '_blank');
+                      window.open?.('https://github.com/kiru-studio/Ksync/releases', '_blank');
                     }
                   }}
                 >

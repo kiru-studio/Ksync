@@ -426,7 +426,7 @@ class DiscordRPCService {
       },
       {
         label: '⚡ Get ksync',
-        url: 'https://github.com/KiruthikKumar16/ksync',
+        url: 'https://github.com/kiru-studio/Ksync',
       },
     ];
 

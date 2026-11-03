@@ -192,7 +192,7 @@ async function tryLrclibMultiLayer(title, artist, targetDurationSec = null, albu
 
   const primaryArtist = cleanArtist.split(/[,&/]/)[0].trim();
   const cleanAlbum = cleanString(album);
-  const userAgent = 'ksync/1.0.0 (https://github.com/KiruthikKumar16/ksync)';
+  const userAgent = 'ksync/1.0.0 (https://github.com/kiru-studio/Ksync)';
   let plainFallback = null;
 
   // Layer 1: Exact Cryptographic/Database Match via /api/get with all metadata
