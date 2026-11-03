@@ -27,12 +27,9 @@ if (app.isPackaged) {
 function getAppIcon() {
   const icoPath = path.join(__dirname, 'build', 'icon.ico');
   const brandedPng = path.join(__dirname, 'assets', 'app-icon.png');
-  const pngPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
-  // On Windows, passing the raw string path to the .ico preserves multi-resolution Win32 icon frames (16x16, 32x32, 48x48, 256x256)
   // On Windows, passing the raw string path to the .ico preserves multi-resolution Win32 icon frames (16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256)
   if (fs.existsSync(icoPath)) return icoPath;
   if (fs.existsSync(brandedPng)) return brandedPng;
-  if (fs.existsSync(pngPath)) return pngPath;
   return undefined;
 }
 
@@ -2123,7 +2120,7 @@ function updateTrayMenu() {
 function createTray() {
   const trayIconPath = path.join(__dirname, 'assets', 'tray-icon.png');
   const whiteLogoPath = path.join(__dirname, 'assets', 'k-logo-white.png');
-  const blackLogoPath = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
+  const blackLogoPath = path.join(__dirname, 'assets', 'k-logo-black.png');
   let iconPath = fs.existsSync(trayIconPath) ? trayIconPath : (fs.existsSync(whiteLogoPath) ? whiteLogoPath : (fs.existsSync(blackLogoPath) ? blackLogoPath : null));
   if (!iconPath && !fs.existsSync(fallbackPath)) {
     const assetsDir = path.join(__dirname, 'assets');

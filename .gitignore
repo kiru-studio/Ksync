@@ -23,6 +23,8 @@ release/
 # IDE files
 .vscode/
 .idea/
+.cursor/
+.amazonq/
 *.swp
 *.swo
 

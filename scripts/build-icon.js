@@ -6,11 +6,10 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const brandedPng = path.join(__dirname, 'assets', 'app-icon.png');
-const fallbackPng = path.join(__dirname, 'Untitled_design__1_-removebg-preview.png');
-const pngPath = fs.existsSync(brandedPng) ? brandedPng : fallbackPng;
+const rootDir = path.resolve(__dirname, '..');
+const pngPath = path.join(rootDir, 'assets', 'app-icon.png');
 
-const outDir = path.join(__dirname, 'build');
+const outDir = path.join(rootDir, 'build');
 const icoPath = path.join(outDir, 'icon.ico');
 const instIco = path.join(outDir, 'installerIcon.ico');
 const uninstIco = path.join(outDir, 'uninstallerIcon.ico');

@@ -10,11 +10,10 @@
     "dev": "concurrently \"npm run start\" \"npm run watch\"",
     "watch": "webpack --mode development --watch",
     "build": "webpack --mode production",
-    "build:icon": "node build-icon.js",
+    "build:icon": "node scripts/build-icon.js",
     "dist": "npm run build && npm run build:icon && electron-builder",
     "pack": "npm run build && npm run build:icon && electron-builder --dir",
-    "release": "npm run build && npm run build:icon && electron-builder --publish always",
-    "setup": "node setup.js"
+    "release": "npm run build && npm run build:icon && electron-builder --publish always"
   },
   "repository": {
     "type": "git",
@@ -80,8 +79,7 @@
       "dist/**/*",
       "src/**/*",
       "assets/**/*",
-      "build/**/*",
-      "Untitled_design__1_-removebg-preview.png"
+      "build/**/*"
     ],
     "extraResources": [
       {
