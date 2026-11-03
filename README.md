@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/app-icon.png" alt="ksync Logo" width="88" height="88" />
+<img src="assets/k-logo-white.png" alt="ksync Logo" width="88" height="88" />
 
 # ksync
 
