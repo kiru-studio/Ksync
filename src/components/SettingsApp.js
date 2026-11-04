@@ -60,6 +60,7 @@ import {
   ChevronDown,
   ChevronUp,
   Power,
+  Target,
 } from 'lucide-react';
 import { useSettings, PRESET_THEMES, DEFAULT_SETTINGS } from '../context/SettingsContext';
 import SpotifyService from '../services/SpotifyService';
@@ -174,8 +175,6 @@ export default function SettingsApp() {
 
   // Appearance Studio states
   const [appearanceSearch, setAppearanceSearch] = useState('');
-  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
-  const [newPresetName, setNewPresetName] = useState('');
   const [renamingPresetId, setRenamingPresetId] = useState(null);
   const [connectedDisplays, setConnectedDisplays] = useState([]);
 
@@ -194,12 +193,65 @@ export default function SettingsApp() {
   const [toastMessage, setToastMessage] = useState(null);
   const [historyStack, setHistoryStack] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const fontFileInputRef = useRef(null);
+
+  const handleFontFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setToastMessage('Font file must be under 5 MB');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    let format = 'truetype';
+    if (ext === 'otf') format = 'opentype';
+    else if (ext === 'woff') format = 'woff';
+    else if (ext === 'woff2') format = 'woff2';
+
+    const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
+    const cleanFontName = rawName || 'Custom Font';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target?.result;
+      if (!base64Data) return;
+
+      const customFontObj = {
+        name: cleanFontName,
+        data: base64Data,
+        format,
+        fileName: file.name,
+      };
+
+      updateThemingWithHistory({
+        customFont: customFontObj,
+        lyricsFontFamily: `'${cleanFontName}', sans-serif`,
+      });
+
+      setToastMessage(`Font "${cleanFontName}" applied!`);
+      setTimeout(() => setToastMessage(null), 3000);
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveCustomFont = () => {
+    updateThemingWithHistory({
+      customFont: null,
+      lyricsFontFamily: 'system-ui, -apple-system, sans-serif',
+    });
+    setToastMessage('Custom font removed');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
   const [collapsedSections, setCollapsedSections] = useState({
     'appearance-background': true,
     'appearance-colors': true,
     'appearance-typography': true,
     'appearance-components': true,
-    'appearance-motion': true,
   });
 
   const {
@@ -715,16 +767,6 @@ export default function SettingsApp() {
     reader.readAsText(file);
   };
 
-  const handleSavePresetSubmit = (e) => {
-    e.preventDefault();
-    if (!newPresetName.trim()) return;
-    saveCustomPreset(newPresetName.trim());
-    setNewPresetName('');
-    setShowSavePresetModal(false);
-    setToastMessage('Preset saved to user themes!');
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   const handleRenameSubmit = (e) => {
     e.preventDefault();
     if (!renameInputValue.trim() || !renamingPresetId) return;
@@ -747,7 +789,6 @@ export default function SettingsApp() {
       'appearance-colors': true,
       'appearance-typography': true,
       'appearance-components': true,
-      'appearance-motion': true,
     }));
   };
 
@@ -759,7 +800,6 @@ export default function SettingsApp() {
       'appearance-colors': false,
       'appearance-typography': false,
       'appearance-components': false,
-      'appearance-motion': false,
     }));
   };
 
@@ -769,7 +809,6 @@ export default function SettingsApp() {
     'appearance-colors',
     'appearance-typography',
     'appearance-components',
-    'appearance-motion',
   ].every((id) => !!collapsedSections[id]);
 
   const activePresetObj = presets.find((p) => p.id === theming.preset);
@@ -947,129 +986,60 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <div className="theme-presets-grid">
-                  {presets.map((preset) => {
-                    const isActive = theming.preset === preset.id;
-                    const isFav = (theming.favoritePresets || []).includes(preset.id);
-                    return (
-                      <div
-                        key={preset.id}
-                        className={`preset-card-visual ${isActive ? 'active' : ''} ${preset.isCustom ? 'is-custom-preset' : ''}`}
-                        onClick={() => handleApplyPresetWithHistory(preset.id)}
-                      >
-                        {/* Top Mini Preview Stage */}
-                        <div
-                          className={`preset-stage-preview stage-${preset.id}`}
-                          style={{
-                            background: preset.backdropStyle === 'solid'
-                              ? preset.solidColor
-                              : preset.backdropStyle === 'gradient' && preset.gradient
-                              ? `linear-gradient(${preset.gradient.angle || 135}deg, ${preset.gradient.color1 || '#181b29'}, ${preset.gradient.color2 || '#0b0c13'})`
-                              : preset.id === 'oled'
-                              ? '#000000'
-                              : undefined,
-                          }}
-                        >
-                          <div className="mini-stage-album" style={{ borderRadius: `${theming.artCornerRadius ?? 10}px` }} />
-                          <div className="mini-stage-lyrics">
-                            <span className="mini-bar-inactive" />
-                            <span
-                              className="mini-bar-active"
-                              style={{
-                                backgroundColor: preset.lyricsActiveColor || preset.accentColor,
-                                boxShadow: `0 0 10px ${preset.lyricsActiveColor || preset.accentColor}`,
-                              }}
-                            />
-                          </div>
+                      {builtinPresets.map((preset) => {
+                        const activePresetId = theming.preset === 'default' ? 'custom' : (theming.preset || 'custom');
+                        const isActive = activePresetId === preset.id;
+                        return (
                           <div
-                            className="mini-stage-pill"
-                            style={{
-                              backgroundColor: preset.accentColor || '#1db954',
-                            }}
-                          />
-                        </div>
-
-                        {/* Bottom Label Bar */}
-                        <div className="preset-label-bar">
-                          <div className="preset-title-cluster">
-                            <span className="preset-title">{preset.name}</span>
-                            {preset.isCustom && <span className="preset-custom-pill">Custom</span>}
-                          </div>
-
-                          <div className="preset-actions-tray" onClick={(e) => e.stopPropagation()}>
-                            {/* Favorite Button */}
-                            <button
-                              type="button"
-                              className={`preset-action-mini-btn ${isFav ? 'favorited' : ''}`}
-                              onClick={() => favoritePreset(preset.id)}
-                              title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                              <Star size={12} fill={isFav ? '#eab308' : 'none'} color={isFav ? '#eab308' : '#71717a'} />
-                            </button>
-
-                            {/* Duplicate Button */}
-                            <button
-                              type="button"
-                              className="preset-action-mini-btn"
-                              onClick={() => {
-                                duplicatePreset(preset.id);
-                                setToastMessage(`Preset "${preset.name}" duplicated`);
-                                setTimeout(() => setToastMessage(null), 2500);
+                            key={preset.id}
+                            className={`preset-card-visual ${isActive ? 'active' : ''}`}
+                            onClick={() => handleApplyPresetWithHistory(preset.id)}
+                            role="button"
+                            tabIndex={0}
+                            title={`Activate ${preset.name} theme`}
+                          >
+                            {/* Top Mini Preview Stage */}
+                            <div
+                              className={`preset-stage-preview stage-${preset.id}`}
+                              style={{
+                                background: preset.backdropStyle === 'solid'
+                                  ? preset.solidColor
+                                  : preset.backdropStyle === 'gradient' && preset.gradient
+                                  ? `linear-gradient(${preset.gradient.angle || 135}deg, ${preset.gradient.color1 || '#181b29'}, ${preset.gradient.color2 || '#0b0c13'})`
+                                  : preset.id === 'oled'
+                                  ? '#000000'
+                                  : undefined,
                               }}
-                              title="Duplicate preset"
                             >
-                              <Copy size={12} />
-                            </button>
-
-                            {/* Custom Only: Rename and Delete */}
-                            {preset.isCustom && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="preset-action-mini-btn"
-                                  onClick={() => {
-                                    setRenamingPresetId(preset.id);
-                                    setRenameInputValue(preset.name);
+                              <div className="mini-stage-album" style={{ borderRadius: `${theming.artCornerRadius ?? 10}px` }} />
+                              <div className="mini-stage-lyrics">
+                                <span className="mini-bar-inactive" />
+                                <span
+                                  className="mini-bar-active"
+                                  style={{
+                                    backgroundColor: preset.lyricsActiveColor || preset.accentColor,
+                                    boxShadow: `0 0 10px ${preset.lyricsActiveColor || preset.accentColor}`,
                                   }}
-                                  title="Rename preset"
-                                >
-                                  <Edit2 size={12} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="preset-action-mini-btn danger"
-                                  onClick={() => {
-                                    if (window.confirm(`Delete custom theme "${preset.name}"?`)) {
-                                      deleteCustomPreset(preset.id);
-                                    }
-                                  }}
-                                  title="Delete custom preset"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </>
-                            )}
+                                />
+                              </div>
+                              <div
+                                className="mini-stage-pill"
+                                style={{
+                                  backgroundColor: preset.accentColor || '#1db954',
+                                }}
+                              />
+                            </div>
 
+                            {/* Bottom Label Bar */}
+                            <div className="preset-label-bar">
+                              <div className="preset-title-cluster">
+                                <span className="preset-title">{preset.name}</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Create Custom Theme Trigger Card */}
-                  <button
-                    type="button"
-                    className="preset-card-visual create-custom-card"
-                    onClick={() => setShowSavePresetModal(true)}
-                  >
-                    <div className="create-custom-content">
-                      <div className="create-custom-icon-ring">
-                        <Plus size={18} />
-                      </div>
-                      <span className="create-custom-title">Create New Theme</span>
-                      <span className="create-custom-desc">Snapshot current look</span>
+                        );
+                      })}
                     </div>
-                  </button>
-                </div>
                   )}
                 </section>
               );
@@ -1078,6 +1048,9 @@ export default function SettingsApp() {
             {/* SECTION 2: BACKGROUND & ARTWORK */}
             {matchesSearch('Background & Artwork', ['solid', 'gradient', 'linear', 'radial', 'angle', 'stops', 'vignette', 'blend', 'zoom', 'album', 'artwork', 'blur', 'glass', 'acrylic', 'opacity', 'border', 'materials']) && (() => {
               const isOpen = appearanceSearch.trim() ? true : !collapsedSections['appearance-background'];
+              const activePresetId = theming.preset === 'default' ? 'custom' : (theming.preset || 'custom');
+              const isCustom = activePresetId === 'custom';
+
               return (
                 <section className="settings-level1-card">
                   <div
@@ -1098,11 +1071,40 @@ export default function SettingsApp() {
                         <Palette size={16} />
                       </div>
                       <div>
-                        <h3 className="card-title-text">Background & Artwork</h3>
-                        <p className="card-desc-text">Select background mode, gradients, blur density, and artwork extraction.</p>
+                        <h3 className="card-title-text">
+                          {isCustom ? "Custom Background Fill" : `${activePresetId === 'oled' ? 'OLED Pure Black Canvas' : activePresetId === 'artwork' ? 'Album Reactive Backdrop' : activePresetId === 'frosted' ? 'Frosted Acrylic Canvas' : activePresetId === 'cyberpunk' ? 'Neon Cyberpunk Canvas' : activePresetId === 'warm-amber' ? 'Warm Sunset Canvas' : 'Background Canvas'}`}
+                        </h3>
+                        <p className="card-desc-text">
+                          {isCustom
+                            ? "Full custom background matrix: select solid colors, gradients, acrylic diffusion, or album reactive extraction."
+                            : `Settings tailored specifically for the active ${activePresetId === 'oled' ? 'OLED Pure Black' : activePresetId === 'artwork' ? 'Artwork Reactive' : activePresetId === 'frosted' ? 'Frosted Glass 11' : activePresetId === 'cyberpunk' ? 'Neon Cyberpunk' : 'Warm Sunset'} profile.`}
+                        </p>
                       </div>
                     </div>
                     <div className="header-right-cluster">
+                      {!isCustom && (
+                        <button
+                          type="button"
+                          className="card-action-btn"
+                          style={{
+                            fontSize: '11.5px',
+                            padding: '4px 10px',
+                            marginRight: '8px',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '6px',
+                            color: '#a1a1aa',
+                            cursor: 'pointer',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateThemingWithHistory({ preset: 'custom' });
+                          }}
+                          title="Switch to Custom to unlock all background modes"
+                        >
+                          Customize
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="card-action-btn ghost icon-only"
@@ -1127,7 +1129,9 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
-                      {/* 6 Background Mode Segmented Tabs */}
+                      {isCustom ? (
+                        <>
+                          {/* 6 Background Mode Segmented Tabs */}
                 <div className="segmented-pill-tray six-items">
                   {[
                     { id: 'solid', label: 'Solid Color' },
@@ -1422,7 +1426,7 @@ export default function SettingsApp() {
 
                 {/* Common Sliders: Backdrop Opacity & Dock Border Opacity */}
                 <div className="bento-two-columns" style={{ marginTop: '14px' }}>
-                  <div className="bento-control-pad">
+                  <div className="bento-control-pad" style={{ gridColumn: 'span 2' }}>
                     <div className="bento-header-row">
                       <span className="bento-label">Global Backdrop Opacity</span>
                       <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.92) * 100)}%</span>
@@ -1442,26 +1446,130 @@ export default function SettingsApp() {
                       />
                     </div>
                   </div>
-
-                  <div className="bento-control-pad">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Dock Edge Border Opacity</span>
-                      <span className="tabular-num-pill">{theming.borderOpacity ?? 12}%</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={theming.borderOpacity ?? 12}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ borderOpacity: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
                 </div>
+                        </>
+                      ) : (
+                        /* Curated Profile Tailored Settings */
+                        <div className="studio-sub-section" style={{ padding: '4px 0' }}>
+                          {activePresetId === 'oled' && (
+                            <div style={{ padding: '12px 14px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff' }}>OLED Pure Black Canvas</div>
+                              <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>Zero-power true black (#000000) canvas locked for OLED efficiency and infinite contrast.</div>
+                            </div>
+                          )}
+
+                          {activePresetId === 'artwork' && (
+                            <>
+                              <div className="card-hairline-row flex-between">
+                                <div>
+                                  <div className="row-main-label">Album Art Color Extraction</div>
+                                  <div className="row-sub-label">Derive dynamic ambient backdrop hues from currently playing song artwork</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className={`pill-toggle-switch ${theming.artworkSampling !== false ? 'on active' : 'off'}`}
+                                  onClick={() => updateThemingWithHistory({ artworkSampling: theming.artworkSampling === false })}
+                                >
+                                  <span className="toggle-thumb" />
+                                </button>
+                              </div>
+
+                              <div className="bento-two-columns" style={{ marginTop: '14px' }}>
+                                <div className="bento-control-pad">
+                                  <div className="bento-header-row">
+                                    <span className="bento-label">Artwork Backdrop Blur</span>
+                                    <span className="tabular-num-pill">{theming.blurStrength ?? 50}px</span>
+                                  </div>
+                                  <div className="thick-slider-wrapper">
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="80"
+                                      value={theming.blurStrength ?? 50}
+                                      onChange={(e) => updateThemingWithHistory({ blurStrength: parseInt(e.target.value, 10) })}
+                                      className="thick-slider-input"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="bento-control-pad">
+                                  <div className="bento-header-row">
+                                    <span className="bento-label">Global Backdrop Opacity</span>
+                                    <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.88) * 100)}%</span>
+                                  </div>
+                                  <div className="thick-slider-wrapper">
+                                    <input
+                                      type="range"
+                                      min="10"
+                                      max="100"
+                                      value={Math.round((theming.opacity ?? 0.88) * 100)}
+                                      onChange={(e) => updateThemingWithHistory({ opacity: parseFloat(e.target.value) / 100 })}
+                                      className="thick-slider-input"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {activePresetId === 'frosted' && (
+                            <div className="bento-two-columns">
+                              <div className="bento-control-pad">
+                                <div className="bento-header-row">
+                                  <span className="bento-label">Acrylic Diffusion Blur</span>
+                                  <span className="tabular-num-pill">{theming.blurStrength ?? 38}px</span>
+                                </div>
+                                <div className="thick-slider-wrapper">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="60"
+                                    value={theming.blurStrength ?? 38}
+                                    onChange={(e) => updateThemingWithHistory({ blurStrength: parseInt(e.target.value, 10) })}
+                                    className="thick-slider-input"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="bento-control-pad">
+                                <div className="bento-header-row">
+                                  <span className="bento-label">Glass Transparency Opacity</span>
+                                  <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.68) * 100)}%</span>
+                                </div>
+                                <div className="thick-slider-wrapper">
+                                  <input
+                                    type="range"
+                                    min="10"
+                                    max="100"
+                                    value={Math.round((theming.opacity ?? 0.68) * 100)}
+                                    onChange={(e) => updateThemingWithHistory({ opacity: parseFloat(e.target.value) / 100 })}
+                                    className="thick-slider-input"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {(activePresetId === 'cyberpunk' || activePresetId === 'warm-amber') && (
+                            <div className="bento-control-pad">
+                              <div className="bento-header-row">
+                                <span className="bento-label">Global Backdrop Opacity</span>
+                                <span className="tabular-num-pill">{Math.round((theming.opacity ?? 0.92) * 100)}%</span>
+                              </div>
+                              <div className="thick-slider-wrapper">
+                                <input
+                                  type="range"
+                                  min="10"
+                                  max="100"
+                                  value={Math.round((theming.opacity ?? 0.92) * 100)}
+                                  onChange={(e) => updateThemingWithHistory({ opacity: parseFloat(e.target.value) / 100 })}
+                                  className="thick-slider-input"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </section>
@@ -1589,7 +1697,6 @@ export default function SettingsApp() {
                                   onChange={(e) => updateThemingWithHistory({ 
                                     accentColor: e.target.value,
                                     progressColor: e.target.value,
-                                    lyricsActiveColor: e.target.value,
                                   })}
                                   className="hidden-color-picker"
                                 />
@@ -1631,7 +1738,7 @@ export default function SettingsApp() {
                                     type="button"
                                     className={`circular-color-swatch ${theming.accentColor === hex ? 'selected' : ''}`}
                                     style={{ backgroundColor: hex }}
-                                    onClick={() => updateThemingWithHistory({ accentColor: hex, progressColor: hex, lyricsActiveColor: hex })}
+                                    onClick={() => updateThemingWithHistory({ accentColor: hex, progressColor: hex })}
                                     title={hex}
                                   />
                                 )
@@ -1698,13 +1805,23 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
+                {/* Hidden font file input */}
+                <input
+                  type="file"
+                  ref={fontFileInputRef}
+                  style={{ display: 'none' }}
+                  accept=".ttf,.otf,.woff,.woff2"
+                  onChange={handleFontFileUpload}
+                />
+
                 {/* Glowing Color Swatches Row */}
                 <div className="glowing-swatches-grid">
                   {LYRIC_GLOW_SWATCHES.map((swatch) => {
-                    const isArtworkReactive = theming.backdropStyle === 'artwork' || theming.preset === 'artwork';
+                    const isArtworkReactive = (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && theming.artworkSampling !== false;
+                    const isDynamicActive = theming.lyricsActiveColor === 'dynamic' || (!theming.lyricsActiveColor && isArtworkReactive);
                     const isCur = swatch.isDynamic
-                      ? (theming.lyricsActiveColor === 'dynamic' || (isArtworkReactive && (!theming.lyricsActiveColor || theming.lyricsActiveColor === 'dynamic' || theming.lyricsActiveColor === '#1db954')))
-                      : (theming.lyricsActiveColor && theming.lyricsActiveColor.toLowerCase() === swatch.hex.toLowerCase() && !(swatch.hex === '#1db954' && isArtworkReactive));
+                      ? isDynamicActive
+                      : (!isDynamicActive && theming.lyricsActiveColor && theming.lyricsActiveColor.toLowerCase() === swatch.hex.toLowerCase());
                     return (
                       <button
                         key={swatch.hex}
@@ -1721,7 +1838,6 @@ export default function SettingsApp() {
                           updateThemingWithHistory({
                             lyricsActiveColor: swatch.hex,
                             lyricsGlowColor: swatch.hex,
-                            ...(swatch.isDynamic ? {} : { accentColor: swatch.hex }),
                           })
                         }
                         title={swatch.name}
@@ -1734,26 +1850,56 @@ export default function SettingsApp() {
 
                 {/* Typography Engine Grid */}
                 <div className="bento-two-columns" style={{ marginTop: '16px' }}>
-                  {/* Font Family Dropdown */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
+                  {/* Font Family Dropdown + Upload Action */}
+                  <div className="bento-control-pad compact" style={{ gridColumn: 'span 2' }}>
+                    <div className="bento-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="bento-label">Karaoke Font Family</span>
+                      <button
+                        type="button"
+                        className="font-upload-action-btn"
+                        onClick={() => fontFileInputRef.current?.click()}
+                        title="Upload custom font (.ttf, .otf, .woff, .woff2)"
+                      >
+                        <Upload size={12} />
+                        <span>Upload Font</span>
+                      </button>
                     </div>
-                    <select
-                      className="studio-select-dropdown full-width"
-                      value={theming.lyricsFontFamily || 'system-ui'}
-                      onChange={(e) => updateThemingWithHistory({ lyricsFontFamily: e.target.value })}
-                    >
-                      <option value="system-ui, -apple-system, sans-serif">System UI Sans (Default)</option>
-                      <option value="'Inter', sans-serif">Inter (Modern Clean)</option>
-                      <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
-                      <option value="'Outfit', sans-serif">Outfit (Editorial)</option>
-                      <option value="'Poppins', sans-serif">Poppins (Rounded)</option>
-                      <option value="'Mukta Malar', sans-serif">Mukta Malar (Tamil Karaoke)</option>
-                      <option value="'Catamaran', sans-serif">Catamaran (Tamil Karaoke)</option>
-                      <option value="'Nirmala UI', sans-serif">Nirmala UI (Tamil Karaoke)</option>
-                      <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
-                    </select>
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                      <select
+                        className="studio-select-dropdown full-width"
+                        value={theming.lyricsFontFamily || 'system-ui'}
+                        onChange={(e) => updateThemingWithHistory({ lyricsFontFamily: e.target.value })}
+                        style={{ flex: 1 }}
+                      >
+                        {theming.customFont?.name && (
+                          <option value={`'${theming.customFont.name}', sans-serif`}>
+                            ★ {theming.customFont.name} (Uploaded)
+                          </option>
+                        )}
+                        <option value="system-ui, -apple-system, sans-serif">System UI Sans (Default)</option>
+                        <option value="'Inter', sans-serif">Inter (Modern Clean)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
+                        <option value="'Outfit', sans-serif">Outfit (Editorial)</option>
+                        <option value="'Poppins', sans-serif">Poppins (Rounded)</option>
+                        <option value="'Mukta Malar', sans-serif">Mukta Malar (Tamil Karaoke)</option>
+                        <option value="'Catamaran', sans-serif">Catamaran (Tamil Karaoke)</option>
+                        <option value="'Nirmala UI', sans-serif">Nirmala UI (Tamil Karaoke)</option>
+                        <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
+                      </select>
+
+                      {theming.customFont?.name && (
+                        <button
+                          type="button"
+                          className="card-action-btn ghost icon-only"
+                          onClick={handleRemoveCustomFont}
+                          title={`Remove custom font "${theming.customFont.name}"`}
+                          style={{ color: '#ef4444', height: '36px', width: '36px' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Font Size Slider */}
@@ -1835,42 +1981,6 @@ export default function SettingsApp() {
                       />
                     </div>
                   </div>
-
-                  {/* Transition Speed */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Lyric Scroll Transition</span>
-                      <span className="tabular-num-pill">{theming.lyricsTransitionMs ?? 320}ms</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="100"
-                        max="800"
-                        step="20"
-                        value={theming.lyricsTransitionMs ?? 320}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ lyricsTransitionMs: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Beat Pulse Animation Toggle */}
-                <div className="card-hairline-row flex-between" style={{ marginTop: '16px' }}>
-                  <div>
-                    <div className="row-main-label">Singing Beat Pulse</div>
-                    <div className="row-sub-label">Soft rhythmic bloom pulse on active vocal phrases</div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`pill-toggle-switch ${theming.lyricsPulseAnim !== false ? 'on active' : 'off'}`}
-                    onClick={() => updateThemingWithHistory({ lyricsPulseAnim: theming.lyricsPulseAnim === false })}
-                  >
-                    <span className="toggle-thumb" />
-                  </button>
                 </div>
                     </>
                   )}
@@ -1902,7 +2012,7 @@ export default function SettingsApp() {
                       </div>
                       <div>
                         <h3 className="card-title-text">Player Components</h3>
-                        <p className="card-desc-text">Refine album art styling, typography size, button dimensions, seekbar, and timestamps.</p>
+                        <p className="card-desc-text">Refine album art styling, marquee behavior, and sleeve hover effects.</p>
                       </div>
                     </div>
                     <div className="header-right-cluster">
@@ -1930,49 +2040,27 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
-                      <div className="bento-two-columns">
-                  {/* Artwork Corner Radius */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Album Art Corner Radius</span>
-                      <span className="tabular-num-pill">{theming.artCornerRadius ?? 10}px</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="0"
-                        max="32"
-                        value={theming.artCornerRadius ?? 10}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ artCornerRadius: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
+                      {/* Artwork Corner Radius */}
+                      <div className="bento-control-pad compact">
+                        <div className="bento-header-row">
+                          <span className="bento-label">Album Art Corner Radius</span>
+                          <span className="tabular-num-pill">{theming.artCornerRadius ?? 10}px</span>
+                        </div>
+                        <div className="thick-slider-wrapper">
+                          <input
+                            type="range"
+                            min="0"
+                            max="32"
+                            value={theming.artCornerRadius ?? 10}
+                            onChange={(e) =>
+                              updateThemingWithHistory({ artCornerRadius: parseInt(e.target.value, 10) })
+                            }
+                            className="thick-slider-input"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Progress Bar Thickness */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Seekbar Thickness</span>
-                      <span className="tabular-num-pill">{theming.progressThickness ?? 4}px</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="2"
-                        max="10"
-                        value={theming.progressThickness ?? 4}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ progressThickness: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Component Row Toggles */}
+                      {/* Component Row Toggles */}
                 <div className="card-hairline-row flex-between" style={{ marginTop: '16px' }}>
                   <div>
                     <div className="row-main-label">Marquee Auto-Scroll</div>
@@ -2000,106 +2088,6 @@ export default function SettingsApp() {
                     <span className="toggle-thumb" />
                   </button>
                 </div>
-                    </>
-                  )}
-                </section>
-              );
-            })()}
-
-            {/* SECTION 7: MOTION & EFFECTS */}
-            {matchesSearch('Motion & Effects', ['motion', 'transition', 'easing', 'spring', 'smooth', 'animation', 'reduced', 'performance', 'speed']) && (() => {
-              const isOpen = appearanceSearch.trim() ? true : !collapsedSections['appearance-motion'];
-              return (
-                <section className="settings-level1-card">
-                  <div
-                    className="card-top-header flex-between"
-                    onClick={() => toggleSectionCollapse('appearance-motion')}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleSectionCollapse('appearance-motion');
-                      }
-                    }}
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
-                  >
-                    <div className="header-left-cluster">
-                      <div className="card-icon-badge">
-                        <Zap size={16} />
-                      </div>
-                      <div>
-                        <h3 className="card-title-text">Motion & Visual Effects</h3>
-                        <p className="card-desc-text">Interface transition curves, reactive ambient glow, and low-spec performance mode.</p>
-                      </div>
-                    </div>
-                    <div className="header-right-cluster">
-                      <button
-                        type="button"
-                        className="card-action-btn ghost icon-only"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSectionCollapse('appearance-motion');
-                        }}
-                        title={isOpen ? "Collapse section" : "Expand section"}
-                        aria-expanded={isOpen}
-                      >
-                        <ChevronDown
-                          size={16}
-                          style={{
-                            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.22s ease',
-                            color: '#a1a1aa',
-                          }}
-                        />
-                      </button>
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <>
-                      <div className="bento-two-columns">
-                  {/* Transition Duration */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Interface Transition Duration</span>
-                      <span className="tabular-num-pill">{theming.transitionDurationMs ?? 250}ms</span>
-                    </div>
-                    <div className="thick-slider-wrapper">
-                      <input
-                        type="range"
-                        min="0"
-                        max="600"
-                        step="25"
-                        value={theming.transitionDurationMs ?? 250}
-                        onChange={(e) =>
-                          updateThemingWithHistory({ transitionDurationMs: parseInt(e.target.value, 10) })
-                        }
-                        className="thick-slider-input"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Easing Curves */}
-                  <div className="bento-control-pad compact">
-                    <div className="bento-header-row">
-                      <span className="bento-label">Easing Physics Curve</span>
-                    </div>
-                    <div className="segmented-pill-tray mini" style={{ margin: '4px 0 0' }}>
-                      {['smooth', 'spring', 'snappy', 'linear'].map((crv) => (
-                        <button
-                          key={crv}
-                          type="button"
-                          className={`segmented-tab-btn ${(theming.transitionEasing || 'smooth') === crv ? 'active' : ''}`}
-                          onClick={() => updateThemingWithHistory({ transitionEasing: crv })}
-                        >
-                          {crv.charAt(0).toUpperCase() + crv.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                     </>
                   )}
                 </section>
@@ -2527,52 +2515,6 @@ export default function SettingsApp() {
               </div>
 
               <div className="monitor-three-grid">
-                {/* Top Edge */}
-                <button
-                  type="button"
-                  className={`monitor-card-item ${(position.mode || 'top') === 'top' ? 'active' : ''}`}
-                  onClick={() => updateSettings({ position: { mode: 'top' } })}
-                >
-                  <div className="monitor-wireframe-container">
-                    <div className="monitor-screen-stage">
-                      <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
-                        {/* Background Desktop Mock Windows */}
-                        <rect x="12" y="32" width="94" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
-                        <line x1="12" y1="40" x2="106" y2="40" stroke="rgba(255, 255, 255, 0.06)" />
-                        <rect x="112" y="36" width="56" height="30" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
-
-                        {/* Top Dock Housing */}
-                        <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={(position.mode || 'top') === 'top' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
-                        
-                        {/* Glowing Top Accent Edge */}
-                        <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="#10B981" />
-
-                        {/* Section 1: Now Playing Mock (album art + title/artist lines + play dot) */}
-                        <rect x="10" y="8" width="13" height="13" rx="3" fill="#27272A" />
-                        <rect x="27" y="10" width="24" height="3.5" rx="1.75" fill="#A1A1AA" />
-                        <rect x="27" y="15.5" width="16" height="2.5" rx="1" fill="#52525B" />
-                        <circle cx="56" cy="14.5" r="3" fill="#1DB954" />
-
-                        {/* Section 2: Synced Lyrics Mock (stacked lyrics with green active bar) */}
-                        <rect x="74" y="7.5" width="32" height="2" rx="1" fill="#3F3F46" />
-                        <rect x="68" y="11.5" width="44" height="4" rx="2" fill="#10B981" />
-                        <rect x="76" y="17.5" width="28" height="2" rx="1" fill="#3F3F46" />
-
-                        {/* Section 3: Up Next Queue Mock (stacked track rows + play circle) */}
-                        <rect x="124" y="8.5" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
-                        <rect x="133" y="9.5" width="20" height="2" rx="1" fill="#A1A1AA" />
-                        <rect x="124" y="15" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
-                        <rect x="133" y="16" width="15" height="2" rx="1" fill="#52525B" />
-                        <circle cx="166" cy="14.5" r="4" fill="#1DB954" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="monitor-label-group">
-                    <span className="monitor-title">Top Bar Dock</span>
-                    <span className="monitor-sub">Default horizontal overlay</span>
-                  </div>
-                </button>
-
                 {/* Left Edge */}
                 <button
                   type="button"
@@ -2617,6 +2559,52 @@ export default function SettingsApp() {
                   <div className="monitor-label-group">
                     <span className="monitor-title">Left Sidebar</span>
                     <span className="monitor-sub">Vertical left edge dock</span>
+                  </div>
+                </button>
+
+                {/* Top Edge */}
+                <button
+                  type="button"
+                  className={`monitor-card-item ${(position.mode || 'top') === 'top' ? 'active' : ''}`}
+                  onClick={() => updateSettings({ position: { mode: 'top' } })}
+                >
+                  <div className="monitor-wireframe-container">
+                    <div className="monitor-screen-stage">
+                      <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                        {/* Background Desktop Mock Windows */}
+                        <rect x="12" y="32" width="94" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                        <line x1="12" y1="40" x2="106" y2="40" stroke="rgba(255, 255, 255, 0.06)" />
+                        <rect x="112" y="36" width="56" height="30" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+
+                        {/* Top Dock Housing */}
+                        <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={(position.mode || 'top') === 'top' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                        
+                        {/* Glowing Top Accent Edge */}
+                        <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="#10B981" />
+
+                        {/* Section 1: Now Playing Mock (album art + title/artist lines + play dot) */}
+                        <rect x="10" y="8" width="13" height="13" rx="3" fill="#27272A" />
+                        <rect x="27" y="10" width="24" height="3.5" rx="1.75" fill="#A1A1AA" />
+                        <rect x="27" y="15.5" width="16" height="2.5" rx="1" fill="#52525B" />
+                        <circle cx="56" cy="14.5" r="3" fill="#1DB954" />
+
+                        {/* Section 2: Synced Lyrics Mock (stacked lyrics with green active bar) */}
+                        <rect x="74" y="7.5" width="32" height="2" rx="1" fill="#3F3F46" />
+                        <rect x="68" y="11.5" width="44" height="4" rx="2" fill="#10B981" />
+                        <rect x="76" y="17.5" width="28" height="2" rx="1" fill="#3F3F46" />
+
+                        {/* Section 3: Up Next Queue Mock (stacked track rows + play circle) */}
+                        <rect x="124" y="8.5" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
+                        <rect x="133" y="9.5" width="20" height="2" rx="1" fill="#A1A1AA" />
+                        <rect x="124" y="15" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
+                        <rect x="133" y="16" width="15" height="2" rx="1" fill="#52525B" />
+                        <circle cx="166" cy="14.5" r="4" fill="#1DB954" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="monitor-label-group">
+                    <span className="monitor-title">Top Bar Dock</span>
+                    <span className="monitor-sub">Default horizontal overlay</span>
                   </div>
                 </button>
 
@@ -2817,6 +2805,39 @@ export default function SettingsApp() {
                                 type="button"
                                 className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
                                 onClick={() => updateSettings({ position: { triggerDistance: item.val } })}
+                              >
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Row 4b: Edge Trigger Area */}
+                      <div className="card-hairline-row flex-between">
+                        <div className="row-with-icon">
+                          <div className="inner-icon-badge">
+                            <Target size={15} />
+                          </div>
+                          <div>
+                            <div className="row-main-label">Edge Trigger Area</div>
+                            <div className="row-sub-label">Limit hover detection zone along the screen edge to eliminate false triggers</div>
+                          </div>
+                        </div>
+                        <div className="segment-pill-group">
+                          {[
+                            { label: 'Full Edge', val: 'full', title: 'Detect across the entire screen edge' },
+                            { label: 'Center Zone', val: 'center', title: 'Only trigger when cursor is near the center' },
+                            { label: 'Compact Hotspot', val: 'compact', title: 'Tight center hotspot for maximum false-trigger avoidance' },
+                          ].map((item) => {
+                            const isSelected = (position.triggerSpan || 'full') === item.val;
+                            return (
+                              <button
+                                key={item.val}
+                                type="button"
+                                className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
+                                onClick={() => updateSettings({ position: { triggerSpan: item.val } })}
+                                title={item.title}
                               >
                                 {item.label}
                               </button>
@@ -3604,54 +3625,7 @@ export default function SettingsApp() {
           <div className="stark-side-dock-reserve right" style={{ width: `${sidebarWidth}px` }} />
         </>
       )}
-          {/* Modal: Save Custom Preset */}
-      {showSavePresetModal && (
-        <div className="settings-modal-backdrop" onClick={() => setShowSavePresetModal(false)}>
-          <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-top-header">
-              <div className="modal-icon-badge">
-                <Sparkles size={18} />
-              </div>
-              <div>
-                <h3 className="modal-title-text">Create New Theme</h3>
-                <p className="modal-desc-text">Snapshot your current visual theme into a reusable preset.</p>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={() => setShowSavePresetModal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleSavePresetSubmit} className="modal-form-body">
-              <label className="modal-input-label">THEME NAME</label>
-              <input
-                type="text"
-                className="modal-text-input"
-                placeholder="e.g. Emerald Cyber Glow"
-                value={newPresetName}
-                onChange={(e) => setNewPresetName(e.target.value)}
-                autoFocus
-                maxLength={32}
-              />
-              <div className="modal-actions-row">
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={() => setShowSavePresetModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="modal-primary-btn"
-                  disabled={!newPresetName.trim()}
-                >
-                  <Save size={14} />
-                  <span>Create Theme</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
 
       {/* Modal: Rename Custom Preset */}
       {renamingPresetId && (

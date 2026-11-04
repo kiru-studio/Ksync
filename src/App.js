@@ -293,6 +293,10 @@ function App() {
       settings.theming?.preset === 'artwork') &&
       settings.theming?.artworkSampling !== false;
 
+    const isDynamicLyrics =
+      settings.theming?.lyricsActiveColor === 'dynamic' ||
+      (!settings.theming?.lyricsActiveColor && isArtworkReactive);
+
     if (isArtworkReactive && currentTrack?.albumArt) {
       extractVibrantColor(currentTrack.albumArt, settings.theming?.accentColor || '#38bdf8').then((accent) => {
         if (accent) {
@@ -300,8 +304,14 @@ function App() {
           document.documentElement.style.setProperty('--accent-rgb', accent.rgb);
           document.documentElement.style.setProperty('--accent-soft', accent.soft);
           document.documentElement.style.setProperty('--accent-glow', accent.glow);
-          document.documentElement.style.setProperty('--dock-lyrics-active', accent.hex);
-          document.documentElement.style.setProperty('--dock-lyrics-active-glow', accent.glow);
+          if (isDynamicLyrics) {
+            document.documentElement.style.setProperty('--dock-lyrics-active', accent.hex);
+            document.documentElement.style.setProperty('--dock-lyrics-active-glow', accent.glow);
+          } else {
+            const fixedLyrics = settings.theming?.lyricsActiveColor || '#1db954';
+            document.documentElement.style.setProperty('--dock-lyrics-active', fixedLyrics);
+            document.documentElement.style.setProperty('--dock-lyrics-active-glow', settings.theming?.lyricsGlowColor || fixedLyrics);
+          }
           document.documentElement.style.setProperty('--progress-color', accent.hex);
         }
       });
@@ -312,7 +322,9 @@ function App() {
         document.documentElement.style.setProperty('--accent-soft', `${settings.theming.accentColor}26`);
         document.documentElement.style.setProperty('--accent-glow', `${settings.theming.accentColor}59`);
       }
-      const lyricsColor = settings.theming?.lyricsActiveColor || settings.theming?.accentColor || '#1db954';
+      const lyricsColor = isDynamicLyrics
+        ? 'var(--accent)'
+        : (settings.theming?.lyricsActiveColor || '#1db954');
       const glowColor = settings.theming?.lyricsGlowColor || lyricsColor;
       document.documentElement.style.setProperty('--dock-lyrics-active', lyricsColor);
       document.documentElement.style.setProperty('--dock-lyrics-active-glow', glowColor);

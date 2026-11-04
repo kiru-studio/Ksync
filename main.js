@@ -640,6 +640,7 @@ function createWindow() {
         const mode = settings.position?.mode || 'top';
         const rawTriggerDist = settings.position?.triggerDistance;
         const triggerDist = (rawTriggerDist === 8 || rawTriggerDist === undefined) ? 1 : Math.max(1, rawTriggerDist);
+        const triggerSpan = settings.position?.triggerSpan || 'full';
 
         let isInsideAnyDock = false;
         let isAnyTriggerZone = false;
@@ -657,11 +658,22 @@ function createWindow() {
               mouseX <= curBounds.x + w &&
               mouseY >= curBounds.y &&
               mouseY <= curBounds.y + curBounds.height;
+
+            let inSpan = true;
+            if (triggerSpan === 'center') {
+              const minY = curBounds.y + curBounds.height * 0.25;
+              const maxY = curBounds.y + curBounds.height * 0.75;
+              inSpan = mouseY >= minY && mouseY <= maxY;
+            } else if (triggerSpan === 'compact') {
+              const minY = curBounds.y + curBounds.height * 0.35;
+              const maxY = curBounds.y + curBounds.height * 0.65;
+              inSpan = mouseY >= minY && mouseY <= maxY;
+            }
+
             triggerThis =
               mouseX >= curBounds.x &&
               mouseX <= curBounds.x + triggerDist &&
-              mouseY >= curBounds.y &&
-              mouseY <= curBounds.y + curBounds.height;
+              inSpan;
           } else if (mode === 'right') {
             const w = Math.min(Math.max(settings.position?.sidebarWidth || 340, 260), 520);
             insideThis =
@@ -669,11 +681,22 @@ function createWindow() {
               mouseX <= curBounds.x + curBounds.width &&
               mouseY >= curBounds.y &&
               mouseY <= curBounds.y + curBounds.height;
+
+            let inSpan = true;
+            if (triggerSpan === 'center') {
+              const minY = curBounds.y + curBounds.height * 0.25;
+              const maxY = curBounds.y + curBounds.height * 0.75;
+              inSpan = mouseY >= minY && mouseY <= maxY;
+            } else if (triggerSpan === 'compact') {
+              const minY = curBounds.y + curBounds.height * 0.35;
+              const maxY = curBounds.y + curBounds.height * 0.65;
+              inSpan = mouseY >= minY && mouseY <= maxY;
+            }
+
             triggerThis =
               mouseX >= curBounds.x + curBounds.width - triggerDist &&
               mouseX <= curBounds.x + curBounds.width &&
-              mouseY >= curBounds.y &&
-              mouseY <= curBounds.y + curBounds.height;
+              inSpan;
           } else {
             // top mode: strictly check mouseY >= curBounds.y to prevent multi-monitor vertical bleed
             const h = settings.position?.height || getDynamicDockHeight(disp);
@@ -682,11 +705,22 @@ function createWindow() {
               mouseX <= curBounds.x + curBounds.width &&
               mouseY >= curBounds.y &&
               mouseY <= curBounds.y + h;
+
+            let inSpan = true;
+            if (triggerSpan === 'center') {
+              const minX = curBounds.x + curBounds.width * 0.3;
+              const maxX = curBounds.x + curBounds.width * 0.7;
+              inSpan = mouseX >= minX && mouseX <= maxX;
+            } else if (triggerSpan === 'compact') {
+              const minX = curBounds.x + curBounds.width * 0.375;
+              const maxX = curBounds.x + curBounds.width * 0.625;
+              inSpan = mouseX >= minX && mouseX <= maxX;
+            }
+
             triggerThis =
               mouseY >= curBounds.y &&
               mouseY <= curBounds.y + triggerDist &&
-              mouseX >= curBounds.x &&
-              mouseX <= curBounds.x + curBounds.width;
+              inSpan;
           }
 
           if (insideThis) isInsideAnyDock = true;

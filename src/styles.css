@@ -5260,7 +5260,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* Visual Stage Presets */
-.stage-default {
+.stage-default,
+.stage-custom {
   background: #121212;
 }
 
@@ -5515,6 +5516,27 @@ input[type="range"]::-webkit-slider-thumb:hover {
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   transition: transform 0.15s ease;
+}
+
+.font-upload-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e4e4e7;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.font-upload-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .thick-slider-input::-webkit-slider-thumb:hover {
@@ -7796,7 +7818,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   gap: 10px;
 }
 
-.stage-default { background: linear-gradient(135deg, #161922, #090a0e); }
+.stage-default, .stage-custom { background: linear-gradient(135deg, #161922, #090a0e); }
 .stage-oled { background: #000000 !important; }
 .stage-frosted, .stage-glass { background: linear-gradient(135deg, #1c2333, #0f131a); }
 .stage-cyberpunk { background: linear-gradient(135deg, #050510, #16062b); }

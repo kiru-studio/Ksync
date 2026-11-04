@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
     sidebarWidth: 340,         // Left/Right sidebar width in px
     islandWidth: 1180,         // Width in floating island mode
     triggerDistance: 1,        // Distance in px to trigger dock reveal (1 = only when reaching the edge)
+    triggerSpan: 'full',       // 'full' | 'center' | 'compact'
     targetDisplay: 'all',      // 'all' | 'primary' | 'cursor' | displayId
   },
   layout: {
@@ -34,7 +35,7 @@ const DEFAULT_SETTINGS = {
     sidebarSectionRatios: [40, 20, 40],
   },
   theming: {
-    preset: 'default',
+    preset: 'custom',
     customPresets: [],
     favoritePresets: [],
 
@@ -100,6 +101,7 @@ const DEFAULT_SETTINGS = {
     lyricsColor: 'white',
     lyricsActiveColor: '#1db954',
     lyricsFontFamily: 'system-ui',
+    customFont: null,
     lyricsFontSize: 20,
     lyricsFontWeight: 700,
     lyricsLineHeight: 1.45,

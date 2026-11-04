@@ -84,6 +84,10 @@
     ],
     "extraResources": [
       {
+        "from": "build/app-update.yml",
+        "to": "app-update.yml"
+      },
+      {
         "from": "smtc-bridge/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish_compressed/smtc-bridge.exe",
         "to": "smtc-bridge.exe"
       }

@@ -583,8 +583,8 @@ export default function SettingsDrawer({
                 <label className="section-label">Screen Edge Placement</label>
                 <div className="position-card-grid">
                   {[
-                    { id: 'top', title: 'Top Bar Dock', desc: 'Slides down from the top screen edge' },
                     { id: 'left', title: 'Left Sidebar', desc: 'Vertical stack sliding in from left edge' },
+                    { id: 'top', title: 'Top Bar Dock', desc: 'Slides down from the top screen edge' },
                     { id: 'right', title: 'Right Sidebar', desc: 'Vertical stack sliding in from right edge' },
                   ].map((pos) => (
                     <button

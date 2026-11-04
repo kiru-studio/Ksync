@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = {
     sidebarWidth: 340,
     islandWidth: 1180,
     triggerDistance: 1,
+    triggerSpan: 'full',
     targetDisplay: 'all',
   },
   layout: {
@@ -23,7 +24,7 @@ export const DEFAULT_SETTINGS = {
     sidebarSectionRatios: [40, 20, 40],
   },
   theming: {
-    preset: 'default',
+    preset: 'custom',
     customPresets: [],
     favoritePresets: [],
 
@@ -89,6 +90,7 @@ export const DEFAULT_SETTINGS = {
     lyricsColor: 'white',
     lyricsActiveColor: '#1db954',
     lyricsFontFamily: 'system-ui',
+    customFont: null,
     lyricsFontSize: 20,
     lyricsFontWeight: 700,
     lyricsLineHeight: 1.45,
@@ -148,8 +150,8 @@ export const DEFAULT_SETTINGS = {
 
 export const PRESET_THEMES = [
   {
-    id: 'default',
-    name: 'Spotify Modern',
+    id: 'custom',
+    name: 'Custom',
     backdropStyle: 'acrylic',
     solidColor: '#0b0d12',
     gradient: { angle: 135, color1: '#161922', color2: '#090a0e', stops: [{ color: '#161922', pos: 0 }, { color: '#090a0e', pos: 100 }] },
@@ -386,8 +388,8 @@ export function SettingsProvider({ children }) {
 
     // 4. Karaoke & Typography
     const isArtworkReactive = (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && theming.artworkSampling !== false;
-    const isDynamicLyrics = isArtworkReactive && (!theming.lyricsActiveColor || theming.lyricsActiveColor === 'dynamic' || theming.preset === 'artwork' || theming.lyricsActiveColor === '#1db954');
-    const activeLyricsColor = isDynamicLyrics ? 'var(--accent)' : (theming.lyricsActiveColor || accent);
+    const isDynamicLyrics = theming.lyricsActiveColor === 'dynamic' || (!theming.lyricsActiveColor && isArtworkReactive);
+    const activeLyricsColor = isDynamicLyrics ? 'var(--accent)' : (theming.lyricsActiveColor || '#1db954');
     const lyricsGlowColor = isDynamicLyrics ? 'var(--accent-glow, var(--accent))' : (theming.lyricsGlowColor || activeLyricsColor);
     root.style.setProperty('--dock-lyrics-active', activeLyricsColor);
     root.style.setProperty('--dock-lyrics-active-glow', lyricsGlowColor);
@@ -406,6 +408,27 @@ export function SettingsProvider({ children }) {
     root.style.setProperty('--dock-lyrics-scale', String(theming.lyricsScale ?? 1.04));
     root.style.setProperty('--dock-lyrics-transition', `${theming.lyricsTransitionMs ?? 320}ms`);
     root.style.setProperty('--dock-lyrics-fade', String((theming.lyricsFadeIntensity ?? 35) / 100));
+
+    // Custom Font Injection
+    if (theming.customFont?.name && theming.customFont?.data) {
+      let fontStyleEl = document.getElementById('ksync-custom-font');
+      if (!fontStyleEl) {
+        fontStyleEl = document.createElement('style');
+        fontStyleEl.id = 'ksync-custom-font';
+        document.head.appendChild(fontStyleEl);
+      }
+      const formatHint = theming.customFont.format ? `format('${theming.customFont.format}')` : '';
+      fontStyleEl.textContent = `
+        @font-face {
+          font-family: '${theming.customFont.name}';
+          src: url('${theming.customFont.data}') ${formatHint};
+          font-display: swap;
+        }
+      `;
+    } else {
+      const fontStyleEl = document.getElementById('ksync-custom-font');
+      if (fontStyleEl) fontStyleEl.remove();
+    }
 
     // 5. Component Overrides & Motion
     root.style.setProperty('--art-corner-radius', `${theming.artCornerRadius ?? 10}px`);
@@ -558,13 +581,14 @@ export function SettingsProvider({ children }) {
 
   const applyPreset = useCallback(
     (presetId) => {
-      const preset = allPresets.find((p) => p.id === presetId);
+      const targetId = presetId === 'default' ? 'custom' : presetId;
+      const preset = allPresets.find((p) => p.id === targetId || (targetId === 'custom' && p.id === 'default'));
       if (!preset) return;
 
       const updatedTheming = {
         ...settings.theming,
         ...preset,
-        preset: preset.id,
+        preset: targetId,
       };
 
       updateSettings({ theming: updatedTheming });
