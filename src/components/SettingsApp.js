@@ -161,7 +161,7 @@ export default function SettingsApp() {
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
   const [hotkeyCombo, setHotkeyCombo] = useState('Ctrl + Alt + S');
   const [customHex, setCustomHex] = useState('');
-  const [appVersion, setAppVersion] = useState('2.5.0');
+  const [appVersion, setAppVersion] = useState('2.5.1');
   const [updateStatus, setUpdateStatus] = useState({ state: 'idle', percent: 0, version: null });
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [openAtLogin, setOpenAtLogin] = useState(false);
