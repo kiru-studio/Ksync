@@ -1742,6 +1742,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('check-for-updates', () => updateService.checkForUpdates(true));
   ipcMain.handle('download-update', () => updateService.downloadUpdate());
   ipcMain.handle('quit-and-install', () => updateService.quitAndInstall());
+  ipcMain.handle('quit-app', () => quitApp());
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-update-status', () => updateService.getStatus());
 
@@ -2268,7 +2269,7 @@ function buildTrayMenu() {
     { type: 'separator' },
     ...getUpdateTrayMenuItems(),
     { type: 'separator' },
-    { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } },
+    { label: 'Quit', click: () => quitApp() },
   ]);
 }
 
@@ -2374,8 +2375,69 @@ app.whenReady().then(() => {
   console.error('[App ready error]', err);
 });
 
+function quitApp() {
+  if (app.isQuiting) return;
+  console.log('[Main] Quitting ksync application completely...');
+  app.isQuiting = true;
+
+  // 1. Destroy tray icon immediately so it vanishes from Windows notification area
+  if (tray && !tray.isDestroyed()) {
+    try {
+      tray.destroy();
+      tray = null;
+    } catch (_) {}
+  }
+
+  // 2. Unregister all global shortcuts
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
+
+  // 3. Destroy RPC and child processes
+  if (discordRPC) {
+    try { discordRPC.destroy(); } catch (_) {}
+  }
+  if (smtcProcess) {
+    try { smtcProcess.kill(); } catch (_) {}
+    smtcProcess = null;
+  }
+
+  // 4. Destroy all open windows immediately
+  for (const win of dockWindowsMap.values()) {
+    if (win && !win.isDestroyed()) {
+      try { win.destroy(); } catch (_) {}
+    }
+  }
+  dockWindowsMap.clear();
+
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    try { settingsWindow.destroy(); } catch (_) {}
+    settingsWindow = null;
+  }
+
+  if (peekWindow && !peekWindow.isDestroyed()) {
+    try { peekWindow.destroy(); } catch (_) {}
+    peekWindow = null;
+  }
+
+  // 5. Exit application process cleanly
+  try {
+    app.quit();
+  } catch (_) {}
+
+  setTimeout(() => {
+    try {
+      process.exit(0);
+    } catch (_) {}
+  }, 150);
+}
+
 app.on('window-all-closed', () => {
-  console.log('[Main] window-all-closed â€“ recreating window in 1s');
+  if (app.isQuiting) {
+    quitApp();
+    return;
+  }
+  console.log('[Main] window-all-closed – recreating window in 1s');
   mainWindow = null;
   setTimeout(() => {
     if (!mainWindow && !app.isQuiting) {
@@ -2392,13 +2454,5 @@ app.on('activate', () => {
 
 // Handle app quit
 app.on('before-quit', () => {
-  app.isQuiting = true;
-  globalShortcut.unregisterAll();
-  if (peekWindow && !peekWindow.isDestroyed()) {
-    try { peekWindow.destroy(); } catch (_) {}
-  }
-  if (discordRPC) discordRPC.destroy();
-  if (smtcProcess) {
-    smtcProcess.kill();
-  }
+  quitApp();
 });

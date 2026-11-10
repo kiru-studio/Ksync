@@ -145,6 +145,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('deep-sleep-mode', sub);
   },
   wakeFromDeepSleep: () => ipcRenderer.invoke('wake-from-deep-sleep'),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
   onUpdateStatus: (callback) => {
     const sub = (event, status) => callback(status);
     ipcRenderer.on('update-status', sub);
