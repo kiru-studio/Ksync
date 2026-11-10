@@ -8,9 +8,11 @@ export const DEFAULT_SETTINGS = {
     mode: 'top',
     style: 'full',
     pinned: false,
+    islandShape: 'square',
     height: 190,
     sidebarWidth: 340,
     islandWidth: 1180,
+    islandSize: 320,
     triggerDistance: 1,
     triggerSpan: 'full',
     targetDisplay: 'all',
@@ -376,23 +378,65 @@ export function SettingsProvider({ children }) {
     root.style.setProperty('--dock-text-primary', primaryText);
     root.style.setProperty('--dock-text-secondary', secondaryText);
 
-    root.style.setProperty('--accent', accent);
-    root.style.setProperty('--accent-rgb', hexToRgb(accent));
+    // Check if Artwork Reactive mode is active and if an extracted accent is cached
+    const isArtworkReactive = (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && theming.artworkSampling !== false;
+    let cachedAccent = null;
+    if (isArtworkReactive) {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const qHex = params.get('accent');
+          if (qHex) {
+            cachedAccent = {
+              hex: qHex,
+              rgb: params.get('rgb') || '',
+              soft: params.get('soft') || '',
+              glow: params.get('glow') || '',
+            };
+          }
+        } catch (_) {}
+      }
+      if (!cachedAccent && typeof localStorage !== 'undefined') {
+        try {
+          const saved = localStorage.getItem('ksync_last_accent');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.hex) cachedAccent = parsed;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (cachedAccent) {
+      root.style.setProperty('--accent', cachedAccent.hex);
+      if (cachedAccent.rgb) root.style.setProperty('--accent-rgb', cachedAccent.rgb);
+      if (cachedAccent.soft) root.style.setProperty('--accent-soft', cachedAccent.soft);
+      if (cachedAccent.glow) root.style.setProperty('--accent-glow', cachedAccent.glow);
+      root.style.setProperty('--progress-color', cachedAccent.hex);
+    } else {
+      root.style.setProperty('--accent', accent);
+      root.style.setProperty('--accent-rgb', hexToRgb(accent));
+      root.style.setProperty('--accent-soft', isOled ? 'transparent' : `${accent}26`);
+      root.style.setProperty('--accent-glow', `${accent}59`);
+      root.style.setProperty('--progress-color', theming.progressColor || accent);
+    }
+
     root.style.setProperty('--accent-secondary', accentSecondary);
-    root.style.setProperty('--accent-glow', `${accent}59`);
-    root.style.setProperty('--accent-soft', isOled ? 'transparent' : `${accent}26`);
     root.style.setProperty('--icon-color', theming.iconColor || secondaryText);
     root.style.setProperty('--border-subtle', theming.borderSubtle || 'rgba(255, 255, 255, 0.08)');
     root.style.setProperty('--divider-color', theming.dividerColor || 'rgba(255, 255, 255, 0.08)');
-    root.style.setProperty('--progress-color', theming.progressColor || accent);
 
     // 4. Karaoke & Typography
-    const isArtworkReactive = (theming.backdropStyle === 'artwork' || theming.preset === 'artwork') && theming.artworkSampling !== false;
     const isDynamicLyrics = theming.lyricsActiveColor === 'dynamic' || (!theming.lyricsActiveColor && isArtworkReactive);
-    const activeLyricsColor = isDynamicLyrics ? 'var(--accent)' : (theming.lyricsActiveColor || '#1db954');
-    const lyricsGlowColor = isDynamicLyrics ? 'var(--accent-glow, var(--accent))' : (theming.lyricsGlowColor || activeLyricsColor);
-    root.style.setProperty('--dock-lyrics-active', activeLyricsColor);
-    root.style.setProperty('--dock-lyrics-active-glow', lyricsGlowColor);
+    if (isDynamicLyrics && cachedAccent) {
+      root.style.setProperty('--dock-lyrics-active', cachedAccent.hex);
+      root.style.setProperty('--dock-lyrics-active-glow', cachedAccent.glow || cachedAccent.hex);
+    } else {
+      const activeLyricsColor = isDynamicLyrics ? 'var(--accent)' : (theming.lyricsActiveColor || '#1db954');
+      const lyricsGlowColor = isDynamicLyrics ? 'var(--accent-glow, var(--accent))' : (theming.lyricsGlowColor || activeLyricsColor);
+      root.style.setProperty('--dock-lyrics-active', activeLyricsColor);
+      root.style.setProperty('--dock-lyrics-active-glow', lyricsGlowColor);
+    }
     root.style.setProperty('--dock-lyrics-glow-radius', `${theming.lyricsGlowRadius ?? 20}px`);
     root.style.setProperty('--dock-lyrics-glow-spread', `${theming.lyricsGlowSpread ?? 4}px`);
     root.style.setProperty(
@@ -442,10 +486,13 @@ export function SettingsProvider({ children }) {
         : 'cubic-bezier(0.2, 0.8, 0.2, 1)'
     );
 
-    // 6. Dock Framing Island Width
+    // 6. Dock Framing Island Width & Shape
     if (position.style === 'island') {
-      root.style.setProperty('--dock-island-max-width', `${position.islandWidth || 1180}px`);
-      root.style.setProperty('--dock-border-radius', '24px');
+      const isSquare = !position.islandShape || position.islandShape === 'square';
+      const w = isSquare ? 480 : 680;
+      const r = isSquare ? 24 : 20;
+      root.style.setProperty('--dock-island-max-width', `${w}px`);
+      root.style.setProperty('--dock-border-radius', `${r}px`);
     } else {
       root.style.setProperty('--dock-island-max-width', '100%');
       root.style.setProperty('--dock-border-radius', '0px');
@@ -470,14 +517,33 @@ export function SettingsProvider({ children }) {
 
     if (api && api.onSettingsChanged) {
       api.onSettingsChanged((updated) => {
-        setSettings(updated);
-        applyCssVariables(updated);
+        setSettings((prev) => {
+          if (!prev) return updated;
+          const themingChanged = JSON.stringify(prev.theming) !== JSON.stringify(updated.theming);
+          const framingChanged =
+            prev.position?.style !== updated.position?.style ||
+            prev.position?.islandShape !== updated.position?.islandShape ||
+            prev.position?.islandWidth !== updated.position?.islandWidth ||
+            prev.position?.islandSize !== updated.position?.islandSize;
+          if (themingChanged || framingChanged) {
+            applyCssVariables(updated);
+          }
+          return updated;
+        });
       });
     }
   }, [applyCssVariables]);
 
+  const hasVisualThemingChanges = (p) => {
+    if (!p) return false;
+    if (p.theming) return true;
+    if (p.position && ('style' in p.position || 'islandShape' in p.position || 'islandWidth' in p.position || 'islandSize' in p.position)) return true;
+    return false;
+  };
+
   const updateSettings = useCallback(
     async (partial) => {
+      const isVisual = hasVisualThemingChanges(partial);
       setSettings((prev) => {
         const next = {
           ...prev,
@@ -498,7 +564,9 @@ export function SettingsProvider({ children }) {
           },
           behavior: { ...prev.behavior, ...(partial.behavior || {}) },
         };
-        applyCssVariables(next);
+        if (isVisual) {
+          applyCssVariables(next);
+        }
         return next;
       });
 
@@ -508,7 +576,9 @@ export function SettingsProvider({ children }) {
           const res = await api.saveSettings(partial);
           if (res) {
             setSettings(res);
-            applyCssVariables(res);
+            if (isVisual) {
+              applyCssVariables(res);
+            }
           }
         } catch (err) {
           console.error('[SettingsContext] Save failed:', err);

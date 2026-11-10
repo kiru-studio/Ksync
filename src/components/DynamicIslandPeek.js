@@ -8,26 +8,37 @@ export default function DynamicIslandPeek() {
   const isHoveredRef = useRef(false);
 
   useEffect(() => {
-    if (!window.electronAPI || !window.electronAPI.onTrackPeekData) return;
+    if (!window.electronAPI) return;
 
-    const cleanup = window.electronAPI.onTrackPeekData((data) => {
-      if (!data || !data.title) return;
-      setTrack(data);
-      setIsShowing(true);
-
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      // Stay visible for 5 seconds before smoothly gliding back up
-      dismissTimerRef.current = setTimeout(() => {
-        if (!isHoveredRef.current) {
-          triggerDismiss();
+    if (window.electronAPI.getCurrentPeekData) {
+      window.electronAPI.getCurrentPeekData().then((data) => {
+        if (data && data.title) {
+          setTrack(data);
+          setIsShowing(true);
         }
-      }, 5000);
-    });
+      });
+    }
 
-    return () => {
-      if (cleanup) cleanup();
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    };
+    if (window.electronAPI.onTrackPeekData) {
+      const cleanup = window.electronAPI.onTrackPeekData((data) => {
+        if (!data || !data.title) return;
+        setTrack(data);
+        setIsShowing(true);
+
+        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+        // Stay visible for 5 seconds before smoothly gliding back up
+        dismissTimerRef.current = setTimeout(() => {
+          if (!isHoveredRef.current) {
+            triggerDismiss();
+          }
+        }, 5000);
+      });
+
+      return () => {
+        if (cleanup) cleanup();
+        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+      };
+    }
   }, []);
 
   const triggerDismiss = () => {
@@ -108,4 +119,3 @@ export default function DynamicIslandPeek() {
     </div>
   );
 }
-

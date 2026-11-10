@@ -355,9 +355,15 @@ const LyricsPanel = ({
     <div 
       className={`lyrics-volume-pill ${isExpanded ? 'expanded' : ''}`}
       onMouseEnter={() => setIsHoveringPill(true)}
-      onMouseLeave={() => setIsHoveringPill(false)}
+      onMouseLeave={() => {
+        setIsHoveringPill(false);
+        if (!isDraggingRef.current) {
+          isInteractingRef.current = false;
+          setIsInteracting(false);
+          if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
+        }
+      }}
       onWheel={(e) => {
-        triggerInteraction();
         handleWheel(e);
       }}
       title={`System Volume: ${displayVolume}%${isEffectiveMuted ? ' (Muted)' : ''} (Click, drag, or scroll to adjust)`}

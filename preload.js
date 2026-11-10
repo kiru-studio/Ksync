@@ -81,6 +81,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSettingsChanged: (callback) => {
     ipcRenderer.on('settings-changed', (event, s) => callback(s));
   },
+  saveExtractedAccent: (accent) => ipcRenderer.send('save-extracted-accent', accent),
+  onExtractedAccentSync: (callback) => {
+    const sub = (event, data) => callback(data);
+    ipcRenderer.on('extracted-accent-sync', sub);
+    return () => ipcRenderer.removeListener('extracted-accent-sync', sub);
+  },
   togglePin: () => ipcRenderer.invoke('toggle-pin'),
   setDockHeight: (height) => ipcRenderer.invoke('set-dock-height', height),
   setSidebarWidth: (width) => ipcRenderer.invoke('set-sidebar-width', width),
@@ -127,6 +133,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateDiscordRPC: (trackInfo) => ipcRenderer.invoke('update-discord-rpc', trackInfo),
   triggerTrackPeek: (trackData) => ipcRenderer.invoke('trigger-track-peek', trackData),
   dismissTrackPeek: () => ipcRenderer.invoke('dismiss-track-peek'),
+  getCurrentPeekData: () => ipcRenderer.invoke('get-current-peek-data'),
   onTrackPeekData: (callback) => {
     const sub = (event, data) => callback(data);
     ipcRenderer.on('track-peek-data', sub);

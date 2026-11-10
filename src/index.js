@@ -5,6 +5,7 @@ import SettingsApp from './components/SettingsApp';
 import DynamicIslandPeek from './components/DynamicIslandPeek';
 import { SettingsProvider } from './context/SettingsContext';
 import './styles.css';
+import './tailwind.css';
 
 function Root() {
   const [currentHash, setCurrentHash] = useState(() => {

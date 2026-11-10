@@ -1,0 +1,44 @@
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --audio-track: rgba(255, 255, 255, 0.16);
+  --audio-progress: var(--accent, #1db954);
+}
+
+/* Reset default browser button styles */
+[data-slot="audio-player"] button:not([class*="bg-"]),
+.square-dynamic-island-root button:not([class*="bg-"]),
+[data-slot="button"]:not([class*="bg-"]),
+.audio-player-btn,
+button.island-dock-btn,
+button.island-ctrl-btn {
+  background-color: transparent;
+  border-style: none;
+  border-width: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Reset default paragraph and heading margins inside audio player & island */
+[data-slot="audio-player"] p,
+[data-slot="audio-player"] h3,
+.square-dynamic-island-root p,
+.square-dynamic-island-root h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.card-heading {
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: #ffffff;
+  letter-spacing: -0.015em;
+  margin: 0;
+}

@@ -9,7 +9,7 @@ const path = require('path');
 const SETTINGS_FILE = 'ksync-settings.json';
 
 const DEFAULT_SETTINGS = {
-  version: '2.4.3',
+  version: '2.5.0',
   audio: {
     lastSystemVolume: null,
     lastSystemMuted: false,
@@ -18,10 +18,12 @@ const DEFAULT_SETTINGS = {
   position: {
     mode: 'top',               // 'top' | 'left' | 'right'
     style: 'full',             // 'full' | 'island'
+    islandShape: 'square',     // 'square' | 'rectangle'
     pinned: false,             // When true, auto-hide is disabled
     height: 190,               // Top dock height in px
     sidebarWidth: 340,         // Left/Right sidebar width in px
-    islandWidth: 1180,         // Width in floating island mode
+    islandWidth: 1180,         // Legacy width in floating island mode
+    islandSize: 320,           // Square Island dimension in px
     triggerDistance: 1,        // Distance in px to trigger dock reveal (1 = only when reaching the edge)
     triggerSpan: 'full',       // 'full' | 'center' | 'compact'
     targetDisplay: 'all',      // 'all' | 'primary' | 'cursor' | displayId

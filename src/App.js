@@ -9,6 +9,8 @@ import SpotifyService from './services/SpotifyService';
 import { extractVibrantColor, hexToRgb } from './utils/colorExtractor';
 import { Play, Pause, Maximize2 } from 'lucide-react';
 import MarqueeText from './components/MarqueeText';
+import SquareDynamicIsland from './components/SquareDynamicIsland';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useSettings } from './context/SettingsContext';
 
 function App() {
@@ -1127,6 +1129,11 @@ function App() {
           flex: isSolo ? '1 1 100%' : `${ratio} 0 0%`,
           width: isSolo ? '100%' : `${ratio}%`,
           maxWidth: isSolo ? '100%' : `${ratio}%`,
+          height: '100%',
+          maxHeight: '100%',
+          minHeight: 0,
+          minWidth: 0,
+          overflow: 'hidden',
           '--top-slot-flex': isSolo ? '1 1 100%' : `${ratio} 0 0%`,
           '--top-slot-width': isSolo ? '100%' : `${ratio}%`,
         }
@@ -1136,6 +1143,9 @@ function App() {
           maxHeight: isSolo ? '100%' : `${ratio}%`,
           width: '100%',
           maxWidth: '100%',
+          minHeight: 0,
+          minWidth: 0,
+          overflow: 'hidden',
           '--sidebar-slot-flex': isSolo ? '1 1 100%' : `${ratio} 0 0%`,
           '--sidebar-slot-height': isSolo ? '100%' : `${ratio}%`,
         };
@@ -1148,57 +1158,69 @@ function App() {
       case 'nowPlaying':
         return (
           <div key="nowPlaying" className={`panel-col ${specificClass} ${soloClass}`} style={panelStyle}>
-            <NowPlaying
-              track={currentTrack}
-              isPlaying={isPlaying}
-              progress={progress}
-              duration={duration}
-              volume={volume}
-              shuffleState={shuffleState}
-              repeatState={repeatState}
-              devices={devices}
-              currentDeviceId={currentTrack?.device?.id}
-              onPlayPause={handlePlayPause}
-              onSkip={handleSkip}
-              onVolumeChange={handleVolumeChange}
-              onProgressChange={handleProgressChange}
-              onShuffle={handleShuffle}
-              onRepeat={handleRepeat}
-              onDeviceChange={handleDeviceChange}
-            />
+            <ErrorBoundary name="NowPlaying" fallbackTitle="Now Playing failed to load">
+              <NowPlaying
+                track={currentTrack}
+                isPlaying={isPlaying}
+                progress={progress}
+                duration={duration}
+                volume={volume}
+                systemVolume={systemVolume}
+                systemMuted={systemMuted}
+                shuffleState={shuffleState}
+                repeatState={repeatState}
+                devices={devices}
+                currentDeviceId={currentTrack?.device?.id}
+                onPlayPause={handlePlayPause}
+                onSkip={handleSkip}
+                onVolumeChange={handleVolumeChange}
+                onSystemVolumeChange={handleSystemVolumeChange}
+                onSystemMuteToggle={handleSystemMuteToggle}
+                onProgressChange={handleProgressChange}
+                onShuffle={handleShuffle}
+                onRepeat={handleRepeat}
+                onDeviceChange={handleDeviceChange}
+              />
+            </ErrorBoundary>
           </div>
         );
       case 'lyrics':
         return (
           <div key="lyrics" className={`panel-col ${specificClass} ${soloClass}`} style={panelStyle}>
-            <LyricsPanel
-              lyrics={lyrics}
-              currentIndex={currentLyricIndex}
-              volume={systemVolume}
-              isMuted={systemMuted}
-              onVolumeChange={handleSystemVolumeChange}
-              onMuteToggle={handleSystemMuteToggle}
-              lyricsColor={settings.theming?.lyricsColor || 'white'}
-              provider={lyricsProvider}
-              lyricsOffsetMs={lyricsOffsetMs}
-              onOffsetChange={setLyricsOffsetMs}
-              onSeek={handleProgressChange}
-            />
+            <ErrorBoundary name="LyricsPanel" fallbackTitle="Lyrics failed to load">
+              <LyricsPanel
+                lyrics={lyrics}
+                currentIndex={currentLyricIndex}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                volume={systemVolume}
+                isMuted={systemMuted}
+                onVolumeChange={handleSystemVolumeChange}
+                onMuteToggle={handleSystemMuteToggle}
+                lyricsColor={settings.theming?.lyricsColor || 'white'}
+                provider={lyricsProvider}
+                lyricsOffsetMs={lyricsOffsetMs}
+                onOffsetChange={setLyricsOffsetMs}
+                onSeek={handleProgressChange}
+              />
+            </ErrorBoundary>
           </div>
         );
       case 'queue':
         return (
           <div key="queue" className={`panel-col ${specificClass} ${soloClass}`} style={panelStyle}>
-            <QueuePanel
-              queue={queue}
-              currentTrack={currentTrack}
-              isPlaying={isPlaying}
-              onPlayTrack={handlePlayQueueTrack}
-              isAuthenticated={isAuthenticated}
-              user={user}
-              onLogin={handleLogin}
-              onLogout={handleLogout}
-            />
+            <ErrorBoundary name="QueuePanel" fallbackTitle="Queue failed to load">
+              <QueuePanel
+                queue={queue}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayQueueTrack}
+                isAuthenticated={isAuthenticated}
+                user={user}
+                onLogin={handleLogin}
+                onLogout={handleLogout}
+              />
+            </ErrorBoundary>
           </div>
         );
       default:
@@ -1261,11 +1283,12 @@ function App() {
       className={`app ${isSlideClass} ${positionClass} ${mode !== 'top' ? 'sidebar-mode' : ''} ${isIsland && mode === 'top' ? 'app-island-mode' : ''} ${isOled ? 'mode-oled' : ''}`}
       style={{
         width: '100%',
-        height: mode === 'top' ? `${dockDimensions.height}px` : '100%',
+        height: '100%',
+        maxHeight: '100%',
       }}
     >
-      {/* Blurred Album Art Mood Backdrop & Dark Scrim (Only for Album Art Reactive theme) */}
-      {(settings.theming?.backdropStyle === 'artwork' || settings.theming?.preset === 'artwork') && currentTrack?.albumArt && (
+      {/* Blurred Album Art Mood Backdrop & Dark Scrim (Only for Album Art Reactive theme, disabled in island mode) */}
+      {(settings.theming?.backdropStyle === 'artwork' || settings.theming?.preset === 'artwork') && currentTrack?.albumArt && !isIsland && (
         <div className="dock-backdrop-blur" aria-hidden="true">
           <img
             key={currentTrack.id || currentTrack.albumArt}
@@ -1277,13 +1300,16 @@ function App() {
         </div>
       )}
 
-      {/* Main Dock Container (Modular & Reorderable Grid) */}
+      {/* Main Dock Container (Modular & Reorderable Grid, or Square Dynamic Island) */}
       <div
         ref={dockContainerRef}
         className={`dock-container ${isIsland && mode === 'top' ? 'dock-island' : ''} ${isTwoPanelBalanced ? 'two-panel-balanced' : ''}`}
         style={{
-          height: mode === 'top' ? `${dockDimensions.height}px` : '100%',
-          maxWidth: isIsland && mode === 'top' ? `${settings.position?.islandWidth || 1180}px` : '100%',
+          height: '100%',
+          maxHeight: '100%',
+          maxWidth: '100%',
+          width: isIsland && mode === 'top' ? '100%' : undefined,
+          borderRadius: isIsland && mode === 'top' ? `${settings.position?.islandShape === 'rectangle' ? 20 : 24}px` : undefined,
         }}
       >
         {mode !== 'top' ? (
@@ -1326,6 +1352,38 @@ function App() {
               }
             }}
           />
+        ) : isIsland ? (
+          <ErrorBoundary name="DynamicIsland" fallbackTitle="Floating Dynamic Island could not load">
+            <SquareDynamicIsland
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              progress={progress}
+              duration={duration}
+              volume={volume}
+              systemVolume={systemVolume}
+              systemMuted={systemMuted}
+              islandShape={settings.position?.islandShape || 'square'}
+              shuffleState={shuffleState}
+              repeatState={repeatState}
+              lyrics={lyrics}
+              currentLyricIndex={currentLyricIndex}
+              queue={queue}
+              onPlayPause={handlePlayPause}
+              onSkip={handleSkip}
+              onSeek={handleProgressChange}
+              onShuffle={handleShuffle}
+              onRepeat={handleRepeat}
+              onPlayTrack={handlePlayQueueTrack}
+              onVolumeChange={handleVolumeChange}
+              onSystemVolumeChange={handleSystemVolumeChange}
+              onSystemMuteToggle={handleSystemMuteToggle}
+              onOpenSettings={() => {
+                if (window.electronAPI?.openSettingsWindow) {
+                  window.electronAPI.openSettingsWindow();
+                }
+              }}
+            />
+          </ErrorBoundary>
         ) : (
           activePanels.map((panelId, index) => (
             <React.Fragment key={panelId}>
@@ -1346,7 +1404,7 @@ function App() {
       </div>
 
       {/* Interactive Bottom Resize Handle (Top Dock Mode) - Only available when Settings is open */}
-      {isSettingsOpen && mode === 'top' && (
+      {isSettingsOpen && mode === 'top' && !isIsland && (
         <div
           className="dock-resize-handle"
           onMouseDown={handleResizeMouseDown}

@@ -4,6 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ksync</title>
+    <script>
+        // Synchronously apply last extracted accent before first paint to eliminate color flashing
+        try {
+            var cachedAccent = null;
+            if (window.location && window.location.search) {
+                var params = new URLSearchParams(window.location.search);
+                var qHex = params.get('accent');
+                if (qHex) {
+                    cachedAccent = {
+                        hex: qHex,
+                        rgb: params.get('rgb') || '',
+                        soft: params.get('soft') || '',
+                        glow: params.get('glow') || ''
+                    };
+                }
+            }
+            if (!cachedAccent) {
+                var raw = localStorage.getItem('ksync_last_accent');
+                if (raw) cachedAccent = JSON.parse(raw);
+            }
+            if (cachedAccent && cachedAccent.hex) {
+                var r = document.documentElement;
+                r.style.setProperty('--accent', cachedAccent.hex);
+                if (cachedAccent.rgb) r.style.setProperty('--accent-rgb', cachedAccent.rgb);
+                if (cachedAccent.soft) r.style.setProperty('--accent-soft', cachedAccent.soft);
+                if (cachedAccent.glow) r.style.setProperty('--accent-glow', cachedAccent.glow);
+                r.style.setProperty('--progress-color', cachedAccent.hex);
+                r.style.setProperty('--dock-lyrics-active', cachedAccent.hex);
+                r.style.setProperty('--dock-lyrics-active-glow', cachedAccent.glow || cachedAccent.hex);
+            }
+        } catch (_) {}
+    </script>
     <style>
         html, body {
             margin: 0;

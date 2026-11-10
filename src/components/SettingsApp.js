@@ -161,7 +161,7 @@ export default function SettingsApp() {
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
   const [hotkeyCombo, setHotkeyCombo] = useState('Ctrl + Alt + S');
   const [customHex, setCustomHex] = useState('');
-  const [appVersion, setAppVersion] = useState('2.4.2');
+  const [appVersion, setAppVersion] = useState('2.5.0');
   const [updateStatus, setUpdateStatus] = useState({ state: 'idle', percent: 0, version: null });
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [openAtLogin, setOpenAtLogin] = useState(false);
@@ -840,7 +840,8 @@ export default function SettingsApp() {
   const dockHeight = dockDimensions.height || position.height || 190;
   const sidebarWidth = Math.min(Math.max(dockDimensions.width || position.sidebarWidth || 340, 260), 520);
   const isIsland = position.style === 'island';
-  const islandWidth = position.islandWidth || 1180;
+  const isSquareIsland = !position.islandShape || position.islandShape === 'square';
+  const islandWidth = isIsland ? (isSquareIsland ? 480 : 680) : (position.islandWidth || 1180);
 
   const sidebarElement = (
     <aside className="settings-nav-sidebar">
@@ -2273,7 +2274,7 @@ export default function SettingsApp() {
                       </div>
                       <div>
                         <h3 className="card-title-text">Framing</h3>
-                        <p className="card-desc-text">Choose edge-to-edge docking or a floating dynamic island pill.</p>
+                        <p className="card-desc-text">Choose edge-to-edge docking or a floating square dynamic island.</p>
                       </div>
                     </div>
                     <button
@@ -2360,26 +2361,20 @@ export default function SettingsApp() {
                               <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
                               <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
 
-                              {/* Floating Rounded Island / Pill Housing */}
-                              <rect x="22" y="4.5" width="136" height="19" rx="9.5" fill="#121216" stroke={position.style === 'island' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                              {/* Floating Rounded Square Dynamic Island Housing */}
+                              <rect x="74" y="5" width="32" height="32" rx="7" fill="#121216" stroke={position.style === 'island' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
                               
-                              {/* Glowing Island Accent Pill Top */}
-                              <rect x="36" y="4.5" width="108" height="2" rx="1" fill="#10B981" />
+                              {/* Glowing Island Accent Top */}
+                              <rect x="80" y="5" width="20" height="2" rx="1" fill="#10B981" />
 
-                              {/* Section 1: Now Playing Mock */}
-                              <rect x="28" y="8" width="12" height="12" rx="3" fill="#27272A" />
-                              <rect x="44" y="10" width="18" height="3" rx="1.5" fill="#A1A1AA" />
-                              <rect x="44" y="14.5" width="12" height="2" rx="1" fill="#52525B" />
+                              {/* Album Art Square Mock */}
+                              <rect x="78" y="9" width="24" height="15" rx="3" fill="#27272A" />
 
-                              {/* Section 2: Synced Lyrics Mock */}
-                              <rect x="74" y="8" width="28" height="2" rx="1" fill="#3F3F46" />
-                              <rect x="68" y="12" width="40" height="3.5" rx="1.75" fill="#10B981" />
-                              <rect x="76" y="17" width="24" height="2" rx="1" fill="#3F3F46" />
+                              {/* Track Title Mock Line */}
+                              <rect x="80" y="26" width="20" height="2" rx="1" fill="#A1A1AA" />
 
-                              {/* Section 3: Up Next Queue Mock */}
-                              <rect x="116" y="9" width="5" height="5" rx="1.2" fill="#27272A" />
-                              <rect x="124" y="10" width="16" height="2" rx="1" fill="#A1A1AA" />
-                              <circle cx="147" cy="14" r="3.5" fill="#1DB954" />
+                              {/* Controls Mock Dot */}
+                              <circle cx="90" cy="31" r="2.5" fill="#1DB954" />
                             </svg>
                           </div>
                         </div>
@@ -2390,49 +2385,136 @@ export default function SettingsApp() {
                       </button>
                     </div>
 
-                    {/* Dynamic Island Geometry Settings: Only visible when Island Mode is active */}
-                    {isIsland && (
-                      <div className="bento-two-columns" style={{ marginTop: '16px' }}>
-                        <div className="bento-control-pad">
-                          <div className="bento-header-row">
-                            <span className="bento-label">Island Corner Radius</span>
-                            <span className="tabular-num-pill">{theming.cornerRadius ?? 24}px</span>
-                          </div>
-                          <div className="thick-slider-wrapper">
-                            <input
-                              type="range"
-                              min="8"
-                              max="36"
-                              value={theming.cornerRadius ?? 24}
-                              onChange={(e) =>
-                                updateThemingWithHistory({ cornerRadius: parseInt(e.target.value, 10) })
-                              }
-                              className="thick-slider-input"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="bento-control-pad">
-                          <div className="bento-header-row">
-                            <span className="bento-label">Island Width</span>
-                            <span className="tabular-num-pill">{position.islandWidth || 1180}px</span>
-                          </div>
-                          <div className="thick-slider-wrapper">
-                            <input
-                              type="range"
-                              min="850"
-                              max="1650"
-                              step="25"
-                              value={position.islandWidth || 1180}
-                              onChange={(e) =>
-                                updateSettings({ position: { islandWidth: parseInt(e.target.value, 10) } })
-                              }
-                              className="thick-slider-input"
-                            />
-                          </div>
-                        </div>
+                    {/* Dynamic Island Shape Options: Always visible so user can seamlessly choose between Square and Rectangle */}
+                    <div style={{ marginTop: '16px' }}>
+                      <div className="card-section-label" style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Dynamic Island Framing Style
                       </div>
-                    )}
+                      <div className="framing-two-grid">
+                        {/* Square Dynamic Island Option */}
+                        <button
+                          type="button"
+                          className={`monitor-card-item ${isIsland && isSquareIsland ? 'active' : ''}`}
+                          onClick={() => {
+                            updateSettings({
+                              position: {
+                                style: 'island',
+                                islandShape: 'square',
+                                islandWidth: 480,
+                              },
+                            });
+                            updateThemingWithHistory({ cornerRadius: 24 });
+                          }}
+                          title="Switch to Compact Square Dynamic Island (480px)"
+                        >
+                          <div className="monitor-wireframe-container">
+                            <div className="monitor-screen-stage">
+                              <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                {/* Background Desktop Mock Windows */}
+                                <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                                <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
+                                <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+
+                                {/* Centered Square Dynamic Island */}
+                                <rect
+                                  x="72"
+                                  y="5"
+                                  width="36"
+                                  height="36"
+                                  rx="8"
+                                  fill="#121216"
+                                  stroke={isIsland && isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                  strokeWidth="1.2"
+                                />
+
+                                {/* Glowing Top Accent Edge */}
+                                <rect x="78" y="5" width="24" height="2" rx="1" fill="#10B981" />
+
+                                {/* Album Art Square Mock */}
+                                <rect x="76" y="10" width="13" height="13" rx="3" fill="#27272A" />
+
+                                {/* Track Info Lines Mock */}
+                                <rect x="92" y="11" width="13" height="2.5" rx="1" fill="#A1A1AA" />
+                                <rect x="92" y="15.5" width="9" height="2" rx="1" fill="#52525B" />
+
+                                {/* Mini Waveform Seekbar Mock */}
+                                <rect x="76" y="26" width="28" height="2" rx="1" fill="#3F3F46" />
+                                <rect x="76" y="26" width="14" height="2" rx="1" fill="#10B981" />
+
+                                {/* Controls Mock Dot */}
+                                <circle cx="90" cy="33.5" r="2.5" fill="#FFFFFF" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="monitor-label-group">
+                            <span className="monitor-title">Square</span>
+                            <span className="monitor-sub">Compact centered dynamic island</span>
+                          </div>
+                        </button>
+
+                        {/* Rectangle Dynamic Island Option */}
+                        <button
+                          type="button"
+                          className={`monitor-card-item ${isIsland && !isSquareIsland ? 'active' : ''}`}
+                          onClick={() => {
+                            updateSettings({
+                              position: {
+                                style: 'island',
+                                islandShape: 'rectangle',
+                                islandWidth: 680,
+                              },
+                            });
+                            updateThemingWithHistory({ cornerRadius: 20 });
+                          }}
+                          title="Switch to Wide Rectangle Dynamic Island (680px)"
+                        >
+                          <div className="monitor-wireframe-container">
+                            <div className="monitor-screen-stage">
+                              <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                {/* Background Desktop Mock Windows */}
+                                <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                                <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
+                                <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+
+                                {/* Centered Wide Rectangle Dynamic Island */}
+                                <rect
+                                  x="44"
+                                  y="7"
+                                  width="92"
+                                  height="25"
+                                  rx="7"
+                                  fill="#121216"
+                                  stroke={isIsland && !isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                  strokeWidth="1.2"
+                                />
+
+                                {/* Glowing Top Accent Edge */}
+                                <rect x="54" y="7" width="72" height="2" rx="1" fill="#10B981" />
+
+                                {/* Album Art Square Mock */}
+                                <rect x="49" y="11" width="13" height="13" rx="3" fill="#27272A" />
+
+                                {/* Track Info Lines Mock */}
+                                <rect x="66" y="12" width="18" height="2.5" rx="1" fill="#A1A1AA" />
+                                <rect x="66" y="16.5" width="12" height="2" rx="1" fill="#52525B" />
+
+                                {/* Lyrics Preview Mock Line */}
+                                <rect x="90" y="12" width="16" height="2" rx="1" fill="#10B981" />
+                                <rect x="92" y="16" width="12" height="1.5" rx="0.75" fill="#3F3F46" />
+
+                                {/* Controls Mock Dots */}
+                                <circle cx="118" cy="18" r="3" fill="#FFFFFF" />
+                                <circle cx="126" cy="18" r="1.8" fill="#52525B" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="monitor-label-group">
+                            <span className="monitor-title">Rectangle</span>
+                            <span className="monitor-sub">Wide panoramic dynamic island</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                     </>
                   )}
                 </section>
@@ -3574,7 +3656,7 @@ export default function SettingsApp() {
       {mode === 'top' && (
         <>
           {/* Top Live Dock Housing Reserve */}
-          <div className="stark-top-dock-reserve" style={{ height: `${dockHeight}px` }}>
+          <div className="stark-top-dock-reserve" style={{ height: `${isIsland ? 220 : dockHeight}px` }}>
             {isIsland && (
               <div className="stark-island-target-bracket" style={{ width: `${islandWidth}px` }}>
                 <span className="bracket-corner top-left" />
@@ -3589,7 +3671,7 @@ export default function SettingsApp() {
           {renderTitleBar('top')}
 
           {/* Fully visible, perfectly aligned workspace */}
-          <div className="stark-workspace-shell" style={{ height: `calc(100vh - ${dockHeight + 34}px)` }}>
+          <div className="stark-workspace-shell" style={{ height: `calc(100vh - ${(isIsland ? 220 : dockHeight) + 34}px)` }}>
             {sidebarElement}
             {mainViewportElement}
           </div>

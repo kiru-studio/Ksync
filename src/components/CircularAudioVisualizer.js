@@ -350,7 +350,7 @@ export default function CircularAudioVisualizer({
         maxWidth: `${canvasPx}px`,
         maxHeight: `${canvasPx}px`,
         pointerEvents: 'none',
-        zIndex: 1,
+        zIndex: 3,
       }}
       aria-hidden="true"
     />

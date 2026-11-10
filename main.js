@@ -236,7 +236,15 @@ function getDockBounds(display) {
     return { x: b.x + b.width - w, y: b.y, width: w, height: b.height, mode: 'right' };
   } else {
     // top mode
-    const h = settings.position?.height || getDynamicDockHeight(d);
+    let h = settings.position?.height || getDynamicDockHeight(d);
+    if (settings.position?.style === 'island') {
+      const isRectangle = settings.position?.islandShape === 'rectangle';
+      const defaultW = isRectangle ? 680 : 480;
+      const islandW = Math.min(Math.max(settings.position?.islandWidth || defaultW, 380), 720);
+      const islandH = 220;
+      const islandX = b.x + Math.round((b.width - islandW) / 2);
+      return { x: islandX, y: b.y, width: islandW, height: islandH, mode: 'top' };
+    }
     return { x: b.x, y: b.y, width: b.width, height: h, mode: 'top' };
   }
 }
@@ -245,6 +253,7 @@ let dockWindowsMap = new Map(); // displayId -> BrowserWindow
 let mainWindow = null;
 let lastBroadcastedPlayerState = null;
 let lastBroadcastedVolume = null;
+let lastExtractedAccent = null;
 
 function broadcastToDocks(channel, ...args) {
   for (const win of dockWindowsMap.values()) {
@@ -272,7 +281,7 @@ let scaledHeight = 190;
 let lyricsColor = 'white'; // 'white' or 'black'
 
 // Ensure single instance (prevents multiple dock windows)
-const isTestMode = process.env.NODE_ENV === 'test' || process.argv.includes('--test');
+const isTestMode = process.env.NODE_ENV === 'test' || process.argv.includes('--test') || process.argv.includes('--test-peek');
 const gotTheLock = isTestMode || app.requestSingleInstanceLock();
 if (!gotTheLock) {
   console.log('[Main] Another instance is running, quitting.');
@@ -366,7 +375,7 @@ function startSmtcSidecar() {
       try {
         const state = JSON.parse(line);
         if (state.type === 'systemVolume') {
-          if (Date.now() - lastSetVolumeTime < 350) {
+          if (Date.now() - lastSetVolumeTime < 800) {
             // Suppress echo bounce during active user adjustments
             return;
           }
@@ -391,6 +400,10 @@ function startSmtcSidecar() {
             });
           } catch (_) {}
         } else if (state.type === 'spotifyVolume' && typeof state.volume === 'number' && state.volume >= 0) {
+          if (Date.now() - lastSetVolumeTime < 800) {
+            // Suppress echo bounce during active user adjustments
+            return;
+          }
           cachedSpotifyVolume = state.volume;
           broadcastToDocks('spotify-volume-changed', { volume: cachedSpotifyVolume });
           try {
@@ -489,7 +502,16 @@ function createDockWindowForDisplay(display) {
   win.setOpacity(isVisible ? 1 : 0);
   win.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height }, false);
 
-  win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  const loadOptions = lastExtractedAccent ? {
+    query: {
+      accent: lastExtractedAccent.hex || '',
+      rgb: lastExtractedAccent.rgb || '',
+      soft: lastExtractedAccent.soft || '',
+      glow: lastExtractedAccent.glow || '',
+    }
+  } : undefined;
+
+  win.loadFile(path.join(__dirname, 'dist', 'index.html'), loadOptions);
 
   win.webContents.once('did-finish-load', () => {
     win.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
@@ -505,6 +527,9 @@ function createDockWindowForDisplay(display) {
     }
     if (cachedSpotifyVolume !== null) {
       win.webContents.send('spotify-volume-changed', { volume: cachedSpotifyVolume });
+    }
+    if (lastExtractedAccent) {
+      win.webContents.send('extracted-accent-sync', lastExtractedAccent);
     }
     if (isSettingsOpen()) {
       win.webContents.send('settings-window-state', { isOpen: true });
@@ -554,7 +579,51 @@ function createDockWindowForDisplay(display) {
 }
 
 function syncDockWindows() {
+  const settings = settingsStore.loadSettings();
+  const target = settings.position?.targetDisplay || 'all';
   const activeDisplays = getActiveDisplaysForDock();
+
+  // In 'cursor' (mouse travel) mode, keep exactly ONE dock window that follows the cursor
+  // seamlessly between displays without destroying or remounting the React tree.
+  if (target === 'cursor') {
+    const activeDisp = activeDisplays[0] || screen.getPrimaryDisplay();
+    const activeDispId = String(activeDisp.id);
+    const b = getDockBounds(activeDisp);
+
+    // Reuse any existing window
+    let winToKeep = null;
+    for (const [dispId, win] of dockWindowsMap.entries()) {
+      if (win && !win.isDestroyed()) {
+        if (!winToKeep) {
+          winToKeep = win;
+        } else {
+          try { win.destroy(); } catch (_) {}
+        }
+      }
+    }
+
+    dockWindowsMap.clear();
+
+    if (!winToKeep || winToKeep.isDestroyed()) {
+      winToKeep = createDockWindowForDisplay(activeDisp);
+    } else {
+      winToKeep.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height }, false);
+      if (winToKeep.webContents) {
+        winToKeep.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
+      }
+      if (isVisible) {
+        winToKeep.setOpacity(1);
+        if (winToKeep.showInactive) winToKeep.showInactive();
+        else winToKeep.show();
+        winToKeep.setAlwaysOnTop(true, 'screen-saver');
+      }
+    }
+
+    dockWindowsMap.set(activeDispId, winToKeep);
+    updateMainWindowRef();
+    return;
+  }
+
   const activeDisplayIds = new Set(activeDisplays.map((d) => String(d.id)));
 
   // 1. Remove windows for displays no longer active
@@ -620,9 +689,23 @@ function createWindow() {
     // Auto-hide functionality: fast 25ms polling loop across all active displays
     let mouseY = 0;
     let mouseX = 0;
+    let lastCursorDisplayId = null;
     setInterval(() => {
       try {
         const settings = settingsStore.loadSettings();
+
+        // Multi-display mouse travel mode: seamlessly follow cursor monitor transitions
+        const target = settings.position?.targetDisplay || 'all';
+        if (target === 'cursor') {
+          const mousePosition = screen.getCursorScreenPoint();
+          const currentDisp = screen.getDisplayNearestPoint(mousePosition);
+          const currentDispId = currentDisp ? String(currentDisp.id) : null;
+          if (currentDispId && currentDispId !== lastCursorDisplayId) {
+            lastCursorDisplayId = currentDispId;
+            syncDockWindows();
+          }
+        }
+
         if (settings.position?.pinned) {
           return;
         }
@@ -639,7 +722,7 @@ function createWindow() {
         mouseY = mousePosition.y;
         const mode = settings.position?.mode || 'top';
         const rawTriggerDist = settings.position?.triggerDistance;
-        const triggerDist = (rawTriggerDist === 8 || rawTriggerDist === undefined) ? 1 : Math.max(1, rawTriggerDist);
+        const triggerDist = Math.max(10, typeof rawTriggerDist === 'number' ? Math.max(rawTriggerDist, 10) : 12);
         const triggerSpan = settings.position?.triggerSpan || 'full';
 
         let isInsideAnyDock = false;
@@ -661,12 +744,12 @@ function createWindow() {
 
             let inSpan = true;
             if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.25;
-              const maxY = curBounds.y + curBounds.height * 0.75;
+              const minY = curBounds.y + curBounds.height * 0.15;
+              const maxY = curBounds.y + curBounds.height * 0.85;
               inSpan = mouseY >= minY && mouseY <= maxY;
             } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.35;
-              const maxY = curBounds.y + curBounds.height * 0.65;
+              const minY = curBounds.y + curBounds.height * 0.25;
+              const maxY = curBounds.y + curBounds.height * 0.75;
               inSpan = mouseY >= minY && mouseY <= maxY;
             }
 
@@ -684,12 +767,12 @@ function createWindow() {
 
             let inSpan = true;
             if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.25;
-              const maxY = curBounds.y + curBounds.height * 0.75;
+              const minY = curBounds.y + curBounds.height * 0.15;
+              const maxY = curBounds.y + curBounds.height * 0.85;
               inSpan = mouseY >= minY && mouseY <= maxY;
             } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.35;
-              const maxY = curBounds.y + curBounds.height * 0.65;
+              const minY = curBounds.y + curBounds.height * 0.25;
+              const maxY = curBounds.y + curBounds.height * 0.75;
               inSpan = mouseY >= minY && mouseY <= maxY;
             }
 
@@ -699,22 +782,30 @@ function createWindow() {
               inSpan;
           } else {
             // top mode: strictly check mouseY >= curBounds.y to prevent multi-monitor vertical bleed
-            const h = settings.position?.height || getDynamicDockHeight(disp);
+            const b = getDockBounds(disp);
             insideThis =
-              mouseX >= curBounds.x &&
-              mouseX <= curBounds.x + curBounds.width &&
-              mouseY >= curBounds.y &&
-              mouseY <= curBounds.y + h;
+              mouseX >= b.x &&
+              mouseX <= b.x + b.width &&
+              mouseY >= b.y &&
+              mouseY <= b.y + b.height;
 
             let inSpan = true;
-            if (triggerSpan === 'center') {
-              const minX = curBounds.x + curBounds.width * 0.3;
-              const maxX = curBounds.x + curBounds.width * 0.7;
-              inSpan = mouseX >= minX && mouseX <= maxX;
-            } else if (triggerSpan === 'compact') {
-              const minX = curBounds.x + curBounds.width * 0.375;
-              const maxX = curBounds.x + curBounds.width * 0.625;
-              inSpan = mouseX >= minX && mouseX <= maxX;
+            if (settings.position?.style === 'island') {
+              if (triggerSpan === 'compact') {
+                inSpan = mouseX >= (b.x - 80) && mouseX <= (b.x + b.width + 80);
+              } else if (triggerSpan === 'center') {
+                inSpan = mouseX >= (b.x - 140) && mouseX <= (b.x + b.width + 140);
+              }
+            } else {
+              if (triggerSpan === 'center') {
+                const minX = curBounds.x + curBounds.width * 0.2;
+                const maxX = curBounds.x + curBounds.width * 0.8;
+                inSpan = mouseX >= minX && mouseX <= maxX;
+              } else if (triggerSpan === 'compact') {
+                const minX = curBounds.x + curBounds.width * 0.25;
+                const maxX = curBounds.x + curBounds.width * 0.75;
+                inSpan = mouseX >= minX && mouseX <= maxX;
+              }
             }
 
             triggerThis =
@@ -728,13 +819,17 @@ function createWindow() {
         }
 
         if (typeof mouseX === 'number' && typeof mouseY === 'number' && !isNaN(mouseX) && !isNaN(mouseY)) {
-          if (isInsideAnyDock) {
+          if (isAnyTriggerZone) {
             initialLaunchPending = false;
             showGraceUntil = 0;
             cancelHide();
-            if (!isVisible && isAnyTriggerZone) {
+            if (!isVisible) {
               showDock();
             }
+          } else if (isInsideAnyDock) {
+            initialLaunchPending = false;
+            showGraceUntil = 0;
+            cancelHide();
           } else {
             if (initialLaunchPending) return;
             if (Date.now() < showGraceUntil) return;
@@ -1286,22 +1381,27 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('spotify-pause', () => SpotifyAPI.pause(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-next', () => SpotifyAPI.skipNext(tokenStore, spotifyConfig));
   ipcMain.handle('spotify-skip-previous', () => SpotifyAPI.skipPrevious(tokenStore, spotifyConfig));
+  let spotifyWebVolumeDebounceTimer = null;
   ipcMain.handle('spotify-set-volume', async (_, volume) => {
     const clamped = Math.max(0, Math.min(100, Math.round(volume)));
-    let webApiSuccess = false;
+    cachedSpotifyVolume = clamped;
+    lastSetVolumeTime = Date.now();
+
+    // 1. Instantly control local Spotify desktop audio session via native Windows WASAPI (0ms hardware latency)
+    if (smtcProcess && smtcProcess.stdin) {
+      sendSmtcCommand({ cmd: 'setSpotifyVolume', volume: clamped });
+    }
+
+    // 2. Debounced asynchronous background sync with Spotify Web API (never blocks UI or causes lag)
     if (tokenStore.hasTokens()) {
-      try {
-        await SpotifyAPI.setVolume(tokenStore, spotifyConfig, clamped);
-        webApiSuccess = true;
-      } catch (err) {
-        console.warn('[main] Spotify Web API setVolume failed (falling back to process audio):', err.message);
-      }
+      if (spotifyWebVolumeDebounceTimer) clearTimeout(spotifyWebVolumeDebounceTimer);
+      spotifyWebVolumeDebounceTimer = setTimeout(async () => {
+        try {
+          await SpotifyAPI.setVolume(tokenStore, spotifyConfig, clamped);
+        } catch (_) {}
+      }, 300);
     }
-    if (!webApiSuccess) {
-      if (smtcProcess && smtcProcess.stdin) {
-        sendSmtcCommand({ cmd: 'setSpotifyVolume', volume: clamped });
-      }
-    }
+
     return { ok: true, volume: clamped };
   });
   ipcMain.handle('spotify-seek', (_, positionMs) => SpotifyAPI.seek(tokenStore, spotifyConfig, positionMs));
@@ -1508,9 +1608,18 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     return { ok: true };
   });
 
+  ipcMain.handle('get-current-peek-data', () => lastTrackPeekData);
+
   ipcMain.handle('dismiss-track-peek', () => {
     dismissTrackPeek();
     return { ok: true };
+  });
+
+  ipcMain.on('save-extracted-accent', (event, accent) => {
+    if (accent && accent.hex) {
+      lastExtractedAccent = accent;
+      broadcastToDocks('extracted-accent-sync', accent);
+    }
   });
 
   // Settings & Positioning IPC
@@ -1688,7 +1797,7 @@ function isCursorInsideAnyDock() {
 function isSettingsActive() {
   if (!settingsWindow || settingsWindow.isDestroyed()) return false;
   if (settingsWindow.isMinimized() || !settingsWindow.isVisible()) return false;
-  return isAnyKsyncWindowFocused() || isCursorInsideAnyDock();
+  return true;
 }
 
 function isSettingsOpen() {
@@ -1859,11 +1968,14 @@ function getOrCreatePeekWindow() {
   return peekWindow;
 }
 
+let lastTrackPeekData = null;
+
 function showTrackPeek(trackData) {
+  lastTrackPeekData = trackData;
   const settings = settingsStore.loadSettings();
   if (settings.behavior?.trackChangePeek === false) return;
-  if (isVisible) return; // Do not peek if dock is already open/visible
-  if (isSettingsOpen()) return; // Do not peek if settings window is open
+  if (isVisible && !process.argv.includes('--test-peek')) return; // Do not peek if dock is already open/visible
+  if (isSettingsOpen() && !process.argv.includes('--test-peek')) return; // Do not peek if settings window is open
 
   const win = getOrCreatePeekWindow();
 

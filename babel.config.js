@@ -5,6 +5,7 @@ module.exports = {
         node: 'current'
       }
     }],
-    '@babel/preset-react'
+    '@babel/preset-react',
+    '@babel/preset-typescript'
   ]
 };

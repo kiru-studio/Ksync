@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -16,6 +16,8 @@ import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
 import CircularAudioVisualizer from './CircularAudioVisualizer';
 
+const FALLBACK_ARTWORK = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&auto=format&fit=crop&q=80';
+
 const WAVE_BARS = [
   30, 42, 60, 80, 50, 38, 70, 95, 82, 58, 44, 76, 92, 100, 72, 48, 64, 88, 96,
   78, 54, 40, 62, 82, 92, 74, 52, 66, 84, 98, 68, 46, 58, 48, 36, 26,
@@ -27,6 +29,8 @@ const NowPlaying = ({
   progress = 0,
   duration = 0,
   volume = 50,
+  systemVolume = 50,
+  systemMuted = false,
   shuffleState = false,
   repeatState = 'off',
   devices = [],
@@ -34,14 +38,17 @@ const NowPlaying = ({
   onPlayPause,
   onSkip,
   onVolumeChange,
+  onSystemVolumeChange,
+  onSystemMuteToggle,
   onProgressChange,
   onShuffle,
   onRepeat,
   onDeviceChange,
 }) => {
   const [showDevices, setShowDevices] = useState(false);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+
+  // 1. Spotify Volume
   const [localVolume, setLocalVolume] = useState(() => {
     if (typeof volume === 'number') return volume;
     try {
@@ -58,43 +65,108 @@ const NowPlaying = ({
     } catch (_) {}
     return 50;
   });
-  const volThrottleTimerRef = useRef(null);
-  const latestVolRef = useRef(volume ?? 50);
+  const [isSpotifyHovered, setIsSpotifyHovered] = useState(false);
+  const [isSpotifyDragging, setIsSpotifyDragging] = useState(false);
+  const isSpotifyHoveredRef = useRef(false);
+  const isSpotifyDraggingRef = useRef(false);
+  const lastSpotifyInteractionRef = useRef(0);
+  const spotifyTrackRef = useRef(null);
 
+  // Sync external volume prop only when not actively interacting
   useEffect(() => {
-    if (typeof volume === 'number') {
+    if (!isSpotifyDraggingRef.current && Date.now() - lastSpotifyInteractionRef.current >= 800 && typeof volume === 'number') {
       setLocalVolume(volume);
-      latestVolRef.current = volume;
     }
   }, [volume]);
 
-  useEffect(() => {
-    return () => {
-      if (volThrottleTimerRef.current) clearTimeout(volThrottleTimerRef.current);
-    };
-  }, []);
-
-  const dispatchVolume = (newVol, immediate = false) => {
+  const dispatchVolume = useCallback((newVol) => {
     const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
+    lastSpotifyInteractionRef.current = Date.now();
     setLocalVolume(clamped);
-    latestVolRef.current = clamped;
+    try {
+      localStorage.setItem('ksync_last_volume', String(clamped));
+    } catch (_) {}
+    if (onVolumeChange) onVolumeChange(clamped);
+  }, [onVolumeChange]);
 
-    if (immediate) {
-      if (volThrottleTimerRef.current) {
-        clearTimeout(volThrottleTimerRef.current);
-        volThrottleTimerRef.current = null;
+  const handleSpotifyPointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsSpotifyDragging(true);
+    isSpotifyDraggingRef.current = true;
+    lastSpotifyInteractionRef.current = Date.now();
+
+    const calcVol = (clientX) => {
+      if (!spotifyTrackRef.current) return localVolume;
+      const rect = spotifyTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      return Math.round((clickX / rect.width) * 100);
+    };
+
+    dispatchVolume(calcVol(e.clientX));
+
+    const onPointerMove = (me) => {
+      dispatchVolume(calcVol(me.clientX));
+    };
+
+    const onPointerUp = () => {
+      setIsSpotifyDragging(false);
+      isSpotifyDraggingRef.current = false;
+      if (!isSpotifyHoveredRef.current) {
+        if (document.activeElement && spotifyTrackRef.current?.contains(document.activeElement)) {
+          document.activeElement.blur();
+        }
       }
-      if (onVolumeChange) onVolumeChange(clamped);
-      return;
-    }
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
 
-    if (!volThrottleTimerRef.current) {
-      volThrottleTimerRef.current = setTimeout(() => {
-        volThrottleTimerRef.current = null;
-        if (onVolumeChange) onVolumeChange(latestVolRef.current);
-      }, 60);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleSpotifyEnter = () => {
+    isSpotifyHoveredRef.current = true;
+    setIsSpotifyHovered(true);
+  };
+
+  const handleSpotifyLeave = (e) => {
+    isSpotifyHoveredRef.current = false;
+    setIsSpotifyHovered(false);
+    if (!isSpotifyDraggingRef.current) {
+      if (e?.currentTarget?.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
     }
   };
+
+  const handleWheelVolume = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY < 0 ? 5 : -5;
+    dispatchVolume((localVolume || 50) + delta);
+  };
+
+  const handleVolumeKeyDown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      dispatchVolume(Math.min(100, (localVolume || 50) + 5));
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      dispatchVolume(Math.max(0, (localVolume || 50) - 5));
+    }
+  };
+
+  const toggleMute = () => {
+    if (localVolume > 0) {
+      setPrevVolume(localVolume);
+      dispatchVolume(0);
+    } else {
+      dispatchVolume(prevVolume || 50);
+    }
+  };
+
+  const showSpotifyVolume = isSpotifyHovered || isSpotifyDragging;
 
   // Synchronize Like/Heart status with Spotify library and persistent cache
   useEffect(() => {
@@ -160,12 +232,12 @@ const NowPlaying = ({
   };
 
   // Artwork Crossfade & Morphing
-  const [currentArt, setCurrentArt] = useState(track?.albumArt || '/default-album-art.png');
+  const [currentArt, setCurrentArt] = useState(track?.albumArt || FALLBACK_ARTWORK);
   const [prevArt, setPrevArt] = useState(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
 
   useEffect(() => {
-    const nextArt = track?.albumArt || '/default-album-art.png';
+    const nextArt = track?.albumArt || FALLBACK_ARTWORK;
     if (nextArt !== currentArt) {
       setPrevArt(currentArt);
       setCurrentArt(nextArt);
@@ -312,38 +384,38 @@ const NowPlaying = ({
     setHoverTime((clickX / rect.width) * duration);
   };
 
-  const handleVolumeClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const percentage = clickX / rect.width;
-    const newVolume = Math.round(percentage * 100);
-    dispatchVolume(newVolume, true);
-  };
 
-  const handleWheelVolume = (e) => {
+  const seekTrackRef = useRef(null);
+  const [isSeekDragging, setIsSeekDragging] = useState(false);
+
+  const handleSeekPointerDown = (e) => {
+    if (track?.canSeek === false || !duration || !onProgressChange) return;
+    e.stopPropagation();
     e.preventDefault();
-    const delta = e.deltaY < 0 ? 5 : -5;
-    const newVol = Math.max(0, Math.min(100, (localVolume || 50) + delta));
-    dispatchVolume(newVol, false);
-  };
+    setIsSeekDragging(true);
 
-  const handleVolumeKeyDown = (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      dispatchVolume(Math.min(100, (localVolume || 50) + 5), true);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      dispatchVolume(Math.max(0, (localVolume || 50) - 5), true);
-    }
-  };
+    const calcSeek = (clientX) => {
+      if (!seekTrackRef.current) return progress;
+      const rect = seekTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const pct = (clickX / rect.width) * 100;
+      setHoverPercent(pct);
+      setHoverTime((clickX / rect.width) * duration);
+      return (clickX / rect.width) * duration;
+    };
 
-  const toggleMute = () => {
-    if (localVolume > 0) {
-      setPrevVolume(localVolume);
-      dispatchVolume(0, true);
-    } else {
-      dispatchVolume(prevVolume || 50, true);
-    }
+    onProgressChange(calcSeek(e.clientX));
+
+    const onPointerMove = (me) => {
+      onProgressChange(calcSeek(me.clientX));
+    };
+    const onPointerUp = () => {
+      setIsSeekDragging(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
   };
 
   const progressPercent = duration > 0 ? Math.max(0, Math.min(100, (progress / duration) * 100)) : 0;
@@ -481,26 +553,27 @@ const NowPlaying = ({
               </div>
             )}
 
-            {/* Expandable Volume Slider */}
+            {/* 1. Spotify Volume Control */}
             <div
-              className="volume-compact-wrap"
-              onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
+              className="volume-compact-wrap relative flex items-center"
+              onMouseEnter={handleSpotifyEnter}
+              onMouseLeave={handleSpotifyLeave}
             >
               <button
                 type="button"
-                className="icon-mini-btn"
+                className={`icon-mini-btn ${localVolume === 0 ? 'muted' : ''}`}
                 onClick={toggleMute}
                 onWheel={handleWheelVolume}
-                title={localVolume === 0 ? "Unmute Spotify" : `Spotify Volume: ${localVolume}% (Scroll to adjust)`}
+                title={localVolume === 0 ? "Unmute Spotify" : `Spotify Volume: ${localVolume}% (Scroll or drag to adjust)`}
                 aria-label={localVolume === 0 ? "Unmute Spotify" : "Mute Spotify"}
               >
-                {localVolume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {localVolume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} color="var(--accent,#1db954)" />}
               </button>
 
               <div
-                className={`volume-slider-bar ${showVolumeSlider ? 'expanded' : ''}`}
-                onClick={handleVolumeClick}
+                ref={spotifyTrackRef}
+                className={`volume-slider-bar ${showSpotifyVolume ? 'expanded' : ''}`}
+                onPointerDown={handleSpotifyPointerDown}
                 onWheel={handleWheelVolume}
                 onKeyDown={handleVolumeKeyDown}
                 tabIndex={0}
@@ -511,7 +584,7 @@ const NowPlaying = ({
                 aria-valuemax="100"
               >
                 <div className="vol-track">
-                  <div className="vol-fill" style={{ width: `${localVolume}%` }} />
+                  <div className="vol-fill bg-[var(--accent,#1db954)]" style={{ width: `${localVolume}%` }} />
                   <div className="vol-thumb" style={{ left: `${localVolume}%` }} />
                 </div>
               </div>
@@ -576,31 +649,35 @@ const NowPlaying = ({
           </button>
         </div>
 
-        {/* Seekbar Row matching controls row width */}
-        <div className="seekbar-row">
-          <span className="time-lbl">{formatTime(progress)}</span>
+        {/* Dynamic Audio Wave Progress Bar */}
+        <div className="seekbar-row flex items-center gap-2.5 w-full select-none">
+          <span className="time-lbl shrink-0 font-mono text-[11px] tabular-nums text-white/50 w-8 text-left select-none">
+            {formatTime(progress)}
+          </span>
           <div
-            className={`seekbar-track wave-seekbar-track ${isHoveringSeek ? 'hovered' : ''}`}
-            onClick={handleProgressClick}
+            ref={seekTrackRef}
+            className={`seekbar-track wave-seekbar-track relative flex-1 h-[14px] bg-transparent cursor-pointer select-none flex items-center group/seek ${(isHoveringSeek || isSeekDragging) ? 'hovered' : ''}`}
+            onPointerDown={handleSeekPointerDown}
             onMouseEnter={() => setIsHoveringSeek(true)}
             onMouseLeave={() => setIsHoveringSeek(false)}
             onMouseMove={handleSeekMouseMove}
             style={{ cursor: track?.canSeek === false ? 'default' : 'pointer' }}
           >
-            {isHoveringSeek && hoverTime !== null && (
+            {(isHoveringSeek || isSeekDragging) && hoverTime !== null && (
               <div 
-                className="seekbar-hover-tooltip" 
+                className="seekbar-hover-tooltip absolute -top-7 -translate-x-1/2 bg-[rgba(10,12,18,0.95)] text-white font-mono text-[10.5px] px-2 py-0.5 rounded-md border border-white/20 pointer-events-none z-30 shadow-xl" 
                 style={{ left: `${hoverPercent}%` }}
               >
                 {formatTime(hoverTime)}
               </div>
             )}
             
+            {/* Dynamic Animated Wave Bars */}
             <div className={`wave-bars-container ${isPlaying ? 'is-playing' : 'is-paused'}`}>
               {WAVE_BARS.map((baseHeight, idx) => {
                 const barPct = (idx / (WAVE_BARS.length - 1)) * 100;
                 const isPlayed = barPct <= progressPercent;
-                const isHovered = isHoveringSeek && barPct <= hoverPercent;
+                const isHovered = (isHoveringSeek || isSeekDragging) && barPct <= hoverPercent;
 
                 return (
                   <span
@@ -615,6 +692,7 @@ const NowPlaying = ({
               })}
             </div>
 
+            {/* Flat Solid Progress Bar on Pause */}
             <div className={`flat-progress-container ${!isPlaying ? 'active' : ''}`}>
               <div
                 className={`flat-progress-fill ${skipTransition ? 'no-transition' : ''}`}
@@ -622,14 +700,15 @@ const NowPlaying = ({
               />
             </div>
 
+            {/* Draggable Circular White Thumb Knob on Hover */}
             <div 
-              className={`seekbar-thumb wave-thumb ${isHoveringSeek ? 'visible' : ''}`} 
+              className={`seekbar-thumb wave-thumb absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9),0_0_10px_var(--accent,#1db954)] transition-opacity duration-150 pointer-events-none z-10 ${(isHoveringSeek || isSeekDragging) ? 'opacity-100 scale-110' : 'opacity-0'}`} 
               style={{ left: `${progressPercent}%` }} 
             />
           </div>
           <button
             type="button"
-            className="time-lbl time-lbl-btn"
+            className="time-lbl time-lbl-btn shrink-0 font-mono text-[11px] tabular-nums text-white/50 hover:text-white transition-colors cursor-pointer border-none bg-transparent p-0 w-9 text-right select-none"
             onClick={toggleRemaining}
             title={showRemaining ? "Switch to total duration" : "Switch to remaining time"}
           >

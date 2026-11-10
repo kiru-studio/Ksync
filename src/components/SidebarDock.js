@@ -26,6 +26,7 @@ const WAVE_BARS = [
   78, 54, 40, 62, 82, 92, 74, 52, 66, 84, 98, 68, 46, 58, 48, 36, 26,
 ];
 
+
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds === null || seconds === undefined) return '0:00';
   const totalSec = Math.max(0, Math.floor(seconds));
@@ -628,6 +629,39 @@ export default function SidebarDock({
   const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (progress / duration) * 100)) : 0;
   const remaining = duration > progress ? duration - progress : 0;
 
+  const seekTrackRef = useRef(null);
+  const [isSeekDragging, setIsSeekDragging] = useState(false);
+
+  const handleSeekPointerDown = (e) => {
+    if (currentTrack?.canSeek === false || !duration || !onProgressChange) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setIsSeekDragging(true);
+
+    const calcSeek = (clientX) => {
+      if (!seekTrackRef.current) return progress;
+      const rect = seekTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const pct = (clickX / rect.width) * 100;
+      setHoverPercent(pct);
+      setHoverTime((clickX / rect.width) * duration);
+      return (clickX / rect.width) * duration;
+    };
+
+    onProgressChange(calcSeek(e.clientX));
+
+    const onPointerMove = (me) => {
+      onProgressChange(calcSeek(me.clientX));
+    };
+    const onPointerUp = () => {
+      setIsSeekDragging(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
   const handleProgressClick = (e) => {
     if (!duration || duration <= 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -946,7 +980,12 @@ export default function SidebarDock({
             <div
               className="sidebar-volume-wrap"
               onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
+              onMouseLeave={(e) => {
+                setShowVolumeSlider(false);
+                if (e?.currentTarget?.contains(document.activeElement)) {
+                  document.activeElement.blur();
+                }
+              }}
             >
               <button
                 type="button"
@@ -1038,29 +1077,33 @@ export default function SidebarDock({
           </button>
         </div>
 
-        {/* 6. SEEKBAR ROW: Interactive Wave Scrubber (matching top dock) */}
-        <div className="sidebar-seekbar-row">
-          <span className="sidebar-time-val">{formatTime(progress)}</span>
+        {/* 6. SEEKBAR ROW: Dynamic Audio Wave Progress Bar */}
+        <div className="sidebar-seekbar-row flex items-center gap-2.5 w-full select-none">
+          <span className="sidebar-time-val shrink-0 font-mono text-[11px] tabular-nums text-white/50 w-8 text-left select-none">
+            {formatTime(progress)}
+          </span>
           <div
-            className={`sidebar-seekbar-bar wave-seekbar-track ${isHoveringSeek ? 'hovered' : ''}`}
+            ref={seekTrackRef}
+            className={`wave-seekbar-track relative flex-1 h-[14px] bg-transparent cursor-pointer select-none flex items-center group/seek ${(isHoveringSeek || isSeekDragging) ? 'hovered' : ''}`}
             onClick={handleProgressClick}
+            onPointerDown={handleSeekPointerDown}
             onMouseEnter={() => setIsHoveringSeek(true)}
             onMouseLeave={() => setIsHoveringSeek(false)}
             onMouseMove={handleSeekMouseMove}
             style={{ cursor: currentTrack?.canSeek === false ? 'default' : 'pointer' }}
           >
-            {isHoveringSeek && hoverTime !== null && (
-              <div className="sidebar-seek-tooltip" style={{ left: `${hoverPercent}%` }}>
+            {(isHoveringSeek || isSeekDragging) && hoverTime !== null && (
+              <div className="sidebar-seek-tooltip absolute -top-7 -translate-x-1/2 bg-[rgba(10,12,18,0.95)] text-white font-mono text-[10.5px] px-2 py-0.5 rounded-md border border-white/20 pointer-events-none z-30 shadow-xl" style={{ left: `${hoverPercent}%` }}>
                 {formatTime(hoverTime)}
               </div>
             )}
 
-            {/* Bouncing Audio Wave Bars (Active when playing) */}
+            {/* Dynamic Animated Wave Bars */}
             <div className={`wave-bars-container ${isPlaying ? 'is-playing' : 'is-paused'}`}>
               {WAVE_BARS.map((baseHeight, idx) => {
                 const barPct = (idx / (WAVE_BARS.length - 1)) * 100;
                 const isPlayed = barPct <= progressPercent;
-                const isHovered = isHoveringSeek && barPct <= hoverPercent;
+                const isHovered = (isHoveringSeek || isSeekDragging) && barPct <= hoverPercent;
 
                 return (
                   <span
@@ -1075,7 +1118,7 @@ export default function SidebarDock({
               })}
             </div>
 
-            {/* Flat Progress Bar (Active when paused) */}
+            {/* Flat Solid Progress Bar on Pause */}
             <div className={`flat-progress-container ${!isPlaying ? 'active' : ''}`}>
               <div
                 className="flat-progress-fill"
@@ -1083,14 +1126,14 @@ export default function SidebarDock({
               />
             </div>
 
-            {/* Seek Thumb Scrubber */}
+            {/* Draggable Circular White Thumb Knob on Hover */}
             <div
-              className={`wave-thumb ${isHoveringSeek ? 'visible' : ''}`}
+              className={`wave-thumb absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9),0_0_10px_var(--accent,#1db954)] transition-opacity duration-150 pointer-events-none z-10 ${(isHoveringSeek || isSeekDragging) ? 'opacity-100 scale-110' : 'opacity-0'}`}
               style={{ left: `${progressPercent}%` }}
             />
           </div>
           <span
-            className="sidebar-time-val time-toggle-btn"
+            className="sidebar-time-val time-toggle-btn shrink-0 font-mono text-[11px] tabular-nums text-white/50 hover:text-white transition-colors cursor-pointer border-none bg-transparent p-0 w-9 text-right select-none"
             onClick={() => setShowRemaining(!showRemaining)}
             title={showRemaining ? 'Show total duration' : 'Show remaining time'}
           >

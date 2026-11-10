@@ -1,6 +1,6 @@
 {
   "name": "ksync",
-  "version": "2.4.3",
+  "version": "2.5.0",
   "description": "A Spotify dock with auto-hide and lyrics display",
   "main": "main.js",
   "scripts": {
@@ -32,6 +32,8 @@
     "@babel/core": "^7.23.5",
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-react": "^7.23.3",
+    "@babel/preset-typescript": "^7.29.7",
+    "autoprefixer": "^10.4.19",
     "babel-loader": "^9.1.3",
     "concurrently": "^8.2.2",
     "css-loader": "^6.8.1",
@@ -42,15 +44,25 @@
     "lucide-react": "^0.294.0",
     "playwright": "^1.64.1",
     "png-to-ico": "^2.1.8",
+    "postcss": "^8.4.38",
+    "postcss-loader": "^8.1.1",
     "rcedit": "^5.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "style-loader": "^3.3.3",
+    "tailwindcss": "^3.4.17",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "electron-updater": "^6.8.11"
+    "@base-ui/react": "^1.9.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "@solar-icons/react": "^2.3.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cn": "^0.5.2",
+    "electron-updater": "^6.8.11",
+    "tailwind-merge": "^3.7.0"
   },
   "build": {
     "appId": "com.ksync",
