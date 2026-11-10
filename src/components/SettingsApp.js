@@ -3547,7 +3547,11 @@ export default function SettingsApp() {
                           : updateStatus.state === 'checking' || isCheckingUpdate
                           ? 'Querying GitHub API distribution channels...'
                           : updateStatus.state === 'error'
-                          ? (updateStatus.error || 'Network connection unavailable or rate-limited.')
+                          ? (updateStatus.error && updateStatus.error.length > 100
+                              ? (updateStatus.error.toLowerCase().includes('sign')
+                                  ? 'Release verification failed. Please download the latest release from GitHub.'
+                                  : `${updateStatus.error.slice(0, 97)}...`)
+                              : (updateStatus.error || 'Network connection unavailable or rate-limited.'))
                           : `Version ${appVersion} is the latest release build.`}
                       </div>
                     </div>

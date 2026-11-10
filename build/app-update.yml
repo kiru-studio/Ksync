@@ -2,5 +2,3 @@ owner: kiru-studio
 repo: Ksync
 provider: github
 updaterCacheDirName: ksync-updater
-publisherName:
-  - kiru studio

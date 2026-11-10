@@ -8,8 +8,6 @@ const UPDATE_CONFIG_YAML = [
   'repo: Ksync',
   'provider: github',
   'updaterCacheDirName: ksync-updater',
-  'publisherName:',
-  '  - kiru studio',
   '',
 ].join('\n');
 
@@ -23,6 +21,13 @@ function ensureUpdateConfigFile() {
     if (process.resourcesPath) {
       const standardPath = path.join(process.resourcesPath, 'app-update.yml');
       if (fs.existsSync(standardPath)) {
+        try {
+          const content = fs.readFileSync(standardPath, 'utf8');
+          if (content.includes('publisherName')) {
+            fs.writeFileSync(standardPath, UPDATE_CONFIG_YAML, 'utf8');
+            console.log('[AutoUpdater] Sanitized app-update.yml in resourcesPath (removed publisherName)');
+          }
+        } catch (_) {}
         return standardPath;
       }
       if (fs.existsSync(process.resourcesPath)) {
@@ -42,10 +47,18 @@ function ensureUpdateConfigFile() {
       fs.mkdirSync(userData, { recursive: true });
     }
     const fallbackPath = path.join(userData, 'app-update.yml');
-    if (!fs.existsSync(fallbackPath)) {
-      fs.writeFileSync(fallbackPath, UPDATE_CONFIG_YAML, 'utf8');
-      console.log('[AutoUpdater] Created fallback app-update.yml in userData:', fallbackPath);
+    if (fs.existsSync(fallbackPath)) {
+      try {
+        const content = fs.readFileSync(fallbackPath, 'utf8');
+        if (content.includes('publisherName')) {
+          fs.writeFileSync(fallbackPath, UPDATE_CONFIG_YAML, 'utf8');
+          console.log('[AutoUpdater] Sanitized app-update.yml in userData (removed publisherName)');
+        }
+      } catch (_) {}
+      return fallbackPath;
     }
+    fs.writeFileSync(fallbackPath, UPDATE_CONFIG_YAML, 'utf8');
+    console.log('[AutoUpdater] Created fallback app-update.yml in userData:', fallbackPath);
     return fallbackPath;
   } catch (err) {
     console.warn('[AutoUpdater] Could not write to userData:', err.message);
@@ -108,6 +121,13 @@ class UpdateService {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.allowPrerelease = false;
+
+    // Bypass Authenticode code-signing verification for unsigned open-source binaries
+    try {
+      autoUpdater.verifyUpdateCodeSignature = () => Promise.resolve(null);
+    } catch (err) {
+      console.warn('[AutoUpdater] verifyUpdateCodeSignature override error:', err.message);
+    }
 
     // Use built-in logging
     autoUpdater.logger = {
@@ -188,9 +208,13 @@ class UpdateService {
 
     autoUpdater.on('error', (err) => {
       console.warn('[AutoUpdater] Update check/download failed:', err.message);
+      let errorMsg = err.message || 'Check failed';
+      if (errorMsg.includes('ERR_UPDATER_INVALID_SIGNATURE') || errorMsg.includes('not signed')) {
+        errorMsg = 'Unsigned release verification failed. Please download the latest update directly from GitHub Releases.';
+      }
       this.updateState({
         state: 'error',
-        error: err.message || 'Check failed',
+        error: errorMsg,
         lastChecked: Date.now(),
       });
     });

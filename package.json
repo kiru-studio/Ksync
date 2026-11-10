@@ -107,9 +107,6 @@
     "win": {
       "icon": "build/icon.ico",
       "legalTrademarks": "kiru studio",
-      "publisherName": [
-        "kiru studio"
-      ],
       "target": [
         {
           "target": "nsis",
