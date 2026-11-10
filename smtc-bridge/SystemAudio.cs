@@ -155,6 +155,8 @@ namespace smtc_bridge
         private static readonly object _syncRoot = new object();
         private static int _lastReportedVolume = -1;
         private static bool _lastReportedMute = false;
+        private static readonly HashSet<uint> _knownSpotifyPids = new HashSet<uint>();
+        private static DateTime _lastSpotifyPidScan = DateTime.MinValue;
 
         public static void Initialize()
         {
@@ -317,6 +319,7 @@ namespace smtc_bridge
                     sessionEnum.GetCount(out int count);
                     float targetScalar = Math.Clamp(volume / 100f, 0f, 1f);
                     bool found = false;
+                    bool shouldRescan = (DateTime.UtcNow - _lastSpotifyPidScan).TotalSeconds > 5 || _knownSpotifyPids.Count == 0;
 
                     for (int i = 0; i < count; i++)
                     {
@@ -326,26 +329,38 @@ namespace smtc_bridge
                             ctrl2.GetProcessId(out uint pid);
                             if (pid > 0)
                             {
-                                try
+                                bool isMatch = _knownSpotifyPids.Contains(pid);
+                                if (!isMatch && shouldRescan)
                                 {
-                                    var proc = System.Diagnostics.Process.GetProcessById((int)pid);
-                                    if (proc.ProcessName.Contains(processName, StringComparison.OrdinalIgnoreCase))
+                                    try
                                     {
-                                        if (ctrl is ISimpleAudioVolume simpleVol)
+                                        var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                                        if (proc.ProcessName.Contains(processName, StringComparison.OrdinalIgnoreCase))
                                         {
-                                            simpleVol.SetMasterVolume(targetScalar, IntPtr.Zero);
-                                            if (volume > 0)
-                                            {
-                                                simpleVol.SetMute(false, IntPtr.Zero);
-                                            }
-                                            found = true;
+                                            _knownSpotifyPids.Add(pid);
+                                            isMatch = true;
                                         }
                                     }
+                                    catch { }
                                 }
-                                catch { }
+
+                                if (isMatch)
+                                {
+                                    if (ctrl is ISimpleAudioVolume simpleVol)
+                                    {
+                                        simpleVol.SetMasterVolume(targetScalar, IntPtr.Zero);
+                                        if (volume > 0)
+                                        {
+                                            simpleVol.SetMute(false, IntPtr.Zero);
+                                        }
+                                        found = true;
+                                    }
+                                }
                             }
                         }
                     }
+
+                    if (shouldRescan) _lastSpotifyPidScan = DateTime.UtcNow;
                     return found;
                 }
                 catch (Exception ex)

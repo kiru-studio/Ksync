@@ -744,17 +744,17 @@ function createWindow() {
 
             let inSpan = true;
             if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.15;
-              const maxY = curBounds.y + curBounds.height * 0.85;
+              const minY = curBounds.y + curBounds.height * 0.08;
+              const maxY = curBounds.y + curBounds.height * 0.92;
               inSpan = mouseY >= minY && mouseY <= maxY;
             } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.25;
-              const maxY = curBounds.y + curBounds.height * 0.75;
+              const minY = curBounds.y + curBounds.height * 0.18;
+              const maxY = curBounds.y + curBounds.height * 0.82;
               inSpan = mouseY >= minY && mouseY <= maxY;
             }
 
             triggerThis =
-              mouseX >= curBounds.x &&
+              mouseX >= (curBounds.x - 6) &&
               mouseX <= curBounds.x + triggerDist &&
               inSpan;
           } else if (mode === 'right') {
@@ -767,18 +767,18 @@ function createWindow() {
 
             let inSpan = true;
             if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.15;
-              const maxY = curBounds.y + curBounds.height * 0.85;
+              const minY = curBounds.y + curBounds.height * 0.08;
+              const maxY = curBounds.y + curBounds.height * 0.92;
               inSpan = mouseY >= minY && mouseY <= maxY;
             } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.25;
-              const maxY = curBounds.y + curBounds.height * 0.75;
+              const minY = curBounds.y + curBounds.height * 0.18;
+              const maxY = curBounds.y + curBounds.height * 0.82;
               inSpan = mouseY >= minY && mouseY <= maxY;
             }
 
             triggerThis =
               mouseX >= curBounds.x + curBounds.width - triggerDist &&
-              mouseX <= curBounds.x + curBounds.width &&
+              mouseX <= (curBounds.x + curBounds.width + 6) &&
               inSpan;
           } else {
             // top mode: strictly check mouseY >= curBounds.y to prevent multi-monitor vertical bleed
@@ -798,18 +798,18 @@ function createWindow() {
               }
             } else {
               if (triggerSpan === 'center') {
-                const minX = curBounds.x + curBounds.width * 0.2;
-                const maxX = curBounds.x + curBounds.width * 0.8;
+                const minX = curBounds.x + curBounds.width * 0.08;
+                const maxX = curBounds.x + curBounds.width * 0.92;
                 inSpan = mouseX >= minX && mouseX <= maxX;
               } else if (triggerSpan === 'compact') {
-                const minX = curBounds.x + curBounds.width * 0.25;
-                const maxX = curBounds.x + curBounds.width * 0.75;
+                const minX = curBounds.x + curBounds.width * 0.18;
+                const maxX = curBounds.x + curBounds.width * 0.82;
                 inSpan = mouseX >= minX && mouseX <= maxX;
               }
             }
 
             triggerThis =
-              mouseY >= curBounds.y &&
+              mouseY >= (curBounds.y - 6) &&
               mouseY <= curBounds.y + triggerDist &&
               inSpan;
           }

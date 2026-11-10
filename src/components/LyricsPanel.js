@@ -157,7 +157,12 @@ const LyricsPanel = ({
     e.preventDefault();
     isDraggingRef.current = false;
     setIsDragging(false);
-    triggerInteraction();
+    if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
+    isInteractingRef.current = false;
+    setIsInteracting(false);
+    if (document.activeElement && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
@@ -361,6 +366,9 @@ const LyricsPanel = ({
           isInteractingRef.current = false;
           setIsInteracting(false);
           if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
+          if (document.activeElement && document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
         }
       }}
       onWheel={(e) => {
