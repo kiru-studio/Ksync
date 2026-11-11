@@ -224,6 +224,10 @@ body {
   align-items: center;
 }
 
+.panel-col.panel-left {
+  overflow: visible;
+}
+
 .panel-left {
   flex: var(--top-slot-flex, 1 1 0%);
   width: var(--top-slot-width, 25%);
@@ -237,7 +241,7 @@ body {
   padding: 0 clamp(10px, 1.4vw, 20px) 0 clamp(8px, 1.2vw, 16px);
   background: transparent;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .panel-center {
@@ -322,7 +326,7 @@ button:focus:not(:focus-visible),
   gap: clamp(8px, 1vw, 14px);
   min-width: 0;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Album Art with Ambient Tint & Glow (Items 2 & 16) */
@@ -356,6 +360,8 @@ button:focus:not(:focus-visible),
 .art-wrapper.circle-rotating-art {
   overflow: visible !important;
   border-radius: 50% !important;
+  margin-left: 8px;
+  margin-right: 4px;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 28px var(--accent-glow, rgba(29, 185, 84, 0.35)) !important;
 }
 
