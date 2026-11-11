@@ -117,6 +117,21 @@ export default function CircularAudioVisualizer({
     let cachedSecondary = '';
     let cachedRgb = '29, 185, 84';
     let colorCheckTimer = 0;
+    let cachedDiscRadius = effectiveDiscR;
+
+    const measureDiscRadius = () => {
+      try {
+        const parent = canvas.parentElement;
+        const artCard = parent?.querySelector('.sidebar-art-card, .art-wrapper') ||
+                        (parent?.classList.contains('art-wrapper') ? parent : null);
+        if (artCard) {
+          const measured = artCard.getBoundingClientRect().width / 2;
+          if (measured > 25 && measured < 220) {
+            cachedDiscRadius = measured;
+          }
+        }
+      } catch (_) {}
+    };
 
     const updateColors = () => {
       try {
@@ -130,6 +145,9 @@ export default function CircularAudioVisualizer({
       } catch (_) {}
     };
     updateColors();
+    measureDiscRadius();
+
+    window.addEventListener('resize', measureDiscRadius);
 
     const render = (now) => {
       const activePlaying = isPlayingRef.current;
@@ -145,11 +163,12 @@ export default function CircularAudioVisualizer({
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
-      // Check colors periodically (every 1s)
+      // Check colors and disc dimensions periodically (every 1s)
       colorCheckTimer += dt;
       if (colorCheckTimer > 1.0) {
         colorCheckTimer = 0;
         updateColors();
+        measureDiscRadius();
       }
 
       // Sync with external seek or progress changes
@@ -185,17 +204,8 @@ export default function CircularAudioVisualizer({
       const cx = displaySize / 2;
       const cy = displaySize / 2;
 
-      // Accurately determine the inner radius from the actual rendered disc card
-      let currentDiscRadius = effectiveDiscR;
-      const parent = canvas.parentElement;
-      const artCard = parent?.querySelector('.sidebar-art-card, .art-wrapper') ||
-                      (parent?.classList.contains('art-wrapper') ? parent : null);
-      if (artCard) {
-        const measured = artCard.getBoundingClientRect().width / 2;
-        if (measured > 25 && measured < 220) {
-          currentDiscRadius = measured;
-        }
-      }
+      // Accurately determine the inner radius from cached disc dimensions (0ms layout cost)
+      const currentDiscRadius = cachedDiscRadius || effectiveDiscR;
       const rInner = currentDiscRadius + (isCompact ? 1.5 : 2.0); // Starts precisely along the outer rim of the rotating vinyl
 
       // Mathematical audio spectrum simulation driven by BPM and audio frequency harmonics
@@ -326,6 +336,7 @@ export default function CircularAudioVisualizer({
     animFrameRef.current = requestAnimationFrame(render);
 
     return () => {
+      window.removeEventListener('resize', measureDiscRadius);
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;

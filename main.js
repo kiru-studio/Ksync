@@ -693,11 +693,13 @@ function createWindow() {
     setInterval(() => {
       try {
         const settings = settingsStore.loadSettings();
+        const mousePosition = screen.getCursorScreenPoint();
+        mouseX = mousePosition.x;
+        mouseY = mousePosition.y;
 
         // Multi-display mouse travel mode: seamlessly follow cursor monitor transitions
         const target = settings.position?.targetDisplay || 'all';
         if (target === 'cursor') {
-          const mousePosition = screen.getCursorScreenPoint();
           const currentDisp = screen.getDisplayNearestPoint(mousePosition);
           const currentDispId = currentDisp ? String(currentDisp.id) : null;
           if (currentDispId && currentDispId !== lastCursorDisplayId) {
@@ -717,9 +719,6 @@ function createWindow() {
           lastMousePollTime = now;
         }
 
-        const mousePosition = screen.getCursorScreenPoint();
-        mouseX = mousePosition.x;
-        mouseY = mousePosition.y;
         const mode = settings.position?.mode || 'top';
         const rawTriggerDist = settings.position?.triggerDistance;
         const triggerDist = Math.max(10, typeof rawTriggerDist === 'number' ? Math.max(rawTriggerDist, 10) : 12);
