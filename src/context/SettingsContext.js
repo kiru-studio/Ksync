@@ -112,6 +112,9 @@ export const DEFAULT_SETTINGS = {
     artCornerRadius: 10,
     artShadowIntensity: 60,
     artHoverZoom: true,
+    albumArtStyle: 'vinyl',
+    albumArtRipples: true,
+    albumArtGlow: true,
     titleSize: 'normal',
     marqueeScroll: true,
     controlButtonSize: 'normal',
@@ -329,16 +332,20 @@ export function SettingsProvider({ children }) {
       );
     }
 
-    if (theming.backdropStyle === 'artwork') {
-      root.style.setProperty('--dock-art-opacity', '0.35');
+    const isArtworkBackdrop = theming.backdropStyle === 'artwork' || theming.preset === 'artwork';
+    if (isArtworkBackdrop) {
+      const op = theming.opacity ?? 0.88;
+      const artOpacity = Math.max(0.12, Math.min(0.75, op * 0.42));
+      root.style.setProperty('--dock-art-opacity', String(artOpacity));
       root.style.setProperty('--dock-backdrop-bg', 'rgba(10, 12, 16, 0.78)');
+      root.style.setProperty('--dock-scrim-bg', `rgba(10, 12, 16, ${Math.max(0.40, Math.min(0.88, 1 - op * 0.35))})`);
     } else {
       root.style.setProperty('--dock-art-opacity', '0');
     }
 
     // 2. Glass & Materials System
     const opacityVal = theming.opacity ?? 0.92;
-    const blurVal = theming.blurStrength ?? (theming.backdropStyle === 'artwork' ? 50 : 24);
+    const blurVal = theming.blurStrength ?? (isArtworkBackdrop ? 50 : 24);
     root.style.setProperty('--dock-opacity', String(opacityVal));
     root.style.setProperty('--dock-blur', `${blurVal}px`);
     root.style.setProperty('--panel-opacity', String(theming.panelOpacity ?? 0.95));
@@ -359,6 +366,8 @@ export function SettingsProvider({ children }) {
     // 3. Global Color System
     const isOled = theming.preset === 'oled' || (theming.backdropStyle === 'solid' && (theming.solidColor === '#000000' || theming.solidColor === '#000'));
     root.classList.toggle('mode-oled', !!isOled);
+    root.classList.toggle('hide-art-ripples', theming.albumArtRipples === false);
+    root.classList.toggle('hide-art-glow', theming.albumArtGlow === false);
 
     const appBg = theming.appBackground || (isOled ? '#000000' : '#050608');
     const surfPri = theming.surfacePrimary || (isOled ? '#000000' : '#101216');

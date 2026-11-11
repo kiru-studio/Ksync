@@ -133,10 +133,10 @@ export default function SidebarDock({
   // Circle rotating artwork state (toggle via click, sync with localStorage and top dock)
   const [isCircleArt, setIsCircleArt] = useState(() => {
     try {
-      return localStorage.getItem('ksync_circle_art') === 'true';
-    } catch (_) {
-      return false;
-    }
+      const stored = localStorage.getItem('ksync_circle_art');
+      if (stored !== null) return stored === 'true';
+    } catch (_) {}
+    return true;
   });
 
   useEffect(() => {

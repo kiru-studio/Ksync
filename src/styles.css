@@ -118,17 +118,18 @@ body {
   width: calc(100% + 60px);
   height: calc(100% + 60px);
   object-fit: cover;
-  filter: blur(55px) saturate(140%);
+  filter: blur(var(--dock-blur, 50px)) saturate(140%);
   transform: scale(1.25);
-  opacity: var(--dock-art-opacity, 0.32);
-  transition: opacity 0.5s ease;
+  opacity: var(--dock-art-opacity, 0.35);
+  transition: opacity 0.4s ease, filter 0.3s ease;
   animation: bgFadeIn 0.5s ease;
 }
 
 .dock-backdrop-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(12, 12, 16, 0.74);
+  background: var(--dock-scrim-bg, rgba(12, 12, 16, 0.74));
+  transition: background 0.3s ease;
 }
 
 @keyframes bgFadeIn {
@@ -482,6 +483,15 @@ button:focus:not(:focus-visible),
   border-radius: 22px;
   pointer-events: none;
   opacity: 0.85;
+}
+
+.hide-art-ripples .compact-circle-waves,
+.hide-art-ripples .compact-square-waves {
+  display: none !important;
+}
+
+.hide-art-glow .art-ambient-tint {
+  display: none !important;
 }
 
 /* OLED Mode Pure Black overrides - Eliminate all gradient washes and glow bleed */

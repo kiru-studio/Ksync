@@ -2041,6 +2041,47 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
+                      {/* Album Art Presentation Style */}
+                      <div className="bento-control-pad compact" style={{ marginBottom: '14px' }}>
+                        <div className="bento-header-row">
+                          <span className="bento-label">Album Art Presentation Effect</span>
+                          <span className="tabular-num-pill">
+                            {(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'Rotating Vinyl Record' : 'Standard Square'}
+                          </span>
+                        </div>
+                        <div className="segmented-tabs-bar" style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            className={`segmented-tab-btn ${(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateThemingWithHistory({ albumArtStyle: 'vinyl' });
+                              try {
+                                localStorage.setItem('ksync_circle_art', 'true');
+                                window.dispatchEvent(new CustomEvent('ksync:circle-art-toggle', { detail: { isCircle: true } }));
+                              } catch (_) {}
+                            }}
+                          >
+                            Rotating Vinyl & 360° Spectrum
+                          </button>
+                          <button
+                            type="button"
+                            className={`segmented-tab-btn ${(theming.albumArtStyle || 'vinyl') === 'square' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateThemingWithHistory({ albumArtStyle: 'square' });
+                              try {
+                                localStorage.setItem('ksync_circle_art', 'false');
+                                window.dispatchEvent(new CustomEvent('ksync:circle-art-toggle', { detail: { isCircle: false } }));
+                              } catch (_) {}
+                            }}
+                          >
+                            Standard Square Cover
+                          </button>
+                        </div>
+                        <div className="row-sub-label" style={{ marginTop: '6px' }}>
+                          Choose and keep your preferred artwork presentation. Clicking the album artwork in either dock also dynamically toggles this.
+                        </div>
+                      </div>
+
                       {/* Artwork Corner Radius */}
                       <div className="bento-control-pad compact">
                         <div className="bento-header-row">
@@ -2062,33 +2103,61 @@ export default function SettingsApp() {
                       </div>
 
                       {/* Component Row Toggles */}
-                <div className="card-hairline-row flex-between" style={{ marginTop: '16px' }}>
-                  <div>
-                    <div className="row-main-label">Marquee Auto-Scroll</div>
-                    <div className="row-sub-label">Automatically scroll long track titles and artist names smoothly</div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`pill-toggle-switch ${theming.marqueeScroll !== false ? 'on active' : 'off'}`}
-                    onClick={() => updateThemingWithHistory({ marqueeScroll: theming.marqueeScroll === false })}
-                  >
-                    <span className="toggle-thumb" />
-                  </button>
-                </div>
+                      <div className="card-hairline-row flex-between" style={{ marginTop: '16px' }}>
+                        <div>
+                          <div className="row-main-label">Harmonic Audio Wave Ripples</div>
+                          <div className="row-sub-label">Rhythmically expanding harmonic ripple rings radiating outward from the artwork</div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`pill-toggle-switch ${theming.albumArtRipples !== false ? 'on active' : 'off'}`}
+                          onClick={() => updateThemingWithHistory({ albumArtRipples: theming.albumArtRipples === false })}
+                        >
+                          <span className="toggle-thumb" />
+                        </button>
+                      </div>
 
-                <div className="card-hairline-row flex-between">
-                  <div>
-                    <div className="row-main-label">Artwork Hover Zoom Effect</div>
-                    <div className="row-sub-label">Subtle scale transition when hovering over the album sleeve</div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`pill-toggle-switch ${theming.artHoverZoom !== false ? 'on active' : 'off'}`}
-                    onClick={() => updateThemingWithHistory({ artHoverZoom: theming.artHoverZoom === false })}
-                  >
-                    <span className="toggle-thumb" />
-                  </button>
-                </div>
+                      <div className="card-hairline-row flex-between">
+                        <div>
+                          <div className="row-main-label">Atmospheric Ambient Art Tint</div>
+                          <div className="row-sub-label">Soft dynamic color aura derived from artwork hues glowing behind the sleeve</div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`pill-toggle-switch ${theming.albumArtGlow !== false ? 'on active' : 'off'}`}
+                          onClick={() => updateThemingWithHistory({ albumArtGlow: theming.albumArtGlow === false })}
+                        >
+                          <span className="toggle-thumb" />
+                        </button>
+                      </div>
+
+                      <div className="card-hairline-row flex-between">
+                        <div>
+                          <div className="row-main-label">Marquee Auto-Scroll</div>
+                          <div className="row-sub-label">Automatically scroll long track titles and artist names smoothly</div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`pill-toggle-switch ${theming.marqueeScroll !== false ? 'on active' : 'off'}`}
+                          onClick={() => updateThemingWithHistory({ marqueeScroll: theming.marqueeScroll === false })}
+                        >
+                          <span className="toggle-thumb" />
+                        </button>
+                      </div>
+
+                      <div className="card-hairline-row flex-between">
+                        <div>
+                          <div className="row-main-label">Artwork Hover Zoom Effect</div>
+                          <div className="row-sub-label">Subtle scale transition when hovering over the album sleeve</div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`pill-toggle-switch ${theming.artHoverZoom !== false ? 'on active' : 'off'}`}
+                          onClick={() => updateThemingWithHistory({ artHoverZoom: theming.artHoverZoom === false })}
+                        >
+                          <span className="toggle-thumb" />
+                        </button>
+                      </div>
                     </>
                   )}
                 </section>
