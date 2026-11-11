@@ -1627,7 +1627,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     const updated = settingsStore.saveSettings(newSettings);
     syncDockWindows();
     broadcastToDocks('settings-changed', updated);
-    if (isSettingsOpen()) showDock();
+    if (isSettingsActive()) showDock();
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       const b = getDockBounds(screen.getPrimaryDisplay());
       settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
@@ -1651,7 +1651,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
     const def = settingsStore.resetSettings();
     syncDockWindows();
     broadcastToDocks('settings-changed', def);
-    if (isSettingsOpen()) showDock();
+    if (isSettingsActive()) showDock();
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       const b = getDockBounds(screen.getPrimaryDisplay());
       settingsWindow.webContents.send('dock-dimensions', { width: b.width, height: b.height, mode: b.mode });
@@ -1797,7 +1797,7 @@ function isCursorInsideAnyDock() {
 function isSettingsActive() {
   if (!settingsWindow || settingsWindow.isDestroyed()) return false;
   if (settingsWindow.isMinimized() || !settingsWindow.isVisible()) return false;
-  return true;
+  return settingsWindow.isFocused();
 }
 
 function isSettingsOpen() {
@@ -1885,7 +1885,7 @@ function openSettingsWindow() {
 
   settingsWindow.on('blur', () => {
     setTimeout(() => {
-      if (!isSettingsActive()) {
+      if (!isAnyKsyncWindowFocused() && !isCursorInsideAnyDock()) {
         const settings = settingsStore.loadSettings();
         if (!settings.position?.pinned) {
           console.log('[Main] Settings blurred and navigated away -> hiding dock');
