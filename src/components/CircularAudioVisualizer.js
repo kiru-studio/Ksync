@@ -117,7 +117,7 @@ export default function CircularAudioVisualizer({
     let cachedSecondary = '';
     let cachedRgb = '29, 185, 84';
     let colorCheckTimer = 0;
-    let cachedDiscRadius = effectiveDiscR;
+    let cachedDiscRadius = discRadiusRef.current || discRadius;
 
     const measureDiscRadius = () => {
       try {
