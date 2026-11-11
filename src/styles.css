@@ -333,7 +333,7 @@ button:focus:not(:focus-visible),
   min-width: clamp(76px, 7.5vw, 118px);
   max-height: calc(100% - 16px);
   border-radius: var(--art-corner-radius, 10px);
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.60), 0 0 24px var(--accent-soft);
   flex-shrink: 0;
@@ -8817,7 +8817,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* 1. Artwork Crossfade & Morphing */
 .art-wrapper {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .art-img-prev {

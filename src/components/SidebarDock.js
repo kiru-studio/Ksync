@@ -8,7 +8,6 @@ import {
   Repeat,
   Repeat1,
   Heart,
-  Volume,
   Volume1,
   Volume2,
   VolumeX,

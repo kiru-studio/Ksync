@@ -57,6 +57,7 @@ const LyricsPanel = ({
   const isInteractingRef = useRef(false);
   const throttleTimerRef = useRef(null);
   const interactionTimerRef = useRef(null);
+  const lyricsRafId = useRef(null);
 
   const triggerInteraction = useCallback(() => {
     setIsInteracting(true);
@@ -84,6 +85,7 @@ const LyricsPanel = ({
   // Clean up timers on unmount
   useEffect(() => {
     return () => {
+      if (lyricsRafId.current) cancelAnimationFrame(lyricsRafId.current);
       if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
       if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
     };
@@ -148,13 +150,23 @@ const LyricsPanel = ({
     e.stopPropagation();
     e.preventDefault();
     const newVol = calcVolumeFromEvent(e);
-    dispatchVolumeChange(newVol, false);
+    setDisplayVolume(newVol);
+    if (!lyricsRafId.current) {
+      lyricsRafId.current = requestAnimationFrame(() => {
+        lyricsRafId.current = null;
+        dispatchVolumeChange(newVol, false);
+      });
+    }
   };
 
   const handlePointerUp = (e) => {
     if (!isDraggingRef.current) return;
     e.stopPropagation();
     e.preventDefault();
+    if (lyricsRafId.current) {
+      cancelAnimationFrame(lyricsRafId.current);
+      lyricsRafId.current = null;
+    }
     isDraggingRef.current = false;
     setIsDragging(false);
     if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
