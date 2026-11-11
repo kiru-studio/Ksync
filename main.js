@@ -57,11 +57,25 @@ const discordRPC = new DiscordRPCService({
   clientId: initialSettings.behavior?.discordClientId || '1565344513881411667',
 });
 
-const spotifyConfig = {
-  clientId: config.spotify?.clientId || config.SPOTIFY_CLIENT_ID || '',
-  clientSecret: config.spotify?.clientSecret || config.SPOTIFY_CLIENT_SECRET || '',
-  redirectUri: config.spotify?.redirectUri || config.REDIRECT_URI || 'http://127.0.0.1:8888/callback',
-};
+function getSpotifyConfig() {
+  const settings = settingsStore.loadSettings();
+  const customClientId = settings.behavior?.spotifyClientId?.trim();
+  return {
+    clientId: customClientId || config.spotify?.clientId || config.SPOTIFY_CLIENT_ID || '9aaae8f6921b4ad3a5b068067d87c0ac',
+    clientSecret: config.spotify?.clientSecret || config.SPOTIFY_CLIENT_SECRET || '',
+    redirectUri: config.spotify?.redirectUri || config.REDIRECT_URI || 'http://127.0.0.1:8888/callback',
+  };
+}
+
+const spotifyConfig = new Proxy({}, {
+  get(target, prop) {
+    const cfg = getSpotifyConfig();
+    return cfg[prop];
+  },
+  set() {
+    return true;
+  },
+});
 
 function normalizePlayerState(body) {
   if (!body) return null;
@@ -1391,14 +1405,19 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
       sendSmtcCommand({ cmd: 'setSpotifyVolume', volume: clamped });
     }
 
-    // 2. Debounced asynchronous background sync with Spotify Web API (never blocks UI or causes lag)
+    // Broadcast volume update to all docks so UI stays reactive
+    broadcastToDocks('spotify-volume-changed', { volume: clamped });
+
+    // 2. Debounced asynchronous background sync with Spotify Web API (controls active Spotify Connect device)
     if (tokenStore.hasTokens()) {
       if (spotifyWebVolumeDebounceTimer) clearTimeout(spotifyWebVolumeDebounceTimer);
       spotifyWebVolumeDebounceTimer = setTimeout(async () => {
         try {
           await SpotifyAPI.setVolume(tokenStore, spotifyConfig, clamped);
-        } catch (_) {}
-      }, 300);
+        } catch (err) {
+          console.warn('[main] Spotify Web API setVolume warning:', err.message);
+        }
+      }, 250);
     }
 
     return { ok: true, volume: clamped };
@@ -1698,6 +1717,13 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('open-spotify-app', () => {
     shell.openExternal('spotify:');
     return { ok: true };
+  });
+  ipcMain.handle('open-external-url', (_, targetUrl) => {
+    if (typeof targetUrl === 'string' && (targetUrl.startsWith('https://') || targetUrl.startsWith('http://'))) {
+      shell.openExternal(targetUrl);
+      return { ok: true };
+    }
+    return { ok: false, error: 'Invalid URL' };
   });
   ipcMain.handle('open-settings-window', () => {
     openSettingsWindow();

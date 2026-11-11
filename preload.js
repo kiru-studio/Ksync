@@ -95,6 +95,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeSettingsWindow: () => ipcRenderer.invoke('minimize-settings'),
   getDockDimensions: () => ipcRenderer.invoke('get-dock-dimensions'),
   openSpotifyApp: () => ipcRenderer.invoke('open-spotify-app'),
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
 
   // Windows System Master Audio Volume APIs
   getSystemVolume: () => ipcRenderer.invoke('get-system-volume'),

@@ -73,17 +73,29 @@ function startCallbackServer(config, expectedState = null) {
   return new Promise((resolve, reject) => {
     const url = new URL(config.redirectUri);
     const port = parseInt(url.port, 10) || (url.protocol === 'https:' ? 443 : 80);
-    const host = url.hostname;
 
     const server = http.createServer((req, res) => {
-      const reqUrl = new URL(req.url || '/', `http://${req.headers.host}`);
-      if (reqUrl.pathname !== url.pathname) {
-        res.writeHead(404);
-        res.end();
+      let reqUrl;
+      try {
+        reqUrl = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`);
+      } catch (_) {
+        reqUrl = new URL(req.url || '/', 'http://127.0.0.1:8888');
+      }
+
+      const reqPath = reqUrl.pathname.replace(/\/+$/, '') || '/';
+      const redirectPath = url.pathname.replace(/\/+$/, '') || '/';
+
+      if (reqPath !== redirectPath) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not found');
         return;
       }
       const code = reqUrl.searchParams.get('code');
-      const error = reqUrl.searchParams.get('error');
+      const rawError = reqUrl.searchParams.get('error_description') || reqUrl.searchParams.get('error');
+      let error = rawError;
+      if (rawError === 'access_denied') {
+        error = 'Authorization was denied. If using a personal Spotify App in Development Mode, verify your email is added under User Management or check your Client ID in Settings.';
+      }
       const returnedState = reqUrl.searchParams.get('state');
 
       if (expectedState && returnedState !== expectedState) {
@@ -197,9 +209,9 @@ function startCallbackServer(config, expectedState = null) {
       }
     });
 
-    server.listen(port, host, () => {
+    server.listen(port, () => {
       activeServer = server;
-      console.log('[SpotifyAuth] Callback server listening on', config.redirectUri);
+      console.log('[SpotifyAuth] Callback server listening on port', port, 'for', config.redirectUri);
     });
 
     server.on('error', (err) => {

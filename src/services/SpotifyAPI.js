@@ -131,9 +131,14 @@ async function request(tokenStore, config, path, options = {}) {
     }
     let message = data.error?.message || `HTTP ${res.status}`;
     if (res.status === 403) {
-      message =
-        '403: Add your Spotify account in the Developer Dashboard. ' +
-        'Go to https://developer.spotify.com/dashboard, open your app, Settings > User Management, add your email.';
+      if (data.error?.reason === 'PREMIUM_REQUIRED') {
+        message = 'Spotify Premium is required for this playback action.';
+      } else if (data.error?.reason === 'VOLUME_CONTROL_DISALLOWED' || data.error?.message?.toLowerCase().includes('volume')) {
+        message = 'Volume control is not supported by the active device.';
+      } else {
+        message = data.error?.message ||
+          '403: User authorization required. If your account is not whitelisted, provide your own free Spotify Client ID in Settings > Spotify Account.';
+      }
     }
     const err = new Error(message);
     err.status = res.status;
@@ -384,8 +389,10 @@ async function skipPrevious(tokenStore, config) {
   });
 }
 
-async function setVolume(tokenStore, config, volumePercent) {
-  return request(tokenStore, config, `/me/player/volume?volume_percent=${Math.round(volumePercent)}`, {
+async function setVolume(tokenStore, config, volumePercent, deviceId = null) {
+  const query = new URLSearchParams({ volume_percent: Math.round(volumePercent) });
+  if (deviceId) query.set('device_id', deviceId);
+  return request(tokenStore, config, `/me/player/volume?${query.toString()}`, {
     method: 'PUT',
   });
 }

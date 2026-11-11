@@ -17,6 +17,7 @@ let stateChangeCb = null;
 export default {
   backend: 'smtc', // Default, updated in init
   isInitialized: false,
+  activePlaybackSource: 'smtc', // 'smtc' | 'webapi'
 
   onStateChange(cb) {
     stateChangeCb = cb;
@@ -55,51 +56,77 @@ export default {
   async getCurrentTrack() {
     if (!api) return null;
 
-    // 1. If backend is SMTC, try SMTC first (zero latency, zero rate limits)
-    if (this.backend === 'smtc') {
-      const smtcTrack = await SMTCService.getCurrentTrack();
-      if (smtcTrack && smtcTrack.title && smtcTrack.type !== 'noSession') {
-        return smtcTrack;
-      }
-    }
-
-    // 2. Fallback to Spotify Web API (Spotify Connect acoustic endpoints, phone, speaker, TV)
+    let hasTokens = false;
     try {
-      const hasTokens = await api.spotifyHasTokens();
-      if (hasTokens) {
-        const result = await api.spotifyGetPlayer();
-        if (result && result.title) {
-          return result;
+      hasTokens = await api.spotifyHasTokens();
+    } catch (_) {}
+
+    // 1. If user is authenticated with Spotify Web API, perform smart hybrid resolution:
+    // Local desktop SMTC (0ms) + remote Spotify Connect devices (Phone, TV, Speaker, Web, Console)
+    if (hasTokens) {
+      try {
+        // Query local Windows SMTC state
+        let smtcTrack = null;
+        try {
+          smtcTrack = await SMTCService.getCurrentTrack();
+        } catch (_) {}
+        const isSmtcValid = smtcTrack && smtcTrack.title && smtcTrack.type !== 'noSession';
+
+        // If local desktop Spotify is actively playing music, use SMTC immediately (0ms hardware latency)
+        if (isSmtcValid && smtcTrack.isPlaying) {
+          this.activePlaybackSource = 'smtc';
+          return smtcTrack;
         }
-      }
-    } catch (err) {
-      if (err.message === 'Not authenticated') {
-        // Expected when user has not authenticated Spotify Web API
-      } else {
-        console.warn('[SpotifyService] Web API getCurrentTrack fallback error:', err.message);
+
+        // Otherwise, check Spotify Web API for active Spotify Connect playback across all user devices
+        let webPlayer = null;
+        try {
+          webPlayer = await api.spotifyGetPlayer();
+        } catch (err) {
+          if (err.message !== 'Not authenticated') {
+            console.warn('[SpotifyService] Web API getCurrentTrack warning:', err.message);
+          }
+        }
+
+        // If another device (Phone, TV, Speaker, Console, Browser) is actively playing, prioritize Web API!
+        if (webPlayer && webPlayer.title && webPlayer.isPlaying) {
+          this.activePlaybackSource = 'webapi';
+          return webPlayer;
+        }
+
+        // If neither is actively playing, prefer whichever has a valid track session
+        if (webPlayer && webPlayer.title) {
+          this.activePlaybackSource = 'webapi';
+          return webPlayer;
+        }
+        if (isSmtcValid) {
+          this.activePlaybackSource = 'smtc';
+          return smtcTrack;
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Hybrid getCurrentTrack error:', err.message);
       }
     }
 
-    // 3. If backend is not SMTC, check SMTC as secondary fallback
-    if (this.backend !== 'smtc') {
-      const smtcTrack = await SMTCService.getCurrentTrack();
-      if (smtcTrack && smtcTrack.title && smtcTrack.type !== 'noSession') {
-        return smtcTrack;
-      }
+    // 2. Fallback when not authenticated: direct local Windows SMTC
+    const smtcTrack = await SMTCService.getCurrentTrack();
+    if (smtcTrack && smtcTrack.title && smtcTrack.type !== 'noSession') {
+      this.activePlaybackSource = 'smtc';
+      return smtcTrack;
     }
 
     return null;
   },
 
   async getQueue(currentTrack = null) {
-    if (!api) return { items: [] };
-    if (this.backend === 'smtc') {
-      return await SMTCService.getQueue(currentTrack);
-    }
+    if (!api || !api.spotifyGetQueue) return { items: [] };
     try {
+      // Windows SMTC has no queue concept. Spotify Web API handles user queue,
+      // playlist/album context tracks, and smart music fallback in Electron main!
       const data = await api.spotifyGetQueue(currentTrack);
       return data && data.items ? data : { items: [] };
-    } catch (_) {
+    } catch (err) {
+      console.warn('[SpotifyService] getQueue error:', err.message);
       return { items: [] };
     }
   },
@@ -131,6 +158,16 @@ export default {
   },
 
   async play() {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifyPlay();
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Web API play fallback to SMTC:', err.message);
+      }
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -169,6 +206,16 @@ export default {
   },
 
   async pause() {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifyPause();
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Web API pause fallback to SMTC:', err.message);
+      }
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -189,6 +236,16 @@ export default {
   },
 
   async skipNext() {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifySkipNext();
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Web API skipNext fallback to SMTC:', err.message);
+      }
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -209,6 +266,16 @@ export default {
   },
 
   async skipPrevious() {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifySkipPrevious();
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Web API skipPrevious fallback to SMTC:', err.message);
+      }
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -231,7 +298,7 @@ export default {
   async setVolume(volume) {
     if (!api || !api.spotifySetVolume) return;
     try {
-      // Direct IPC call attempts Spotify Web API (Premium) and automatically falls back to Windows WASAPI Spotify process volume (Free/desktop)
+      // Direct IPC call attempts Spotify Web API (Spotify Connect remote endpoints) and automatically falls back to Windows WASAPI Spotify process volume (desktop)
       await api.spotifySetVolume(volume);
     } catch (err) {
       console.error('Error setting volume:', err);
@@ -239,6 +306,16 @@ export default {
   },
 
   async seek(positionSeconds) {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifySeek(Math.round(positionSeconds * 1000));
+        }
+      } catch (err) {
+        console.warn('[SpotifyService] Web API seek fallback to SMTC:', err.message);
+      }
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -259,6 +336,14 @@ export default {
   },
 
   async setShuffle(state) {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifySetShuffle(!!state);
+        }
+      } catch (_) {}
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {
@@ -279,6 +364,14 @@ export default {
   },
 
   async setRepeat(state) {
+    if (this.activePlaybackSource === 'webapi') {
+      try {
+        const hasTokens = await api?.spotifyHasTokens();
+        if (hasTokens) {
+          return await api.spotifySetRepeat(state);
+        }
+      } catch (_) {}
+    }
     if (this.backend === 'smtc') {
       const smtcTrack = await SMTCService.getCurrentTrack();
       if (smtcTrack && smtcTrack.title) {

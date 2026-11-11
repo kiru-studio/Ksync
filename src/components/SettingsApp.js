@@ -157,6 +157,10 @@ export default function SettingsApp() {
   const [transferFeedback, setTransferFeedback] = useState(null);
   const [playbackBackend, setPlaybackBackend] = useState('smtc');
   const [authError, setAuthError] = useState(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [customClientIdInput, setCustomClientIdInput] = useState(settings?.behavior?.spotifyClientId || '');
+  const [clientIdSaveFeedback, setClientIdSaveFeedback] = useState(null);
+  const [showClientGuide, setShowClientGuide] = useState(false);
   const [isRefreshingDevices, setIsRefreshingDevices] = useState(false);
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
   const [hotkeyCombo, setHotkeyCombo] = useState('Ctrl + Alt + S');
@@ -458,8 +462,29 @@ export default function SettingsApp() {
     }
   };
 
+  useEffect(() => {
+    if (settings?.behavior?.spotifyClientId !== undefined) {
+      setCustomClientIdInput(settings.behavior.spotifyClientId || '');
+    }
+  }, [settings?.behavior?.spotifyClientId]);
+
+  const handleSaveCustomClientId = (newId) => {
+    const trimmed = (newId || '').trim();
+    updateSettings({ behavior: { spotifyClientId: trimmed } });
+    setClientIdSaveFeedback('Client ID applied! Click "Connect Account" to authenticate with your application.');
+    setTimeout(() => setClientIdSaveFeedback(null), 5000);
+  };
+
+  const handleResetCustomClientId = () => {
+    updateSettings({ behavior: { spotifyClientId: '' } });
+    setCustomClientIdInput('');
+    setClientIdSaveFeedback('Reset to default community Spotify Client ID.');
+    setTimeout(() => setClientIdSaveFeedback(null), 5000);
+  };
+
   const handleLogin = async () => {
     try {
+      setIsAuthenticating(true);
       setAuthError(null);
       await SpotifyService.authenticate();
       setIsAuthenticated(true);
@@ -468,8 +493,10 @@ export default function SettingsApp() {
       const devs = await SpotifyService.getDevices();
       if (devs) setDevices(devs);
     } catch (err) {
-      setAuthError(err.message || 'Login failed');
+      setAuthError(err.message || 'Login failed. If using Development Mode, add your email in Developer Dashboard or enter your own Client ID below.');
       console.error('[SettingsApp] Login error:', err);
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
@@ -3117,6 +3144,32 @@ export default function SettingsApp() {
               </p>
             </header>
 
+            {/* Auth Error Feedback Alert Banner */}
+            {authError && (
+              <div className="account-auth-error-banner">
+                <div className="auth-error-left">
+                  <AlertCircle size={20} className="auth-error-icon" />
+                  <div className="auth-error-content">
+                    <div className="auth-error-title">Spotify Authorization Feedback</div>
+                    <div className="auth-error-desc">{authError}</div>
+                    {(authError.includes('403') || authError.includes('whitelisted') || authError.includes('denied') || authError.includes('Development') || authError.includes('INVALID_CLIENT')) && (
+                      <div className="auth-error-tip">
+                        💡 <strong>Why this happens:</strong> Spotify apps in Development Mode are restricted by Spotify to 25 invited accounts. To connect any Spotify account freely, enter your own personal Spotify Client ID in the configuration deck below.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="auth-error-close"
+                  onClick={() => setAuthError(null)}
+                  title="Dismiss error"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
             {/* 6.1: Profile Membership Hero Card */}
             <section className="settings-level1-card account-pro-deck">
               <div className="account-pro-deck-glow" />
@@ -3177,10 +3230,20 @@ export default function SettingsApp() {
                       type="button"
                       className="account-pro-btn-login"
                       onClick={handleLogin}
+                      disabled={isAuthenticating}
                       title="Authorize via Spotify OAuth"
                     >
-                      <LogIn size={13} />
-                      <span>Connect Account</span>
+                      {isAuthenticating ? (
+                        <>
+                          <RefreshCw size={13} className="spin-anim" />
+                          <span>Connecting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <LogIn size={13} />
+                          <span>Connect Account</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -3211,6 +3274,127 @@ export default function SettingsApp() {
                     Native OS Hook
                   </span>
                 </div>
+              </div>
+            </section>
+
+            {/* Custom Spotify Client ID Card */}
+            <section className="settings-level1-card account-clientid-deck">
+              <div className="card-top-header">
+                <div className="card-icon-badge engine-badge">
+                  <Zap size={16} />
+                </div>
+                <div>
+                  <h3 className="card-title-text">Spotify Developer Client ID</h3>
+                  <p className="card-desc-text">
+                    Use your personal Spotify Developer App Client ID to connect any Spotify account without whitelist limitations.
+                  </p>
+                </div>
+              </div>
+
+              <div className="clientid-input-composite-row">
+                <div className="clientid-input-wrapper">
+                  <input
+                    type="text"
+                    value={customClientIdInput}
+                    onChange={(e) => setCustomClientIdInput(e.target.value)}
+                    placeholder="Default Client ID (9aaae8f6921b4ad3a5b068067d87c0ac)"
+                    className="clientid-text-input"
+                    spellCheck="false"
+                  />
+                  {customClientIdInput && (
+                    <button
+                      type="button"
+                      className="clientid-clear-btn"
+                      onClick={() => setCustomClientIdInput('')}
+                      title="Clear"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="clientid-action-buttons">
+                  <button
+                    type="button"
+                    className="clientid-save-btn"
+                    onClick={() => handleSaveCustomClientId(customClientIdInput)}
+                    disabled={customClientIdInput.trim() === (settings?.behavior?.spotifyClientId || '').trim()}
+                  >
+                    <Save size={13} />
+                    <span>Apply ID</span>
+                  </button>
+
+                  {Boolean(settings?.behavior?.spotifyClientId) && (
+                    <button
+                      type="button"
+                      className="clientid-reset-btn"
+                      onClick={handleResetCustomClientId}
+                      title="Reset to default community Client ID"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Use Default</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {clientIdSaveFeedback && (
+                <div className="clientid-feedback-banner">
+                  <CheckCircle2 size={14} className="feedback-icon" />
+                  <span>{clientIdSaveFeedback}</span>
+                </div>
+              )}
+
+              {/* Collapsible Setup Guide */}
+              <div className="clientid-guide-expander">
+                <button
+                  type="button"
+                  className="clientid-guide-toggle-btn"
+                  onClick={() => setShowClientGuide(!showClientGuide)}
+                >
+                  <span>How to create your own free Spotify Client ID (takes 30 seconds)</span>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: showClientGuide ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
+                </button>
+
+                {showClientGuide && (
+                  <div className="clientid-guide-body">
+                    <ol className="clientid-steps-list">
+                      <li>
+                        Go to the official{' '}
+                        <button
+                          type="button"
+                          className="link-btn-inline"
+                          onClick={() => {
+                            if (window.electronAPI?.openExternalUrl) {
+                              window.electronAPI.openExternalUrl('https://developer.spotify.com/dashboard');
+                            }
+                          }}
+                        >
+                          Spotify Developer Dashboard <ExternalLink size={11} />
+                        </button>{' '}
+                        and sign in with your Spotify account.
+                      </li>
+                      <li>
+                        Click <strong>Create App</strong> and fill in:
+                        <ul>
+                          <li><strong>App Name:</strong> <code>ksync</code></li>
+                          <li><strong>App Description:</strong> <code>Desktop Music Dock</code></li>
+                          <li><strong>Redirect URI:</strong> <code>http://127.0.0.1:8888/callback</code></li>
+                          <li>Check the box for <strong>Web API</strong></li>
+                        </ul>
+                      </li>
+                      <li>Click <strong>Save</strong>.</li>
+                      <li>In your newly created app, go to <strong>Settings</strong> and copy the <strong>Client ID</strong>.</li>
+                      <li>Paste it into the field above, click <strong>Apply ID</strong>, then click <strong>Connect Account</strong> above!</li>
+                    </ol>
+                  </div>
+                )}
               </div>
             </section>
 

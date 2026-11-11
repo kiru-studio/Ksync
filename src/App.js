@@ -221,17 +221,21 @@ function App() {
 
   // Broadcast live Spotify playback to Discord Rich Presence (RPC)
   useEffect(() => {
-    if (window.electronAPI && window.electronAPI.updateDiscordRPC && currentTrack) {
-      window.electronAPI.updateDiscordRPC({
-        title: currentTrack.title,
-        artist: currentTrack.artist,
-        album: currentTrack.album,
-        albumArt: currentTrack.albumArt,
-        durationMs: currentTrack.duration_ms || currentTrack.durationMs || (duration ? duration * 1000 : 0),
-        positionMs: Math.round(progress * 1000),
-        isPlaying: !!isPlaying,
-        trackId: currentTrack.id,
-      });
+    if (window.electronAPI && window.electronAPI.updateDiscordRPC) {
+      if (currentTrack && currentTrack.title) {
+        window.electronAPI.updateDiscordRPC({
+          title: currentTrack.title,
+          artist: currentTrack.artist,
+          album: currentTrack.album,
+          albumArt: currentTrack.albumArt,
+          durationMs: currentTrack.duration_ms || currentTrack.durationMs || (duration ? duration * 1000 : 0),
+          positionMs: Math.round(progress * 1000),
+          isPlaying: !!isPlaying,
+          trackId: currentTrack.id,
+        });
+      } else {
+        window.electronAPI.updateDiscordRPC(null);
+      }
     }
   }, [currentTrack?.title, currentTrack?.artist, currentTrack?.albumArt, isPlaying, Math.round(progress / 4)]);
   const [queue, setQueue] = useState([]);
