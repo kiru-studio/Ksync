@@ -73,7 +73,8 @@
       {
         "provider": "github",
         "owner": "kiru-studio",
-        "repo": "Ksync"
+        "repo": "Ksync",
+        "releaseType": "release"
       }
     ],
     "directories": {
