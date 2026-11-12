@@ -743,6 +743,22 @@ export default function SettingsApp() {
     return () => window.removeEventListener('keydown', handleUndoRedoKeys);
   }, [activeTab, handleUndo, handleRedo]);
 
+  // Keep album art presentation style synchronized when toggled from dock artwork click
+  useEffect(() => {
+    const handleExternalCircleToggle = (e) => {
+      if (e.detail && typeof e.detail.isCircle === 'boolean') {
+        const nextStyle = e.detail.isCircle ? 'vinyl' : 'square';
+        if ((theming.albumArtStyle || 'vinyl') !== nextStyle) {
+          updateThemingWithHistory({ albumArtStyle: nextStyle });
+        }
+      }
+    };
+    window.addEventListener('ksync:circle-art-toggle', handleExternalCircleToggle);
+    return () => {
+      window.removeEventListener('ksync:circle-art-toggle', handleExternalCircleToggle);
+    };
+  }, [theming.albumArtStyle, updateThemingWithHistory]);
+
   const handleExportTheme = () => {
     setShowOverflowMenu(false);
     const jsonStr = exportTheme();
@@ -2068,18 +2084,25 @@ export default function SettingsApp() {
 
                   {isOpen && (
                     <>
-                      {/* Album Art Presentation Style */}
-                      <div className="bento-control-pad compact" style={{ marginBottom: '14px' }}>
-                        <div className="bento-header-row">
-                          <span className="bento-label">Album Art Presentation Effect</span>
+                      {/* Album Art Presentation Effect Visual Wireframe Cards */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <div className="bento-header-row" style={{ marginBottom: '10px' }}>
+                          <div>
+                            <span className="bento-label" style={{ fontSize: '13px', fontWeight: 600 }}>Album Art Presentation Effect</span>
+                            <div className="row-sub-label" style={{ marginTop: '2px' }}>
+                              Choose your artwork presentation. Clicking the album artwork in either dock also dynamically toggles this.
+                            </div>
+                          </div>
                           <span className="tabular-num-pill">
                             {(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'Rotating Vinyl Record' : 'Standard Square'}
                           </span>
                         </div>
-                        <div className="segmented-tabs-bar" style={{ marginTop: '8px' }}>
+
+                        <div className="framing-two-grid">
+                          {/* Option 1: Rotating Vinyl & 360° Spectrum */}
                           <button
                             type="button"
-                            className={`segmented-tab-btn ${(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'active' : ''}`}
+                            className={`monitor-card-item ${(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'active' : ''}`}
                             onClick={() => {
                               updateThemingWithHistory({ albumArtStyle: 'vinyl' });
                               try {
@@ -2088,11 +2111,108 @@ export default function SettingsApp() {
                               } catch (_) {}
                             }}
                           >
-                            Rotating Vinyl & 360° Spectrum
+                            <div className="monitor-wireframe-container">
+                              <div className="monitor-screen-stage">
+                                <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                  {/* Background Desktop Window */}
+                                  <rect x="8" y="6" width="164" height="60" rx="4" fill="#141417" stroke="rgba(255, 255, 255, 0.06)" />
+                                  <line x1="8" y1="16" x2="172" y2="16" stroke="rgba(255, 255, 255, 0.05)" />
+                                  <circle cx="14" cy="11" r="1.5" fill="#52525B" />
+                                  <circle cx="19" cy="11" r="1.5" fill="#52525B" />
+                                  <circle cx="24" cy="11" r="1.5" fill="#52525B" />
+
+                                  {/* Dock Bar Housing */}
+                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
+
+                                  {/* 360° Radial Spectrum Visualizer Lines (24 bars) */}
+                                  <line x1="49.0" y1="37.0" x2="52.0" y2="37.0" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="48.6" y1="40.4" x2="52.6" y2="41.5" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="47.3" y1="43.5" x2="52.0" y2="46.3" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="45.2" y1="46.2" x2="47.7" y2="48.7" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="42.5" y1="48.3" x2="43.8" y2="50.4" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="39.4" y1="49.6" x2="40.5" y2="53.9" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="36.0" y1="50.0" x2="36.0" y2="55.2" stroke="#60A5FA" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="32.6" y1="49.6" x2="31.9" y2="52.5" stroke="#818CF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="29.5" y1="48.3" x2="27.5" y2="51.7" stroke="#A78BFA" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="26.8" y1="46.2" x2="22.9" y2="50.1" stroke="#F472B6" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="24.7" y1="43.5" x2="20.9" y2="45.7" stroke="#FB7185" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="23.4" y1="40.4" x2="20.5" y2="41.1" stroke="#F87171" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="23.0" y1="37.0" x2="18.8" y2="37.0" stroke="#FBBF24" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="23.4" y1="33.6" x2="18.6" y2="32.3" stroke="#F59E0B" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="24.7" y1="30.5" x2="22.3" y2="29.1" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="26.8" y1="27.8" x2="25.3" y2="26.3" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="29.5" y1="25.7" x2="27.6" y2="22.5" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="32.6" y1="24.4" x2="31.2" y2="19.1" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="36.0" y1="24.0" x2="36.0" y2="20.4" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="39.4" y1="24.4" x2="40.1" y2="21.7" stroke="#60A5FA" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="42.5" y1="25.7" x2="44.8" y2="21.8" stroke="#818CF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="45.2" y1="27.8" x2="48.7" y2="24.3" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="47.3" y1="30.5" x2="50.4" y2="28.7" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="48.6" y1="33.6" x2="51.3" y2="32.9" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+
+                                  {/* Vinyl Disc Body */}
+                                  <circle cx="36" cy="37" r="11.5" fill="#18181c" stroke="#27272a" strokeWidth="0.8" />
+                                  <circle cx="36" cy="37" r="9.5" fill="none" stroke="rgba(255, 255, 255, 0.09)" strokeWidth="0.6" />
+                                  <circle cx="36" cy="37" r="7.4" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.6" />
+                                  <circle cx="36" cy="37" r="5.5" fill="none" stroke="rgba(255, 255, 255, 0.06)" strokeWidth="0.5" />
+
+                                  {/* Vinyl Grooves Sheen */}
+                                  <path d="M 36 37 L 28 29 A 11.5 11.5 0 0 1 39 25.5 Z" fill="rgba(255, 255, 255, 0.07)" />
+                                  <path d="M 36 37 L 44 45 A 11.5 11.5 0 0 1 33 48.5 Z" fill="rgba(255, 255, 255, 0.07)" />
+
+                                  {/* Center Spindle & Artwork */}
+                                  <circle cx="36" cy="37" r="4.2" fill="#10B981" />
+                                  <circle cx="36" cy="37" r="1.6" fill="#121216" />
+                                  <circle cx="36" cy="37" r="0.6" fill="#ffffff" opacity="0.9" />
+
+                                  {/* Track Details */}
+                                  <rect x="58" y="24" width="46" height="3.5" rx="1.75" fill="#ffffff" opacity="0.85" />
+                                  <rect x="58" y="30.5" width="28" height="2.5" rx="1.25" fill="#71717a" />
+
+                                  {/* Dynamic Frequency Wave Seekbar */}
+                                  <line x1="58" y1="38" x2="114" y2="38" stroke="#27272a" strokeWidth="2" strokeLinecap="round" />
+                                  <line x1="58" y1="38" x2="84" y2="38" stroke="#10B981" strokeWidth="2" strokeLinecap="round" />
+                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="#10B981" />
+                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="#10B981" />
+                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="#10B981" />
+                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="#10B981" />
+                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="#10B981" />
+                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <rect x="87" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
+                                  <rect x="91" y="35" width="1.5" height="6" rx="0.75" fill="#3f3f46" />
+                                  <rect x="95" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
+                                  <rect x="99" y="35.5" width="1.5" height="5" rx="0.75" fill="#3f3f46" />
+                                  <rect x="103" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
+                                  <rect x="107" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
+                                  <rect x="111" y="37" width="1.5" height="2" rx="0.75" fill="#3f3f46" />
+
+                                  {/* Media Controls */}
+                                  <polygon points="126,37 129.5,34.5 129.5,39.5" fill="#71717a" />
+                                  <line x1="125" y1="34.5" x2="125" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
+                                  <circle cx="138" cy="37" r="5" fill="#10B981" />
+                                  <polygon points="137,34.8 141,37 137,39.2" fill="#09090b" />
+                                  <polygon points="146.5,34.5 150,37 146.5,39.5" fill="#71717a" />
+                                  <line x1="151" y1="34.5" x2="151" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
+                                  <circle cx="160" cy="37" r="2.5" fill="#3f3f46" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="monitor-label-group">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span className="monitor-title">Rotating Vinyl & 360° Spectrum</span>
+                                {(theming.albumArtStyle || 'vinyl') === 'vinyl' && (
+                                  <Check size={14} color="#10b981" strokeWidth={2.5} />
+                                )}
+                              </div>
+                              <span className="monitor-sub">Spinning grooved disc & radial EQ spectrum</span>
+                            </div>
                           </button>
+
+                          {/* Option 2: Standard Square Cover */}
                           <button
                             type="button"
-                            className={`segmented-tab-btn ${(theming.albumArtStyle || 'vinyl') === 'square' ? 'active' : ''}`}
+                            className={`monitor-card-item ${(theming.albumArtStyle || 'vinyl') === 'square' ? 'active' : ''}`}
                             onClick={() => {
                               updateThemingWithHistory({ albumArtStyle: 'square' });
                               try {
@@ -2101,11 +2221,124 @@ export default function SettingsApp() {
                               } catch (_) {}
                             }}
                           >
-                            Standard Square Cover
+                            <div className="monitor-wireframe-container">
+                              <div className="monitor-screen-stage">
+                                <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                  <defs>
+                                    <linearGradient id="albumSleeveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" stopColor="#6366f1" />
+                                      <stop offset="50%" stopColor="#3b82f6" />
+                                      <stop offset="100%" stopColor="#10b981" />
+                                    </linearGradient>
+                                  </defs>
+
+                                  {/* Background Desktop Window */}
+                                  <rect x="8" y="6" width="164" height="60" rx="4" fill="#141417" stroke="rgba(255, 255, 255, 0.06)" />
+                                  <line x1="8" y1="16" x2="172" y2="16" stroke="rgba(255, 255, 255, 0.05)" />
+                                  <circle cx="14" cy="11" r="1.5" fill="#52525B" />
+                                  <circle cx="19" cy="11" r="1.5" fill="#52525B" />
+                                  <circle cx="24" cy="11" r="1.5" fill="#52525B" />
+
+                                  {/* Dock Bar Housing */}
+                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'square' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
+
+                                  {/* Ambient Art Glow Aura */}
+                                  <rect
+                                    x="20"
+                                    y="21"
+                                    width="32"
+                                    height="32"
+                                    rx={Math.min(Math.max(4, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 3), 10)}
+                                    fill="#10B981"
+                                    opacity="0.25"
+                                  />
+
+                                  {/* Harmonic Wave Ripple Outlines */}
+                                  <rect
+                                    x="20"
+                                    y="21"
+                                    width="32"
+                                    height="32"
+                                    rx={Math.min(Math.max(3, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 2), 9)}
+                                    fill="none"
+                                    stroke="#10B981"
+                                    strokeWidth="0.8"
+                                    strokeDasharray="3 2"
+                                    opacity="0.6"
+                                  />
+                                  <rect
+                                    x="17"
+                                    y="18"
+                                    width="38"
+                                    height="38"
+                                    rx={Math.min(Math.max(4, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 4), 11)}
+                                    fill="none"
+                                    stroke="#34D399"
+                                    strokeWidth="0.6"
+                                    strokeDasharray="2 3"
+                                    opacity="0.3"
+                                  />
+
+                                  {/* Square Album Sleeve with dynamic corner radius */}
+                                  <rect
+                                    x="23"
+                                    y="24"
+                                    width="26"
+                                    height="26"
+                                    rx={Math.min(Math.max(2, Math.round((theming.artCornerRadius ?? 10) * 0.5)), 8)}
+                                    fill="url(#albumSleeveGrad)"
+                                    stroke="rgba(255, 255, 255, 0.25)"
+                                    strokeWidth="0.8"
+                                  />
+                                  {/* Sleeve Gloss Sheen */}
+                                  <path d="M 23 24 L 49 24 L 23 50 Z" fill="rgba(255, 255, 255, 0.15)" />
+                                  {/* Center Sleeve Vinyl Detail */}
+                                  <circle cx="36" cy="37" r="4.5" fill="rgba(0, 0, 0, 0.35)" />
+                                  <circle cx="36" cy="37" r="1.8" fill="#ffffff" opacity="0.8" />
+
+                                  {/* Track Details */}
+                                  <rect x="58" y="24" width="46" height="3.5" rx="1.75" fill="#ffffff" opacity="0.85" />
+                                  <rect x="58" y="30.5" width="28" height="2.5" rx="1.25" fill="#71717a" />
+
+                                  {/* Dynamic Frequency Wave Seekbar */}
+                                  <line x1="58" y1="38" x2="114" y2="38" stroke="#27272a" strokeWidth="2" strokeLinecap="round" />
+                                  <line x1="58" y1="38" x2="84" y2="38" stroke="#10B981" strokeWidth="2" strokeLinecap="round" />
+                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="#10B981" />
+                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="#10B981" />
+                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="#10B981" />
+                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="#10B981" />
+                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="#10B981" />
+                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <rect x="87" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
+                                  <rect x="91" y="35" width="1.5" height="6" rx="0.75" fill="#3f3f46" />
+                                  <rect x="95" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
+                                  <rect x="99" y="35.5" width="1.5" height="5" rx="0.75" fill="#3f3f46" />
+                                  <rect x="103" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
+                                  <rect x="107" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
+                                  <rect x="111" y="37" width="1.5" height="2" rx="0.75" fill="#3f3f46" />
+
+                                  {/* Media Controls */}
+                                  <polygon points="126,37 129.5,34.5 129.5,39.5" fill="#71717a" />
+                                  <line x1="125" y1="34.5" x2="125" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
+                                  <circle cx="138" cy="37" r="5" fill="#10B981" />
+                                  <polygon points="137,34.8 141,37 137,39.2" fill="#09090b" />
+                                  <polygon points="146.5,34.5 150,37 146.5,39.5" fill="#71717a" />
+                                  <line x1="151" y1="34.5" x2="151" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
+                                  <circle cx="160" cy="37" r="2.5" fill="#3f3f46" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="monitor-label-group">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span className="monitor-title">Standard Square Cover</span>
+                                {(theming.albumArtStyle || 'vinyl') === 'square' && (
+                                  <Check size={14} color="#10b981" strokeWidth={2.5} />
+                                )}
+                              </div>
+                              <span className="monitor-sub">Classic album sleeve with ambient glow</span>
+                            </div>
                           </button>
-                        </div>
-                        <div className="row-sub-label" style={{ marginTop: '6px' }}>
-                          Choose and keep your preferred artwork presentation. Clicking the album artwork in either dock also dynamically toggles this.
                         </div>
                       </div>
 
