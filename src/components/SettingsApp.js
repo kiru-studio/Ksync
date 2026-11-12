@@ -2739,136 +2739,138 @@ export default function SettingsApp() {
                       </button>
                     </div>
 
-                    {/* Dynamic Island Shape Options: Always visible so user can seamlessly choose between Square and Rectangle */}
-                    <div style={{ marginTop: '16px' }}>
-                      <div className="card-section-label" style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Dynamic Island Framing Style
-                      </div>
-                      <div className="framing-two-grid">
-                        {/* Square Dynamic Island Option */}
-                        <button
-                          type="button"
-                          className={`monitor-card-item ${isIsland && isSquareIsland ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSettings({
-                              position: {
-                                style: 'island',
-                                islandShape: 'square',
-                                islandWidth: 480,
-                              },
-                            });
-                            updateThemingWithHistory({ cornerRadius: 24 });
-                          }}
-                          title="Switch to Compact Square Dynamic Island (480px)"
-                        >
-                          <div className="monitor-wireframe-container">
-                            <div className="monitor-screen-stage">
-                              <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
-                                {/* Background Desktop Mock Windows */}
-                                <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
-                                <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
-                                <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                    {/* Dynamic Island Shape Options: Shown only when Floating Dynamic Island is selected */}
+                    {isIsland && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div className="card-section-label" style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Dynamic Island Framing Style
+                        </div>
+                        <div className="framing-two-grid">
+                          {/* Square Dynamic Island Option */}
+                          <button
+                            type="button"
+                            className={`monitor-card-item ${isIsland && isSquareIsland ? 'active' : ''}`}
+                            onClick={() => {
+                              updateSettings({
+                                position: {
+                                  style: 'island',
+                                  islandShape: 'square',
+                                  islandWidth: 480,
+                                },
+                              });
+                              updateThemingWithHistory({ cornerRadius: 24 });
+                            }}
+                            title="Switch to Compact Square Dynamic Island (480px)"
+                          >
+                            <div className="monitor-wireframe-container">
+                              <div className="monitor-screen-stage">
+                                <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                  {/* Background Desktop Mock Windows */}
+                                  <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                                  <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
+                                  <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
 
-                                {/* Centered Square Dynamic Island */}
-                                <rect
-                                  x="72"
-                                  y="5"
-                                  width="36"
-                                  height="36"
-                                  rx="8"
-                                  fill="#121216"
-                                  stroke={isIsland && isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
-                                  strokeWidth="1.2"
-                                />
+                                  {/* Centered Square Dynamic Island */}
+                                  <rect
+                                    x="72"
+                                    y="5"
+                                    width="36"
+                                    height="36"
+                                    rx="8"
+                                    fill="#121216"
+                                    stroke={isIsland && isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                    strokeWidth="1.2"
+                                  />
 
-                                {/* Glowing Top Accent Edge */}
-                                <rect x="78" y="5" width="24" height="2" rx="1" fill="#10B981" />
+                                  {/* Glowing Top Accent Edge */}
+                                  <rect x="78" y="5" width="24" height="2" rx="1" fill="#10B981" />
 
-                                {/* Album Art Square Mock */}
-                                <rect x="76" y="10" width="13" height="13" rx="3" fill="#27272A" />
+                                  {/* Album Art Square Mock */}
+                                  <rect x="76" y="10" width="13" height="13" rx="3" fill="#27272A" />
 
-                                {/* Track Info Lines Mock */}
-                                <rect x="92" y="11" width="13" height="2.5" rx="1" fill="#A1A1AA" />
-                                <rect x="92" y="15.5" width="9" height="2" rx="1" fill="#52525B" />
+                                  {/* Track Info Lines Mock */}
+                                  <rect x="92" y="11" width="13" height="2.5" rx="1" fill="#A1A1AA" />
+                                  <rect x="92" y="15.5" width="9" height="2" rx="1" fill="#52525B" />
 
-                                {/* Mini Waveform Seekbar Mock */}
-                                <rect x="76" y="26" width="28" height="2" rx="1" fill="#3F3F46" />
-                                <rect x="76" y="26" width="14" height="2" rx="1" fill="#10B981" />
+                                  {/* Mini Waveform Seekbar Mock */}
+                                  <rect x="76" y="26" width="28" height="2" rx="1" fill="#3F3F46" />
+                                  <rect x="76" y="26" width="14" height="2" rx="1" fill="#10B981" />
 
-                                {/* Controls Mock Dot */}
-                                <circle cx="90" cy="33.5" r="2.5" fill="#FFFFFF" />
-                              </svg>
+                                  {/* Controls Mock Dot */}
+                                  <circle cx="90" cy="33.5" r="2.5" fill="#FFFFFF" />
+                                </svg>
+                              </div>
                             </div>
-                          </div>
-                          <div className="monitor-label-group">
-                            <span className="monitor-title">Square</span>
-                            <span className="monitor-sub">Compact centered dynamic island</span>
-                          </div>
-                        </button>
-
-                        {/* Rectangle Dynamic Island Option */}
-                        <button
-                          type="button"
-                          className={`monitor-card-item ${isIsland && !isSquareIsland ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSettings({
-                              position: {
-                                style: 'island',
-                                islandShape: 'rectangle',
-                                islandWidth: 680,
-                              },
-                            });
-                            updateThemingWithHistory({ cornerRadius: 20 });
-                          }}
-                          title="Switch to Wide Rectangle Dynamic Island (680px)"
-                        >
-                          <div className="monitor-wireframe-container">
-                            <div className="monitor-screen-stage">
-                              <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
-                                {/* Background Desktop Mock Windows */}
-                                <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
-                                <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
-                                <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
-
-                                {/* Centered Wide Rectangle Dynamic Island */}
-                                <rect
-                                  x="44"
-                                  y="7"
-                                  width="92"
-                                  height="25"
-                                  rx="7"
-                                  fill="#121216"
-                                  stroke={isIsland && !isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
-                                  strokeWidth="1.2"
-                                />
-
-                                {/* Glowing Top Accent Edge */}
-                                <rect x="54" y="7" width="72" height="2" rx="1" fill="#10B981" />
-
-                                {/* Album Art Square Mock */}
-                                <rect x="49" y="11" width="13" height="13" rx="3" fill="#27272A" />
-
-                                {/* Track Info Lines Mock */}
-                                <rect x="66" y="12" width="18" height="2.5" rx="1" fill="#A1A1AA" />
-                                <rect x="66" y="16.5" width="12" height="2" rx="1" fill="#52525B" />
-
-                                {/* Lyrics Preview Mock Line */}
-                                <rect x="90" y="12" width="16" height="2" rx="1" fill="#10B981" />
-                                <rect x="92" y="16" width="12" height="1.5" rx="0.75" fill="#3F3F46" />
-
-                                {/* Controls Mock Dots */}
-                                <circle cx="118" cy="18" r="3" fill="#FFFFFF" />
-                                <circle cx="126" cy="18" r="1.8" fill="#52525B" />
-                              </svg>
+                            <div className="monitor-label-group">
+                              <span className="monitor-title">Square</span>
+                              <span className="monitor-sub">Compact centered dynamic island</span>
                             </div>
-                          </div>
-                          <div className="monitor-label-group">
-                            <span className="monitor-title">Rectangle</span>
-                            <span className="monitor-sub">Wide panoramic dynamic island</span>
-                          </div>
-                        </button>
+                          </button>
+
+                          {/* Rectangle Dynamic Island Option */}
+                          <button
+                            type="button"
+                            className={`monitor-card-item ${isIsland && !isSquareIsland ? 'active' : ''}`}
+                            onClick={() => {
+                              updateSettings({
+                                position: {
+                                  style: 'island',
+                                  islandShape: 'rectangle',
+                                  islandWidth: 680,
+                                },
+                              });
+                              updateThemingWithHistory({ cornerRadius: 20 });
+                            }}
+                            title="Switch to Wide Rectangle Dynamic Island (680px)"
+                          >
+                            <div className="monitor-wireframe-container">
+                              <div className="monitor-screen-stage">
+                                <svg width="100%" height="100%" viewBox="0 0 180 72" fill="none">
+                                  {/* Background Desktop Mock Windows */}
+                                  <rect x="12" y="28" width="94" height="38" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+                                  <line x1="12" y1="36" x2="106" y2="36" stroke="rgba(255, 255, 255, 0.06)" />
+                                  <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
+
+                                  {/* Centered Wide Rectangle Dynamic Island */}
+                                  <rect
+                                    x="44"
+                                    y="7"
+                                    width="92"
+                                    height="25"
+                                    rx="7"
+                                    fill="#121216"
+                                    stroke={isIsland && !isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                    strokeWidth="1.2"
+                                  />
+
+                                  {/* Glowing Top Accent Edge */}
+                                  <rect x="54" y="7" width="72" height="2" rx="1" fill="#10B981" />
+
+                                  {/* Album Art Square Mock */}
+                                  <rect x="49" y="11" width="13" height="13" rx="3" fill="#27272A" />
+
+                                  {/* Track Info Lines Mock */}
+                                  <rect x="66" y="12" width="18" height="2.5" rx="1" fill="#A1A1AA" />
+                                  <rect x="66" y="16.5" width="12" height="2" rx="1" fill="#52525B" />
+
+                                  {/* Lyrics Preview Mock Line */}
+                                  <rect x="90" y="12" width="16" height="2" rx="1" fill="#10B981" />
+                                  <rect x="92" y="16" width="12" height="1.5" rx="0.75" fill="#3F3F46" />
+
+                                  {/* Controls Mock Dots */}
+                                  <circle cx="118" cy="18" r="3" fill="#FFFFFF" />
+                                  <circle cx="126" cy="18" r="1.8" fill="#52525B" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="monitor-label-group">
+                              <span className="monitor-title">Rectangle</span>
+                              <span className="monitor-sub">Wide panoramic dynamic island</span>
+                            </div>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     </>
                   )}
                 </section>
