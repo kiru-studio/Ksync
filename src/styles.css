@@ -6245,25 +6245,25 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* Interactive Trigger Area Configurator */
 .trigger-stage-wrapper {
   width: 100%;
-  background: #09090b;
+  background: #09090c;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 0 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.3);
   margin-top: 10px;
   margin-bottom: 16px;
 }
 
 .trigger-stage-svg {
   width: 100%;
-  max-width: 580px;
+  max-width: 100%;
   height: auto;
-  max-height: 190px;
+  max-height: 230px;
   display: block;
 }
 
@@ -6272,8 +6272,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 580px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .trigger-badge-live {
@@ -6290,17 +6289,79 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.trigger-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 820px) {
+  .trigger-preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.trigger-preset-card {
+  background: #18181c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+  position: relative;
+}
+
+.trigger-preset-card:hover {
+  background: #202026;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.trigger-preset-card.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.22);
+}
+
+.trigger-preset-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.trigger-preset-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.trigger-preset-card.active .trigger-preset-title {
+  color: #10b981;
+}
+
+.trigger-preset-desc {
+  font-size: 11px;
+  color: #71717a;
+  line-height: 1.35;
+}
+
 .trigger-sub-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .trigger-sub-chip {
-  padding: 3px 8px;
-  font-size: 10.5px;
-  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #a1a1aa;
