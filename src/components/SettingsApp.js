@@ -1699,7 +1699,7 @@ export default function SettingsApp() {
                               <div>
                                 <div style={{ fontSize: '13.5px', fontWeight: '600', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span>Dynamic Album Artwork Extraction</span>
-                                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', background: 'var(--accent-soft, rgba(16, 185, 129, 0.2))', color: 'var(--accent, #34d399)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                     Active
                                   </span>
                                 </div>
@@ -1899,7 +1899,7 @@ export default function SettingsApp() {
                     <div className="bento-header-row">
                       <span className="bento-label">Karaoke Font Family</span>
                       {theming.customFont?.name && (
-                        <span className="tabular-num-pill" style={{ color: '#10b981' }}>★ Custom Font Active</span>
+                        <span className="tabular-num-pill" style={{ color: 'var(--accent, #10b981)' }}>★ Custom Font Active</span>
                       )}
                     </div>
 
@@ -2126,13 +2126,13 @@ export default function SettingsApp() {
                                   <circle cx="24" cy="11" r="1.5" fill="#52525B" />
 
                                   {/* Dock Bar Housing */}
-                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
+                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'vinyl' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
 
                                   {/* 360° Radial Spectrum Visualizer Lines (24 bars) */}
-                                  <line x1="49.0" y1="37.0" x2="52.0" y2="37.0" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="48.6" y1="40.4" x2="52.6" y2="41.5" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="47.3" y1="43.5" x2="52.0" y2="46.3" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="45.2" y1="46.2" x2="47.7" y2="48.7" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="49.0" y1="37.0" x2="52.0" y2="37.0" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="48.6" y1="40.4" x2="52.6" y2="41.5" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="47.3" y1="43.5" x2="52.0" y2="46.3" stroke="var(--accent, #34D399)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="45.2" y1="46.2" x2="47.7" y2="48.7" stroke="var(--accent, #34D399)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="42.5" y1="48.3" x2="43.8" y2="50.4" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="39.4" y1="49.6" x2="40.5" y2="53.9" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="36.0" y1="50.0" x2="36.0" y2="55.2" stroke="#60A5FA" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
@@ -2143,16 +2143,16 @@ export default function SettingsApp() {
                                   <line x1="23.4" y1="40.4" x2="20.5" y2="41.1" stroke="#F87171" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="23.0" y1="37.0" x2="18.8" y2="37.0" stroke="#FBBF24" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="23.4" y1="33.6" x2="18.6" y2="32.3" stroke="#F59E0B" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="24.7" y1="30.5" x2="22.3" y2="29.1" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="26.8" y1="27.8" x2="25.3" y2="26.3" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="29.5" y1="25.7" x2="27.6" y2="22.5" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="32.6" y1="24.4" x2="31.2" y2="19.1" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="24.7" y1="30.5" x2="22.3" y2="29.1" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="26.8" y1="27.8" x2="25.3" y2="26.3" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="29.5" y1="25.7" x2="27.6" y2="22.5" stroke="var(--accent, #34D399)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="32.6" y1="24.4" x2="31.2" y2="19.1" stroke="var(--accent, #34D399)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="36.0" y1="24.0" x2="36.0" y2="20.4" stroke="#38BDF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="39.4" y1="24.4" x2="40.1" y2="21.7" stroke="#60A5FA" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
                                   <line x1="42.5" y1="25.7" x2="44.8" y2="21.8" stroke="#818CF8" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="45.2" y1="27.8" x2="48.7" y2="24.3" stroke="#34D399" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="47.3" y1="30.5" x2="50.4" y2="28.7" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
-                                  <line x1="48.6" y1="33.6" x2="51.3" y2="32.9" stroke="#10B981" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="45.2" y1="27.8" x2="48.7" y2="24.3" stroke="var(--accent, #34D399)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="47.3" y1="30.5" x2="50.4" y2="28.7" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
+                                  <line x1="48.6" y1="33.6" x2="51.3" y2="32.9" stroke="var(--accent, #10B981)" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />
 
                                   {/* Vinyl Disc Body */}
                                   <circle cx="36" cy="37" r="11.5" fill="#18181c" stroke="#27272a" strokeWidth="0.8" />
@@ -2165,7 +2165,7 @@ export default function SettingsApp() {
                                   <path d="M 36 37 L 44 45 A 11.5 11.5 0 0 1 33 48.5 Z" fill="rgba(255, 255, 255, 0.07)" />
 
                                   {/* Center Spindle & Artwork */}
-                                  <circle cx="36" cy="37" r="4.2" fill="#10B981" />
+                                  <circle cx="36" cy="37" r="4.2" fill="var(--accent, #10B981)" />
                                   <circle cx="36" cy="37" r="1.6" fill="#121216" />
                                   <circle cx="36" cy="37" r="0.6" fill="#ffffff" opacity="0.9" />
 
@@ -2175,14 +2175,14 @@ export default function SettingsApp() {
 
                                   {/* Dynamic Frequency Wave Seekbar */}
                                   <line x1="58" y1="38" x2="114" y2="38" stroke="#27272a" strokeWidth="2" strokeLinecap="round" />
-                                  <line x1="58" y1="38" x2="84" y2="38" stroke="#10B981" strokeWidth="2" strokeLinecap="round" />
-                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="#10B981" />
-                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="#10B981" />
-                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
-                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="#10B981" />
-                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="#10B981" />
-                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="#10B981" />
-                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <line x1="58" y1="38" x2="84" y2="38" stroke="var(--accent, #10B981)" strokeWidth="2" strokeLinecap="round" />
+                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="var(--accent, #10B981)" />
                                   <rect x="87" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
                                   <rect x="91" y="35" width="1.5" height="6" rx="0.75" fill="#3f3f46" />
                                   <rect x="95" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
@@ -2194,7 +2194,7 @@ export default function SettingsApp() {
                                   {/* Media Controls */}
                                   <polygon points="126,37 129.5,34.5 129.5,39.5" fill="#71717a" />
                                   <line x1="125" y1="34.5" x2="125" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
-                                  <circle cx="138" cy="37" r="5" fill="#10B981" />
+                                  <circle cx="138" cy="37" r="5" fill="var(--accent, #10B981)" />
                                   <polygon points="137,34.8 141,37 137,39.2" fill="#09090b" />
                                   <polygon points="146.5,34.5 150,37 146.5,39.5" fill="#71717a" />
                                   <line x1="151" y1="34.5" x2="151" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
@@ -2206,7 +2206,7 @@ export default function SettingsApp() {
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <span className="monitor-title">Rotating Vinyl & 360° Spectrum</span>
                                 {(theming.albumArtStyle || 'vinyl') === 'vinyl' && (
-                                  <Check size={14} color="#10b981" strokeWidth={2.5} />
+                                  <Check size={14} color="var(--accent, #10b981)" strokeWidth={2.5} />
                                 )}
                               </div>
                               <span className="monitor-sub">Spinning grooved disc & radial EQ spectrum</span>
@@ -2232,7 +2232,7 @@ export default function SettingsApp() {
                                     <linearGradient id="albumSleeveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                       <stop offset="0%" stopColor="#6366f1" />
                                       <stop offset="50%" stopColor="#3b82f6" />
-                                      <stop offset="100%" stopColor="#10b981" />
+                                      <stop offset="100%" stopColor="var(--accent, #10b981)" />
                                     </linearGradient>
                                   </defs>
 
@@ -2244,7 +2244,7 @@ export default function SettingsApp() {
                                   <circle cx="24" cy="11" r="1.5" fill="#52525B" />
 
                                   {/* Dock Bar Housing */}
-                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'square' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
+                                  <rect x="12" y="16" width="156" height="42" rx="8" fill="#0d0d10" stroke={(theming.albumArtStyle || 'vinyl') === 'square' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} strokeWidth="1.2" />
 
                                   {/* Ambient Art Glow Aura */}
                                   <rect
@@ -2253,7 +2253,7 @@ export default function SettingsApp() {
                                     width="32"
                                     height="32"
                                     rx={Math.min(Math.max(4, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 3), 10)}
-                                    fill="#10B981"
+                                    fill="var(--accent, #10B981)"
                                     opacity="0.25"
                                   />
 
@@ -2265,7 +2265,7 @@ export default function SettingsApp() {
                                     height="32"
                                     rx={Math.min(Math.max(3, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 2), 9)}
                                     fill="none"
-                                    stroke="#10B981"
+                                    stroke="var(--accent, #10B981)"
                                     strokeWidth="0.8"
                                     strokeDasharray="3 2"
                                     opacity="0.6"
@@ -2277,7 +2277,7 @@ export default function SettingsApp() {
                                     height="38"
                                     rx={Math.min(Math.max(4, Math.round((theming.artCornerRadius ?? 10) * 0.6) + 4), 11)}
                                     fill="none"
-                                    stroke="#34D399"
+                                    stroke="var(--accent, #34D399)"
                                     strokeWidth="0.6"
                                     strokeDasharray="2 3"
                                     opacity="0.3"
@@ -2306,14 +2306,14 @@ export default function SettingsApp() {
 
                                   {/* Dynamic Frequency Wave Seekbar */}
                                   <line x1="58" y1="38" x2="114" y2="38" stroke="#27272a" strokeWidth="2" strokeLinecap="round" />
-                                  <line x1="58" y1="38" x2="84" y2="38" stroke="#10B981" strokeWidth="2" strokeLinecap="round" />
-                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="#10B981" />
-                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="#10B981" />
-                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
-                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="#10B981" />
-                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="#10B981" />
-                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="#10B981" />
-                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="#10B981" />
+                                  <line x1="58" y1="38" x2="84" y2="38" stroke="var(--accent, #10B981)" strokeWidth="2" strokeLinecap="round" />
+                                  <rect x="59" y="34.5" width="1.5" height="7" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="63" y="33" width="1.5" height="10" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="67" y="35" width="1.5" height="6" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="71" y="32" width="1.5" height="12" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="75" y="34" width="1.5" height="8" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="79" y="33.5" width="1.5" height="9" rx="0.75" fill="var(--accent, #10B981)" />
+                                  <rect x="83" y="35" width="1.5" height="6" rx="0.75" fill="var(--accent, #10B981)" />
                                   <rect x="87" y="36" width="1.5" height="4" rx="0.75" fill="#3f3f46" />
                                   <rect x="91" y="35" width="1.5" height="6" rx="0.75" fill="#3f3f46" />
                                   <rect x="95" y="36.5" width="1.5" height="3" rx="0.75" fill="#3f3f46" />
@@ -2325,7 +2325,7 @@ export default function SettingsApp() {
                                   {/* Media Controls */}
                                   <polygon points="126,37 129.5,34.5 129.5,39.5" fill="#71717a" />
                                   <line x1="125" y1="34.5" x2="125" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
-                                  <circle cx="138" cy="37" r="5" fill="#10B981" />
+                                  <circle cx="138" cy="37" r="5" fill="var(--accent, #10B981)" />
                                   <polygon points="137,34.8 141,37 137,39.2" fill="#09090b" />
                                   <polygon points="146.5,34.5 150,37 146.5,39.5" fill="#71717a" />
                                   <line x1="151" y1="34.5" x2="151" y2="39.5" stroke="#71717a" strokeWidth="1" strokeLinecap="round" />
@@ -2337,7 +2337,7 @@ export default function SettingsApp() {
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <span className="monitor-title">Standard Square Cover</span>
                                 {(theming.albumArtStyle || 'vinyl') === 'square' && (
-                                  <Check size={14} color="#10b981" strokeWidth={2.5} />
+                                  <Check size={14} color="var(--accent, #10b981)" strokeWidth={2.5} />
                                 )}
                               </div>
                               <span className="monitor-sub">Classic album sleeve with ambient glow</span>
@@ -2497,7 +2497,7 @@ export default function SettingsApp() {
                             <rect x="12" y="10" width="28" height="28" rx="6" fill="#27272A" />
                             <rect x="48" y="14" width="60" height="7" rx="3" fill="#A1A1AA" />
                             <rect x="48" y="26" width="38" height="5" rx="2" fill="#52525B" />
-                            <circle cx="132" cy="24" r="9" fill="#1DB954" />
+                            <circle cx="132" cy="24" r="9" fill="var(--accent, #1DB954)" />
                           </svg>
                         </div>
                         <div className="module-card-header">
@@ -2535,7 +2535,7 @@ export default function SettingsApp() {
                         <div className="module-wireframe-stage">
                           <svg width="100%" height="48" viewBox="0 0 160 48" fill="none">
                             <rect x="36" y="8" width="88" height="6" rx="3" fill="#3F3F46" />
-                            <rect x="24" y="20" width="112" height="9" rx="4" fill="#1DB954" />
+                            <rect x="24" y="20" width="112" height="9" rx="4" fill="var(--accent, #1DB954)" />
                             <rect x="42" y="34" width="76" height="6" rx="3" fill="#3F3F46" />
                           </svg>
                         </div>
@@ -2670,20 +2670,20 @@ export default function SettingsApp() {
                               <rect x="112" y="36" width="56" height="30" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
 
                               {/* Full Screen Width Top Dock Housing (Edge to Edge) */}
-                              <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={position.style !== 'island' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                              <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={position.style !== 'island' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} />
                               
                               {/* Glowing Top Accent Edge */}
-                              <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="#10B981" />
+                              <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="var(--accent, #10B981)" />
 
                               {/* Section 1: Now Playing Mock */}
                               <rect x="10" y="8" width="13" height="13" rx="3" fill="#27272A" />
                               <rect x="27" y="10" width="24" height="3.5" rx="1.75" fill="#A1A1AA" />
                               <rect x="27" y="15.5" width="16" height="2.5" rx="1" fill="#52525B" />
-                              <circle cx="56" cy="14.5" r="3" fill="#1DB954" />
+                              <circle cx="56" cy="14.5" r="3" fill="var(--accent, #1DB954)" />
 
                               {/* Section 2: Synced Lyrics Mock */}
                               <rect x="74" y="7.5" width="32" height="2" rx="1" fill="#3F3F46" />
-                              <rect x="68" y="11.5" width="44" height="4" rx="2" fill="#10B981" />
+                              <rect x="68" y="11.5" width="44" height="4" rx="2" fill="var(--accent, #10B981)" />
                               <rect x="76" y="17.5" width="28" height="2" rx="1" fill="#3F3F46" />
 
                               {/* Section 3: Up Next Queue Mock */}
@@ -2691,7 +2691,7 @@ export default function SettingsApp() {
                               <rect x="133" y="9.5" width="20" height="2" rx="1" fill="#A1A1AA" />
                               <rect x="124" y="15" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
                               <rect x="133" y="16" width="15" height="2" rx="1" fill="#52525B" />
-                              <circle cx="166" cy="14.5" r="4" fill="#1DB954" />
+                              <circle cx="166" cy="14.5" r="4" fill="var(--accent, #1DB954)" />
                             </svg>
                           </div>
                         </div>
@@ -2716,10 +2716,10 @@ export default function SettingsApp() {
                               <rect x="112" y="32" width="56" height="34" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
 
                               {/* Floating Rounded Square Dynamic Island Housing */}
-                              <rect x="74" y="5" width="32" height="32" rx="7" fill="#121216" stroke={position.style === 'island' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                              <rect x="74" y="5" width="32" height="32" rx="7" fill="#121216" stroke={position.style === 'island' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} />
                               
                               {/* Glowing Island Accent Top */}
-                              <rect x="80" y="5" width="20" height="2" rx="1" fill="#10B981" />
+                              <rect x="80" y="5" width="20" height="2" rx="1" fill="var(--accent, #10B981)" />
 
                               {/* Album Art Square Mock */}
                               <rect x="78" y="9" width="24" height="15" rx="3" fill="#27272A" />
@@ -2728,7 +2728,7 @@ export default function SettingsApp() {
                               <rect x="80" y="26" width="20" height="2" rx="1" fill="#A1A1AA" />
 
                               {/* Controls Mock Dot */}
-                              <circle cx="90" cy="31" r="2.5" fill="#1DB954" />
+                              <circle cx="90" cy="31" r="2.5" fill="var(--accent, #1DB954)" />
                             </svg>
                           </div>
                         </div>
@@ -2778,12 +2778,12 @@ export default function SettingsApp() {
                                     height="36"
                                     rx="8"
                                     fill="#121216"
-                                    stroke={isIsland && isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                    stroke={isIsland && isSquareIsland ? 'var(--accent, rgba(16, 185, 129, 0.55))' : 'rgba(255, 255, 255, 0.12)'}
                                     strokeWidth="1.2"
                                   />
 
                                   {/* Glowing Top Accent Edge */}
-                                  <rect x="78" y="5" width="24" height="2" rx="1" fill="#10B981" />
+                                  <rect x="78" y="5" width="24" height="2" rx="1" fill="var(--accent, #10B981)" />
 
                                   {/* Album Art Square Mock */}
                                   <rect x="76" y="10" width="13" height="13" rx="3" fill="#27272A" />
@@ -2794,7 +2794,7 @@ export default function SettingsApp() {
 
                                   {/* Mini Waveform Seekbar Mock */}
                                   <rect x="76" y="26" width="28" height="2" rx="1" fill="#3F3F46" />
-                                  <rect x="76" y="26" width="14" height="2" rx="1" fill="#10B981" />
+                                  <rect x="76" y="26" width="14" height="2" rx="1" fill="var(--accent, #10B981)" />
 
                                   {/* Controls Mock Dot */}
                                   <circle cx="90" cy="33.5" r="2.5" fill="#FFFFFF" />
@@ -2839,12 +2839,12 @@ export default function SettingsApp() {
                                     height="25"
                                     rx="7"
                                     fill="#121216"
-                                    stroke={isIsland && !isSquareIsland ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.12)'}
+                                    stroke={isIsland && !isSquareIsland ? 'var(--accent, rgba(16, 185, 129, 0.55))' : 'rgba(255, 255, 255, 0.12)'}
                                     strokeWidth="1.2"
                                   />
 
                                   {/* Glowing Top Accent Edge */}
-                                  <rect x="54" y="7" width="72" height="2" rx="1" fill="#10B981" />
+                                  <rect x="54" y="7" width="72" height="2" rx="1" fill="var(--accent, #10B981)" />
 
                                   {/* Album Art Square Mock */}
                                   <rect x="49" y="11" width="13" height="13" rx="3" fill="#27272A" />
@@ -2854,7 +2854,7 @@ export default function SettingsApp() {
                                   <rect x="66" y="16.5" width="12" height="2" rx="1" fill="#52525B" />
 
                                   {/* Lyrics Preview Mock Line */}
-                                  <rect x="90" y="12" width="16" height="2" rx="1" fill="#10B981" />
+                                  <rect x="90" y="12" width="16" height="2" rx="1" fill="var(--accent, #10B981)" />
                                   <rect x="92" y="16" width="12" height="1.5" rx="0.75" fill="#3F3F46" />
 
                                   {/* Controls Mock Dots */}
@@ -2969,20 +2969,20 @@ export default function SettingsApp() {
                         <circle cx="79" cy="15" r="2" fill="#52525B" />
 
                         {/* Left Sidebar Dock Housing */}
-                        <rect x="3" y="3" width="56" height="66" rx="4" fill="#121216" stroke={position.mode === 'left' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                        <rect x="3" y="3" width="56" height="66" rx="4" fill="#121216" stroke={position.mode === 'left' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} />
                         
                         {/* Glowing Left Accent Edge */}
-                        <rect x="3" y="8" width="2.5" height="56" rx="1.25" fill="#10B981" />
+                        <rect x="3" y="8" width="2.5" height="56" rx="1.25" fill="var(--accent, #10B981)" />
 
                         {/* Section 1: Now Playing Mock (top) */}
                         <rect x="10" y="8" width="14" height="14" rx="3" fill="#27272A" />
                         <rect x="28" y="10" width="22" height="3" rx="1.5" fill="#A1A1AA" />
                         <rect x="28" y="15" width="15" height="2.5" rx="1" fill="#52525B" />
-                        <circle cx="48" cy="19" r="2.5" fill="#1DB954" />
+                        <circle cx="48" cy="19" r="2.5" fill="var(--accent, #1DB954)" />
 
                         {/* Section 2: Synced Lyrics Mock (middle) */}
                         <rect x="14" y="27" width="32" height="2" rx="1" fill="#3F3F46" />
-                        <rect x="11" y="31.5" width="38" height="3.5" rx="1.75" fill="#10B981" />
+                        <rect x="11" y="31.5" width="38" height="3.5" rx="1.75" fill="var(--accent, #10B981)" />
                         <rect x="16" y="37.5" width="28" height="2" rx="1" fill="#3F3F46" />
 
                         {/* Section 3: Up Next Queue Mock (bottom) */}
@@ -2990,7 +2990,7 @@ export default function SettingsApp() {
                         <rect x="20" y="47" width="24" height="2" rx="1" fill="#A1A1AA" />
                         <rect x="10" y="55" width="7" height="7" rx="1.5" fill="#27272A" />
                         <rect x="20" y="57" width="18" height="2" rx="1" fill="#52525B" />
-                        <circle cx="48" cy="58" r="3" fill="#1DB954" />
+                        <circle cx="48" cy="58" r="3" fill="var(--accent, #1DB954)" />
                       </svg>
                     </div>
                   </div>
@@ -3015,20 +3015,20 @@ export default function SettingsApp() {
                         <rect x="112" y="36" width="56" height="30" rx="3" fill="#18181c" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 2" />
 
                         {/* Top Dock Housing */}
-                        <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={(position.mode || 'top') === 'top' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                        <rect x="4" y="3" width="172" height="23" rx="4" fill="#121216" stroke={(position.mode || 'top') === 'top' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} />
                         
                         {/* Glowing Top Accent Edge */}
-                        <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="#10B981" />
+                        <rect x="16" y="3" width="148" height="2.5" rx="1.25" fill="var(--accent, #10B981)" />
 
                         {/* Section 1: Now Playing Mock (album art + title/artist lines + play dot) */}
                         <rect x="10" y="8" width="13" height="13" rx="3" fill="#27272A" />
                         <rect x="27" y="10" width="24" height="3.5" rx="1.75" fill="#A1A1AA" />
                         <rect x="27" y="15.5" width="16" height="2.5" rx="1" fill="#52525B" />
-                        <circle cx="56" cy="14.5" r="3" fill="#1DB954" />
+                        <circle cx="56" cy="14.5" r="3" fill="var(--accent, #1DB954)" />
 
                         {/* Section 2: Synced Lyrics Mock (stacked lyrics with green active bar) */}
                         <rect x="74" y="7.5" width="32" height="2" rx="1" fill="#3F3F46" />
-                        <rect x="68" y="11.5" width="44" height="4" rx="2" fill="#10B981" />
+                        <rect x="68" y="11.5" width="44" height="4" rx="2" fill="var(--accent, #10B981)" />
                         <rect x="76" y="17.5" width="28" height="2" rx="1" fill="#3F3F46" />
 
                         {/* Section 3: Up Next Queue Mock (stacked track rows + play circle) */}
@@ -3036,7 +3036,7 @@ export default function SettingsApp() {
                         <rect x="133" y="9.5" width="20" height="2" rx="1" fill="#A1A1AA" />
                         <rect x="124" y="15" width="5.5" height="5.5" rx="1.5" fill="#27272A" />
                         <rect x="133" y="16" width="15" height="2" rx="1" fill="#52525B" />
-                        <circle cx="166" cy="14.5" r="4" fill="#1DB954" />
+                        <circle cx="166" cy="14.5" r="4" fill="var(--accent, #1DB954)" />
                       </svg>
                     </div>
                   </div>
@@ -3062,20 +3062,20 @@ export default function SettingsApp() {
                         <circle cx="21" cy="15" r="2" fill="#52525B" />
 
                         {/* Right Sidebar Dock Housing */}
-                        <rect x="121" y="3" width="56" height="66" rx="4" fill="#121216" stroke={position.mode === 'right' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.12)'} />
+                        <rect x="121" y="3" width="56" height="66" rx="4" fill="#121216" stroke={position.mode === 'right' ? 'var(--accent, rgba(16, 185, 129, 0.45))' : 'rgba(255, 255, 255, 0.12)'} />
                         
                         {/* Glowing Right Accent Edge */}
-                        <rect x="174.5" y="8" width="2.5" height="56" rx="1.25" fill="#10B981" />
+                        <rect x="174.5" y="8" width="2.5" height="56" rx="1.25" fill="var(--accent, #10B981)" />
 
                         {/* Section 1: Now Playing Mock (top) */}
                         <rect x="128" y="8" width="14" height="14" rx="3" fill="#27272A" />
                         <rect x="146" y="10" width="22" height="3" rx="1.5" fill="#A1A1AA" />
                         <rect x="146" y="15" width="15" height="2.5" rx="1" fill="#52525B" />
-                        <circle cx="166" cy="19" r="2.5" fill="#1DB954" />
+                        <circle cx="166" cy="19" r="2.5" fill="var(--accent, #1DB954)" />
 
                         {/* Section 2: Synced Lyrics Mock (middle) */}
                         <rect x="132" y="27" width="32" height="2" rx="1" fill="#3F3F46" />
-                        <rect x="129" y="31.5" width="38" height="3.5" rx="1.75" fill="#10B981" />
+                        <rect x="129" y="31.5" width="38" height="3.5" rx="1.75" fill="var(--accent, #10B981)" />
                         <rect x="134" y="37.5" width="28" height="2" rx="1" fill="#3F3F46" />
 
                         {/* Section 3: Up Next Queue Mock (bottom) */}
@@ -3083,7 +3083,7 @@ export default function SettingsApp() {
                         <rect x="138" y="47" width="24" height="2" rx="1" fill="#A1A1AA" />
                         <rect x="128" y="55" width="7" height="7" rx="1.5" fill="#27272A" />
                         <rect x="138" y="57" width="18" height="2" rx="1" fill="#52525B" />
-                        <circle cx="166" cy="58" r="3" fill="#1DB954" />
+                        <circle cx="166" cy="58" r="3" fill="var(--accent, #1DB954)" />
                       </svg>
                     </div>
                   </div>
@@ -3155,7 +3155,7 @@ export default function SettingsApp() {
                     Screen Edge Simulation ({position.mode === 'left' ? 'Left Edge' : position.mode === 'right' ? 'Right Edge' : 'Top Edge'})
                   </span>
                   <span className="trigger-badge-live">
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent, #10b981)', display: 'inline-block' }} />
                     {(() => {
                       const curSpan = position.triggerSpan || 'full';
                       if (curSpan === 'center') return `Center Focus (${position.triggerWidthPct ?? 60}%)`;
@@ -3176,11 +3176,11 @@ export default function SettingsApp() {
                       <stop offset="100%" stopColor="#08090d" />
                     </linearGradient>
                     <linearGradient id="triggerZoneGlowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.25" />
+                      <stop offset="0%" stopColor="var(--accent, #10b981)" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="var(--accent, #10b981)" stopOpacity="0.25" />
                     </linearGradient>
                     <pattern id="triggerHashPattern" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                      <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1.5" />
+                      <line x1="0" y1="0" x2="0" y2="8" stroke="var(--accent, rgba(16, 185, 129, 0.45))" strokeOpacity={0.45} strokeWidth="1.5" />
                     </pattern>
                   </defs>
 
@@ -3208,32 +3208,32 @@ export default function SettingsApp() {
                   {/* Mock Dock Rendering */}
                   {position.mode === 'left' ? (
                     <g>
-                      <rect x="16" y="12" width="32" height="164" rx="4" fill="#111216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
-                      <rect x="20" y="20" width="24" height="24" rx="3" fill="#1db954" opacity="0.85" />
+                      <rect x="16" y="12" width="32" height="164" rx="4" fill="#111216" stroke="var(--accent, rgba(16, 185, 129, 0.45))" strokeWidth="1" strokeOpacity={0.45} />
+                      <rect x="20" y="20" width="24" height="24" rx="3" fill="var(--accent, #1db954)" opacity="0.85" />
                       <circle cx="32" cy="56" r="4" fill="#ffffff" opacity="0.8" />
                     </g>
                   ) : position.mode === 'right' ? (
                     <g>
-                      <rect x="552" y="12" width="32" height="164" rx="4" fill="#111216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
-                      <rect x="556" y="20" width="24" height="24" rx="3" fill="#1db954" opacity="0.85" />
+                      <rect x="552" y="12" width="32" height="164" rx="4" fill="#111216" stroke="var(--accent, rgba(16, 185, 129, 0.45))" strokeWidth="1" strokeOpacity={0.45} />
+                      <rect x="556" y="20" width="24" height="24" rx="3" fill="var(--accent, #1db954)" opacity="0.85" />
                       <circle cx="568" cy="56" r="4" fill="#ffffff" opacity="0.8" />
                     </g>
                   ) : (
                     position.style === 'island' ? (
                       <g>
-                        <rect x="190" y="15" width="220" height="20" rx="10" fill="#111216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
-                        <rect x="195" y="18" width="14" height="14" rx="3" fill="#1db954" />
+                        <rect x="190" y="15" width="220" height="20" rx="10" fill="#111216" stroke="var(--accent, rgba(16, 185, 129, 0.45))" strokeWidth="1" strokeOpacity={0.45} />
+                        <rect x="195" y="18" width="14" height="14" rx="3" fill="var(--accent, #1db954)" />
                         <rect x="215" y="21" width="40" height="3" rx="1" fill="#ffffff" opacity="0.8" />
                         <rect x="215" y="27" width="25" height="2" rx="1" fill="#71717a" />
-                        <circle cx="300" cy="25" r="4.5" fill="#10b981" />
+                        <circle cx="300" cy="25" r="4.5" fill="var(--accent, #10b981)" />
                         <rect x="320" y="24" width="75" height="2.5" rx="1" fill="rgba(255, 255, 255, 0.15)" />
                       </g>
                     ) : (
                       <g>
-                        <rect x="16" y="12" width="568" height="20" rx="3" fill="#111216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
-                        <rect x="24" y="15" width="14" height="14" rx="3" fill="#1db954" />
+                        <rect x="16" y="12" width="568" height="20" rx="3" fill="#111216" stroke="var(--accent, rgba(16, 185, 129, 0.45))" strokeWidth="1" strokeOpacity={0.45} />
+                        <rect x="24" y="15" width="14" height="14" rx="3" fill="var(--accent, #1db954)" />
                         <rect x="44" y="18" width="45" height="3" rx="1" fill="#ffffff" opacity="0.8" />
-                        <circle cx="300" cy="22" r="4.5" fill="#10b981" />
+                        <circle cx="300" cy="22" r="4.5" fill="var(--accent, #10b981)" />
                       </g>
                     )
                   )}
@@ -3268,15 +3268,15 @@ export default function SettingsApp() {
                       }
                       return (
                         <g>
-                          <rect x="16" y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x="16" y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="var(--accent, #10b981)" strokeWidth="1.5" />
                           <rect x="16" y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerHashPattern)" opacity="0.6" />
-                          <line x1={16 + depth} y1={y} x2={16 + depth} y2={y + h} stroke="#34d399" strokeWidth="2" strokeDasharray="5 3" />
+                          <line x1={16 + depth} y1={y} x2={16 + depth} y2={y + h} stroke="var(--accent, #34d399)" strokeWidth="2" strokeDasharray="5 3" />
                           <circle cx={16 + depth / 2} cy={y + h / 2} r="2.5" fill="#ffffff" />
                           {(() => {
                             const tagY = Math.max(22, Math.min(160, y + h / 2));
                             return (
                               <g transform={`translate(${16 + depth + 8}, ${tagY})`}>
-                                <rect x="0" y="-7.5" width="80" height="15" rx="7.5" fill="#10b981" />
+                                <rect x="0" y="-7.5" width="80" height="15" rx="7.5" fill="var(--accent, #10b981)" />
                                 <text x="40" y="3" textAnchor="middle" fill="#042f1a" fontSize="7.5" fontWeight="800" fontFamily="ui-monospace, monospace">
                                   TRIGGER ZONE
                                 </text>
@@ -3306,15 +3306,15 @@ export default function SettingsApp() {
                       }
                       return (
                         <g>
-                          <rect x={584 - depth} y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x={584 - depth} y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="var(--accent, #10b981)" strokeWidth="1.5" />
                           <rect x={584 - depth} y={y} width={depth} height={h} rx={depth > 7 ? 4 : 2} fill="url(#triggerHashPattern)" opacity="0.6" />
-                          <line x1={584 - depth} y1={y} x2={584 - depth} y2={y + h} stroke="#34d399" strokeWidth="2" strokeDasharray="5 3" />
+                          <line x1={584 - depth} y1={y} x2={584 - depth} y2={y + h} stroke="var(--accent, #34d399)" strokeWidth="2" strokeDasharray="5 3" />
                           <circle cx={584 - depth / 2} cy={y + h / 2} r="2.5" fill="#ffffff" />
                           {(() => {
                             const tagY = Math.max(22, Math.min(160, y + h / 2));
                             return (
                               <g transform={`translate(${584 - depth - 88}, ${tagY})`}>
-                                <rect x="0" y="-7.5" width="80" height="15" rx="7.5" fill="#10b981" />
+                                <rect x="0" y="-7.5" width="80" height="15" rx="7.5" fill="var(--accent, #10b981)" />
                                 <text x="40" y="3" textAnchor="middle" fill="#042f1a" fontSize="7.5" fontWeight="800" fontFamily="ui-monospace, monospace">
                                   TRIGGER ZONE
                                 </text>
@@ -3352,16 +3352,16 @@ export default function SettingsApp() {
                       }
                       return (
                         <g>
-                          <rect x={x} y="12" width={w} height={depth} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x={x} y="12" width={w} height={depth} rx={depth > 7 ? 4 : 2} fill="url(#triggerZoneGlowGrad)" stroke="var(--accent, #10b981)" strokeWidth="1.5" />
                           <rect x={x} y="12" width={w} height={depth} rx={depth > 7 ? 4 : 2} fill="url(#triggerHashPattern)" opacity="0.6" />
-                          <line x1={x} y1={12 + depth} x2={x + w} y2={12 + depth} stroke="#34d399" strokeWidth="2" strokeDasharray="5 3" />
+                          <line x1={x} y1={12 + depth} x2={x + w} y2={12 + depth} stroke="var(--accent, #34d399)" strokeWidth="2" strokeDasharray="5 3" />
                           <circle cx={x + w / 2} cy={12 + depth / 2} r="2.5" fill="#ffffff" />
                           {(() => {
                             const tagX = Math.max(65, Math.min(535, x + w / 2));
                             const tagY = Math.max(30, 12 + depth + 4);
                             return (
                               <g transform={`translate(${tagX}, ${tagY})`}>
-                                <rect x="-42" y="0" width="84" height="15" rx="7.5" fill="#10b981" />
+                                <rect x="-42" y="0" width="84" height="15" rx="7.5" fill="var(--accent, #10b981)" />
                                 <text x="0" y="10" textAnchor="middle" fill="#042f1a" fontSize="7.5" fontWeight="800" fontFamily="ui-monospace, monospace" letterSpacing="0.4">
                                   TRIGGER ZONE
                                 </text>
