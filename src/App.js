@@ -319,6 +319,10 @@ function App() {
           document.documentElement.style.setProperty('--accent-rgb', accent.rgb);
           document.documentElement.style.setProperty('--accent-soft', accent.soft);
           document.documentElement.style.setProperty('--accent-glow', accent.glow);
+          try {
+            localStorage.setItem('ksync_last_accent', JSON.stringify(accent));
+            window.dispatchEvent(new CustomEvent('ksync:accent-changed', { detail: accent }));
+          } catch (_) {}
           if (isDynamicLyrics) {
             document.documentElement.style.setProperty('--dock-lyrics-active', accent.hex);
             document.documentElement.style.setProperty('--dock-lyrics-active-glow', accent.glow);
@@ -332,10 +336,18 @@ function App() {
       });
     } else {
       if (settings.theming?.accentColor) {
-        document.documentElement.style.setProperty('--accent', settings.theming.accentColor);
-        document.documentElement.style.setProperty('--accent-rgb', hexToRgb(settings.theming.accentColor));
-        document.documentElement.style.setProperty('--accent-soft', `${settings.theming.accentColor}26`);
-        document.documentElement.style.setProperty('--accent-glow', `${settings.theming.accentColor}59`);
+        const hex = settings.theming.accentColor;
+        const rgb = hexToRgb(hex);
+        const soft = `${hex}26`;
+        const glow = `${hex}59`;
+        document.documentElement.style.setProperty('--accent', hex);
+        document.documentElement.style.setProperty('--accent-rgb', rgb);
+        document.documentElement.style.setProperty('--accent-soft', soft);
+        document.documentElement.style.setProperty('--accent-glow', glow);
+        try {
+          localStorage.setItem('ksync_last_accent', JSON.stringify({ hex, rgb, soft, glow }));
+          window.dispatchEvent(new CustomEvent('ksync:accent-changed', { detail: { hex, rgb, soft, glow } }));
+        } catch (_) {}
       }
       const lyricsColor = isDynamicLyrics
         ? 'var(--accent)'

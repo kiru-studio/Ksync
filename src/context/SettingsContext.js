@@ -548,6 +548,29 @@ export function SettingsProvider({ children }) {
         });
       });
     }
+
+    const handleStorageAccent = (e) => {
+      if ((e.key === 'ksync_last_accent' && e.newValue) || e.type === 'ksync:accent-changed') {
+        try {
+          const accent = e.type === 'ksync:accent-changed' ? e.detail : JSON.parse(e.newValue);
+          if (accent && accent.hex) {
+            document.documentElement.style.setProperty('--accent', accent.hex);
+            if (accent.rgb) document.documentElement.style.setProperty('--accent-rgb', accent.rgb);
+            if (accent.soft) document.documentElement.style.setProperty('--accent-soft', accent.soft);
+            if (accent.glow) document.documentElement.style.setProperty('--accent-glow', accent.glow);
+            document.documentElement.style.setProperty('--progress-color', accent.hex);
+          }
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorageAccent);
+    window.addEventListener('ksync:accent-changed', handleStorageAccent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageAccent);
+      window.removeEventListener('ksync:accent-changed', handleStorageAccent);
+    };
   }, [applyCssVariables]);
 
   const hasVisualThemingChanges = (p) => {
