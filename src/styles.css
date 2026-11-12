@@ -6385,6 +6385,48 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 600;
 }
 
+.bento-button-group {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.bento-button-group.four-cols {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.bento-button-group.three-cols {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.bento-sub-btn {
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.bento-sub-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.bento-sub-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+  font-weight: 600;
+}
+
 /* ==========================================================================
    PANE 3: RIGHT COLLAPSIBLE PANEL (REMOVED)
    ========================================================================== */

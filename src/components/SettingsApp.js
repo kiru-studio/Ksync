@@ -3093,19 +3093,58 @@ export default function SettingsApp() {
               </div>
             </section>
 
-            {/* Section 2: Dedicated Interactive Edge Trigger Area Configurator Card */}
-            <section className="settings-level1-card" style={{ marginBottom: '16px' }}>
-              <div className="card-top-header">
-                <div className="card-icon-badge">
-                  <Target size={16} />
-                </div>
-                <div>
-                  <h3 className="card-title-text">Edge Trigger Area Configurator</h3>
-                  <p className="card-desc-text">
-                    Visually tune the hover detection hotspot along the screen boundary so the dock reveals effortlessly without false triggers when clicking browser tabs.
-                  </p>
-                </div>
-              </div>
+            {/* Section 2: Dedicated Interactive Edge Trigger Area Configurator Card (Collapsible) */}
+            {(() => {
+              const isTriggerOpen = !collapsedSections['edge-trigger'];
+              return (
+                <section className="settings-level1-card" style={{ marginBottom: '16px' }}>
+                  <div
+                    className="card-top-header flex-between"
+                    onClick={() => toggleSectionCollapse('edge-trigger')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleSectionCollapse('edge-trigger');
+                      }
+                    }}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    <div className="header-left-cluster">
+                      <div className="card-icon-badge">
+                        <Target size={16} />
+                      </div>
+                      <div>
+                        <h3 className="card-title-text">Edge Trigger Area Configurator</h3>
+                        <p className="card-desc-text">
+                          Tune hover hotspot along the screen boundary for auto-revealing the dock.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="card-action-btn ghost icon-only"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSectionCollapse('edge-trigger');
+                      }}
+                      title={isTriggerOpen ? 'Collapse section' : 'Expand section'}
+                      aria-expanded={isTriggerOpen}
+                    >
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          transform: isTriggerOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.22s ease',
+                          color: '#a1a1aa',
+                        }}
+                      />
+                    </button>
+                  </div>
+
+                  {isTriggerOpen && (
+                    <>
 
               {/* Visual Interactive Screen Mock Wireframe Stage */}
               <div className="trigger-stage-wrapper">
@@ -3337,12 +3376,7 @@ export default function SettingsApp() {
               {/* Hotspot Presets Grid */}
               <div style={{ marginTop: '14px', marginBottom: '14px' }}>
                 <div className="bento-header-row" style={{ marginBottom: '8px' }}>
-                  <div>
-                    <span className="bento-label" style={{ fontSize: '13px', fontWeight: 600 }}>Hotspot Geometry Presets</span>
-                    <div className="row-sub-label" style={{ marginTop: '2px' }}>
-                      Select a calibrated screen coverage profile, or fine-tune exact dimensions in the bento grid below.
-                    </div>
-                  </div>
+                  <span className="bento-label" style={{ fontSize: '13px', fontWeight: 600 }}>Hotspot Presets</span>
                 </div>
 
                 <div className="trigger-preset-grid">
@@ -3351,42 +3385,42 @@ export default function SettingsApp() {
                       id: 'full',
                       title: 'Full Screen Edge',
                       badge: '100%',
-                      desc: 'Spans the complete screen boundary for effortless reveals anywhere along the edge.',
+                      desc: 'Entire screen border',
                       patch: { triggerSpan: 'full', triggerWidthPct: 100, triggerOffsetPct: 50 },
                     },
                     {
                       id: 'center',
                       title: 'Center Focus',
                       badge: '60%',
-                      desc: 'Focused center span. Protects browser tabs & top corner window controls from false reveals.',
+                      desc: 'Tab & corner safe zone',
                       patch: { triggerSpan: 'center', triggerWidthPct: 60, triggerOffsetPct: 50 },
                     },
                     {
                       id: 'compact',
                       title: 'Compact Hotspot',
                       badge: '35%',
-                      desc: 'Tight center hotspot. Requires deliberate cursor hovering; ideal for multi-tab power users.',
+                      desc: 'Tight center zone',
                       patch: { triggerSpan: 'compact', triggerWidthPct: 35, triggerOffsetPct: 50 },
                     },
                     {
                       id: 'dock',
                       title: 'Dock Bounds Match',
                       badge: position.style === 'island' ? 'Island' : 'Dock',
-                      desc: 'Geometric lock: trigger zone matches the exact pixel footprint of your visible dock.',
+                      desc: 'Matches dock width',
                       patch: { triggerSpan: 'dock' },
                     },
                     {
                       id: 'corner',
-                      title: (position.triggerSpan === 'right' || position.triggerOffsetPct === 100) ? 'Right Corner Focus' : 'Left Corner Focus',
-                      badge: (position.triggerSpan === 'right' || position.triggerOffsetPct === 100) ? 'Right 35%' : 'Left 35%',
-                      desc: 'Anchored to one corner. Toggle between Left (0%) and Right (100%) screen corners.',
+                      title: (position.triggerSpan === 'right' || position.triggerOffsetPct === 100) ? 'Right Corner' : 'Left Corner',
+                      badge: (position.triggerSpan === 'right' || position.triggerOffsetPct === 100) ? 'Right' : 'Left',
+                      desc: 'Screen corner zone',
                       isCorner: true,
                     },
                     {
                       id: 'custom',
                       title: 'Custom Calibrated',
                       badge: 'Manual',
-                      desc: 'Fully unconstrained tuning. Adjust exact screen width %, offset, and reveal depth below.',
+                      desc: 'Custom dimensions',
                       patch: { triggerSpan: 'custom' },
                     },
                   ].map((preset) => {
@@ -3430,15 +3464,11 @@ export default function SettingsApp() {
                 {/* Bento Pad 1: Edge Reveal Distance (Depth) */}
                 <div className="bento-control-pad">
                   <div className="bento-header-row">
-                    <span className="bento-label">Edge Reveal Distance (Depth)</span>
+                    <span className="bento-label">Edge Reveal Distance</span>
                     <span className="tabular-num-pill">{position.triggerDistance ?? 4} px</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#71717a', lineHeight: 1.35 }}>
-                    {(position.triggerDistance ?? 4) === 1
-                      ? 'Absolute 1px Screen Boundary Only — Zero accidental reveals when clicking browser tabs'
-                      : (position.triggerDistance ?? 4) <= 5
-                      ? `${position.triggerDistance ?? 4}px Standard Responsive Edge — Balanced for most monitors`
-                      : `${position.triggerDistance ?? 4}px Wide Hotspot — Fast activation without exact pixel edge aiming`}
+                  <div style={{ fontSize: '11px', color: '#71717a' }}>
+                    Cursor distance from screen border to trigger
                   </div>
                   <div className="thick-slider-wrapper" style={{ marginTop: '4px' }}>
                     <input
@@ -3451,20 +3481,20 @@ export default function SettingsApp() {
                       className="thick-slider-input"
                     />
                   </div>
-                  <div className="trigger-sub-pills">
+                  <div className="bento-button-group four-cols">
                     {[
-                      { label: '1px (Edge Only)', val: 1 },
-                      { label: '4px (Standard)', val: 4 },
-                      { label: '8px (Comfort)', val: 8 },
-                      { label: '16px (Relaxed)', val: 16 },
-                    ].map((chip) => (
+                      { label: '1px', val: 1 },
+                      { label: '4px', val: 4 },
+                      { label: '8px', val: 8 },
+                      { label: '16px', val: 16 },
+                    ].map((btn) => (
                       <button
-                        key={chip.val}
+                        key={btn.val}
                         type="button"
-                        className={`trigger-sub-chip ${(position.triggerDistance ?? 4) === chip.val ? 'active' : ''}`}
-                        onClick={() => updateSettings({ position: { triggerDistance: chip.val } })}
+                        className={`bento-sub-btn ${(position.triggerDistance ?? 4) === btn.val ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: { triggerDistance: btn.val } })}
                       >
-                        {chip.label}
+                        {btn.label}
                       </button>
                     ))}
                   </div>
@@ -3473,34 +3503,39 @@ export default function SettingsApp() {
                 {/* Bento Pad 2: Hover Dwell Delay (Brush Shield) */}
                 <div className="bento-control-pad">
                   <div className="bento-header-row">
-                    <span className="bento-label">Hover Dwell Delay (Brush Shield)</span>
+                    <span className="bento-label">Hover Dwell Delay</span>
                     <span className="tabular-num-pill">{position.triggerDelayMs ?? 0} ms</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#71717a', lineHeight: 1.35 }}>
-                    {(position.triggerDelayMs ?? 0) === 0
-                      ? 'Instant Reveal (0ms) — Dock reveals the moment the cursor touches the hotspot'
-                      : `Dwell Filter (${position.triggerDelayMs}ms) — Cursor must linger in hotspot to prevent sweeping triggers`}
+                  <div style={{ fontSize: '11px', color: '#71717a' }}>
+                    Cursor pause required before revealing dock
                   </div>
-                  <div className="segment-pill-group" style={{ marginTop: '8px', width: '100%' }}>
+                  <div className="thick-slider-wrapper" style={{ marginTop: '4px' }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="400"
+                      step="25"
+                      value={position.triggerDelayMs ?? 0}
+                      onChange={(e) => updateSettings({ position: { triggerDelayMs: parseInt(e.target.value, 10) } })}
+                      className="thick-slider-input"
+                    />
+                  </div>
+                  <div className="bento-button-group four-cols">
                     {[
-                      { label: 'Instant (0ms)', val: 0 },
-                      { label: 'Quick (100ms)', val: 100 },
-                      { label: 'Balanced (200ms)', val: 200 },
-                      { label: 'Deliberate (350ms)', val: 350 },
-                    ].map((item) => {
-                      const isSelected = (position.triggerDelayMs ?? 0) === item.val;
-                      return (
-                        <button
-                          key={item.val}
-                          type="button"
-                          className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
-                          style={{ flex: 1, padding: '7px 4px', fontSize: '11px', textAlign: 'center' }}
-                          onClick={() => updateSettings({ position: { triggerDelayMs: item.val } })}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
+                      { label: '0ms', val: 0 },
+                      { label: '100ms', val: 100 },
+                      { label: '200ms', val: 200 },
+                      { label: '350ms', val: 350 },
+                    ].map((btn) => (
+                      <button
+                        key={btn.val}
+                        type="button"
+                        className={`bento-sub-btn ${(position.triggerDelayMs ?? 0) === btn.val ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: { triggerDelayMs: btn.val } })}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -3510,11 +3545,11 @@ export default function SettingsApp() {
                 {/* Bento Pad 3: Hotspot Width (% of Edge) */}
                 <div className="bento-control-pad">
                   <div className="bento-header-row">
-                    <span className="bento-label">Hotspot Width (% of Screen Edge)</span>
+                    <span className="bento-label">Hotspot Width</span>
                     <span className="tabular-num-pill">{position.triggerWidthPct ?? 60}%</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#71717a', lineHeight: 1.35 }}>
-                    How wide the active trigger zone spans along the monitor border
+                  <div style={{ fontSize: '11px', color: '#71717a' }}>
+                    Trigger zone span length along monitor edge
                   </div>
                   <div className="thick-slider-wrapper" style={{ marginTop: '4px' }}>
                     <input
@@ -3527,21 +3562,20 @@ export default function SettingsApp() {
                       className="thick-slider-input"
                     />
                   </div>
-                  <div className="trigger-sub-pills">
+                  <div className="bento-button-group four-cols">
                     {[
-                      { label: '35% (Compact)', val: 35 },
-                      { label: '50% (Half)', val: 50 },
-                      { label: '60% (Balanced)', val: 60 },
-                      { label: '80% (Wide)', val: 80 },
-                      { label: '100% (Full)', val: 100 },
-                    ].map((chip) => (
+                      { label: '35%', val: 35 },
+                      { label: '50%', val: 50 },
+                      { label: '70%', val: 70 },
+                      { label: '100%', val: 100 },
+                    ].map((btn) => (
                       <button
-                        key={chip.val}
+                        key={btn.val}
                         type="button"
-                        className={`trigger-sub-chip ${(position.triggerWidthPct ?? 60) === chip.val ? 'active' : ''}`}
-                        onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerWidthPct: chip.val } })}
+                        className={`bento-sub-btn ${(position.triggerWidthPct ?? 60) === btn.val ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerWidthPct: btn.val } })}
                       >
-                        {chip.label}
+                        {btn.label}
                       </button>
                     ))}
                   </div>
@@ -3550,13 +3584,13 @@ export default function SettingsApp() {
                 {/* Bento Pad 4: Horizontal Alignment (Offset) */}
                 <div className="bento-control-pad">
                   <div className="bento-header-row">
-                    <span className="bento-label">Hotspot Horizontal Alignment (Offset)</span>
+                    <span className="bento-label">Horizontal Alignment</span>
                     <span className="tabular-num-pill">
-                      {(position.triggerOffsetPct ?? 50) === 0 ? 'Left (0%)' : (position.triggerOffsetPct ?? 50) === 50 ? 'Center (50%)' : (position.triggerOffsetPct ?? 50) === 100 ? 'Right (100%)' : `${position.triggerOffsetPct ?? 50}%`}
+                      {(position.triggerOffsetPct ?? 50) === 0 ? 'Left (0%)' : (position.triggerOffsetPct ?? 50) === 50 ? 'Center (50%)' : (position.triggerOffsetPct ?? 50) === 100 ? 'Right (100%)' : `${position.triggerOffsetPct}%`}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#71717a', lineHeight: 1.35 }}>
-                    Shift the hotspot along the edge (0% = Left / Top, 50% = Center, 100% = Right / Bottom)
+                  <div style={{ fontSize: '11px', color: '#71717a' }}>
+                    Hotspot anchor position along screen border
                   </div>
                   <div className="thick-slider-wrapper" style={{ marginTop: '4px' }}>
                     <input
@@ -3569,25 +3603,29 @@ export default function SettingsApp() {
                       className="thick-slider-input"
                     />
                   </div>
-                  <div className="trigger-sub-pills">
+                  <div className="bento-button-group three-cols">
                     {[
                       { label: 'Left (0%)', val: 0 },
                       { label: 'Center (50%)', val: 50 },
                       { label: 'Right (100%)', val: 100 },
-                    ].map((chip) => (
+                    ].map((btn) => (
                       <button
-                        key={chip.val}
+                        key={btn.val}
                         type="button"
-                        className={`trigger-sub-chip ${(position.triggerOffsetPct ?? 50) === chip.val ? 'active' : ''}`}
-                        onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerOffsetPct: chip.val } })}
+                        className={`bento-sub-btn ${(position.triggerOffsetPct ?? 50) === btn.val ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerOffsetPct: btn.val } })}
                       >
-                        {chip.label}
+                        {btn.label}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
-            </section>
+                    </>
+                  )}
+                </section>
+              );
+            })()}
 
             {/* Section 3: Window Behavior & Input Card (Collapsible Dropdown Section) */}
             {(() => {
