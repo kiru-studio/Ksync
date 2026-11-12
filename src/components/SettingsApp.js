@@ -3089,7 +3089,384 @@ export default function SettingsApp() {
               </div>
             </section>
 
-            {/* Section 2: Window Behavior & Input Card (Collapsible Dropdown Section) */}
+            {/* Section 2: Dedicated Interactive Edge Trigger Area Configurator Card */}
+            <section className="settings-level1-card" style={{ marginBottom: '16px' }}>
+              <div className="card-top-header">
+                <div className="card-icon-badge">
+                  <Target size={16} />
+                </div>
+                <div>
+                  <h3 className="card-title-text">Edge Trigger Area Configurator</h3>
+                  <p className="card-desc-text">
+                    Visually tune the hover detection hotspot along the screen boundary so the dock reveals effortlessly without false triggers when clicking browser tabs.
+                  </p>
+                </div>
+              </div>
+
+              {/* Visual Interactive Screen Mock Wireframe Stage */}
+              <div className="trigger-stage-wrapper">
+                <div className="trigger-stage-header-bar">
+                  <span style={{ fontSize: '11.5px', color: '#a1a1aa', fontWeight: 500 }}>
+                    Screen Edge Simulation ({position.mode === 'left' ? 'Left Edge' : position.mode === 'right' ? 'Right Edge' : 'Top Edge'})
+                  </span>
+                  <span className="trigger-badge-live">
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                    {(() => {
+                      const curSpan = position.triggerSpan || 'full';
+                      if (curSpan === 'center') return `Center Focus (${position.triggerWidthPct ?? 60}%)`;
+                      if (curSpan === 'compact') return `Compact (${position.triggerWidthPct ?? 35}%)`;
+                      if (curSpan === 'dock') return 'Dock Bounds Match';
+                      if (curSpan === 'left') return 'Left Area (35%)';
+                      if (curSpan === 'right') return 'Right Area (35%)';
+                      if (curSpan === 'custom') return `Custom (${position.triggerWidthPct ?? 60}% • Offset ${position.triggerOffsetPct ?? 50}%)`;
+                      return 'Full Screen Edge (100%)';
+                    })()} • {position.triggerDistance ?? 4}px Depth
+                  </span>
+                </div>
+
+                <svg className="trigger-stage-svg" viewBox="0 0 360 140" fill="none">
+                  <defs>
+                    <linearGradient id="triggerZoneGlowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.25" />
+                    </linearGradient>
+                    <pattern id="triggerHashPattern" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                      <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1.5" />
+                    </pattern>
+                  </defs>
+
+                  {/* Monitor Stand */}
+                  <rect x="155" y="133" width="50" height="5" rx="2" fill="#18181c" />
+                  
+                  {/* Outer Bezel */}
+                  <rect x="10" y="6" width="340" height="126" rx="7" fill="#09090b" stroke="rgba(255, 255, 255, 0.12)" strokeWidth="1" />
+                  
+                  {/* Desktop Screen Area */}
+                  <rect x="13" y="9" width="334" height="120" rx="5" fill="#0d0e13" />
+
+                  {/* Mock Browser Window with Tabs */}
+                  <rect x="32" y="24" width="296" height="96" rx="4" fill="#15161d" stroke="rgba(255, 255, 255, 0.06)" />
+                  <rect x="38" y="27" width="70" height="8" rx="2" fill="#20222b" />
+                  <text x="42" y="33" fill="#71717a" fontSize="5" fontFamily="sans-serif">Browser Tabs / Close Area</text>
+                  <rect x="112" y="27" width="55" height="8" rx="2" fill="#191a22" />
+
+                  {/* Mock Dock Rendering */}
+                  {position.mode === 'left' ? (
+                    <rect x="13" y="9" width="26" height="120" rx="3" fill="#121216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
+                  ) : position.mode === 'right' ? (
+                    <rect x="321" y="9" width="26" height="120" rx="3" fill="#121216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
+                  ) : (
+                    position.style === 'island' ? (
+                      <g>
+                        <rect x="115" y="11" width="130" height="13" rx="6.5" fill="#121216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
+                        <rect x="119" y="13" width="9" height="9" rx="2" fill="#27272a" />
+                        <rect x="132" y="15" width="26" height="2" rx="1" fill="#a1a1aa" />
+                        <circle cx="180" cy="17.5" r="3.5" fill="#10b981" />
+                        <rect x="202" y="16" width="34" height="3" rx="1.5" fill="rgba(255, 255, 255, 0.1)" />
+                      </g>
+                    ) : (
+                      <g>
+                        <rect x="13" y="9" width="334" height="14" rx="2" fill="#121216" stroke="rgba(16, 185, 129, 0.45)" strokeWidth="1" />
+                        <rect x="18" y="11" width="10" height="10" rx="2" fill="#27272a" />
+                        <rect x="32" y="14" width="35" height="2" rx="1" fill="#a1a1aa" />
+                        <circle cx="180" cy="16" r="3.5" fill="#10b981" />
+                      </g>
+                    )
+                  )}
+
+                  {/* DYNAMIC TRIGGER HOTSPOT */}
+                  {(() => {
+                    const mode = position.mode || 'top';
+                    const span = position.triggerSpan || 'full';
+                    const dist = position.triggerDistance ?? 4;
+                    const wPct = position.triggerWidthPct ?? 60;
+                    const offPct = position.triggerOffsetPct ?? 50;
+                    const depth = Math.max(4, Math.min(22, Math.round(dist * 1.3)));
+
+                    if (mode === 'left') {
+                      let h = 120;
+                      let y = 9;
+                      if (span === 'compact') {
+                        h = 120 * 0.35;
+                        y = 9 + (120 - h) / 2;
+                      } else if (span === 'center') {
+                        h = 120 * 0.60;
+                        y = 9 + (120 - h) / 2;
+                      } else if (span === 'left') {
+                        h = 120 * 0.35;
+                        y = 9;
+                      } else if (span === 'right') {
+                        h = 120 * 0.35;
+                        y = 129 - h;
+                      } else if (span === 'custom') {
+                        h = 120 * (Math.max(10, Math.min(100, wPct)) / 100);
+                        y = 9 + (120 - h) * (Math.max(0, Math.min(100, offPct)) / 100);
+                      }
+                      return (
+                        <g>
+                          <rect x="13" y={y} width={depth} height={h} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x="13" y={y} width={depth} height={h} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerHashPattern)" opacity="0.6" />
+                          <line x1={13 + depth} y1={y} x2={13 + depth} y2={y + h} stroke="#10b981" strokeWidth="2" strokeDasharray="4 2" />
+                        </g>
+                      );
+                    } else if (mode === 'right') {
+                      let h = 120;
+                      let y = 9;
+                      if (span === 'compact') {
+                        h = 120 * 0.35;
+                        y = 9 + (120 - h) / 2;
+                      } else if (span === 'center') {
+                        h = 120 * 0.60;
+                        y = 9 + (120 - h) / 2;
+                      } else if (span === 'left') {
+                        h = 120 * 0.35;
+                        y = 9;
+                      } else if (span === 'right') {
+                        h = 120 * 0.35;
+                        y = 129 - h;
+                      } else if (span === 'custom') {
+                        h = 120 * (Math.max(10, Math.min(100, wPct)) / 100);
+                        y = 9 + (120 - h) * (Math.max(0, Math.min(100, offPct)) / 100);
+                      }
+                      return (
+                        <g>
+                          <rect x={347 - depth} y={y} width={depth} height={h} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x={347 - depth} y={y} width={depth} height={h} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerHashPattern)" opacity="0.6" />
+                          <line x1={347 - depth} y1={y} x2={347 - depth} y2={y + h} stroke="#10b981" strokeWidth="2" strokeDasharray="4 2" />
+                        </g>
+                      );
+                    } else {
+                      let w = 334;
+                      let x = 13;
+                      if (span === 'dock') {
+                        if (position.style === 'island') {
+                          w = 146;
+                          x = 107;
+                        } else {
+                          w = 334;
+                          x = 13;
+                        }
+                      } else if (span === 'compact') {
+                        w = 334 * 0.35;
+                        x = 13 + (334 - w) / 2;
+                      } else if (span === 'center') {
+                        w = 334 * 0.60;
+                        x = 13 + (334 - w) / 2;
+                      } else if (span === 'left') {
+                        w = 334 * 0.35;
+                        x = 13;
+                      } else if (span === 'right') {
+                        w = 334 * 0.35;
+                        x = 347 - w;
+                      } else if (span === 'custom') {
+                        w = 334 * (Math.max(10, Math.min(100, wPct)) / 100);
+                        x = 13 + (334 - w) * (Math.max(0, Math.min(100, offPct)) / 100);
+                      }
+                      return (
+                        <g>
+                          <rect x={x} y="9" width={w} height={depth} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerZoneGlowGrad)" stroke="#10b981" strokeWidth="1.5" />
+                          <rect x={x} y="9" width={w} height={depth} rx={depth > 7 ? 3 : 1.5} fill="url(#triggerHashPattern)" opacity="0.6" />
+                          <line x1={x} y1={9 + depth} x2={x + w} y2={9 + depth} stroke="#10b981" strokeWidth="2" strokeDasharray="4 2" />
+                          <circle cx={x + w / 2} cy={9 + depth / 2} r="2" fill="#ffffff" />
+                        </g>
+                      );
+                    }
+                  })()}
+                </svg>
+              </div>
+
+              {/* Row: Preset Profiles */}
+              <div className="card-hairline-row flex-between" style={{ alignItems: 'flex-start', paddingTop: '10px' }}>
+                <div style={{ maxWidth: '280px' }}>
+                  <div className="row-main-label">Hotspot Presets</div>
+                  <div className="row-sub-label">Choose a pre-calibrated zone or switch to Custom to fine-tune width and offset</div>
+                </div>
+                <div className="segment-pill-group" style={{ flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '440px' }}>
+                  {[
+                    { label: 'Full Edge (100%)', val: 'full', patch: { triggerSpan: 'full', triggerWidthPct: 100, triggerOffsetPct: 50 } },
+                    { label: 'Center Focus (60%)', val: 'center', patch: { triggerSpan: 'center', triggerWidthPct: 60, triggerOffsetPct: 50 } },
+                    { label: 'Compact Hotspot (35%)', val: 'compact', patch: { triggerSpan: 'compact', triggerWidthPct: 35, triggerOffsetPct: 50 } },
+                    { label: 'Dock Bounds Match', val: 'dock', patch: { triggerSpan: 'dock' } },
+                    { label: 'Left Corner (35%)', val: 'left', patch: { triggerSpan: 'left', triggerWidthPct: 35, triggerOffsetPct: 0 } },
+                    { label: 'Right Corner (35%)', val: 'right', patch: { triggerSpan: 'right', triggerWidthPct: 35, triggerOffsetPct: 100 } },
+                    { label: 'Manual Custom', val: 'custom', patch: { triggerSpan: 'custom' } },
+                  ].map((preset) => {
+                    const isSelected = (position.triggerSpan || 'full') === preset.val;
+                    return (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: preset.patch })}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Slider 1: Edge Reveal Distance (Depth) */}
+              <div className="card-hairline-row" style={{ flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+                <div className="flex-between">
+                  <div>
+                    <div className="row-main-label">Edge Reveal Distance (Depth)</div>
+                    <div className="row-sub-label">
+                      {(position.triggerDistance ?? 4) === 1
+                        ? 'Absolute 1px Screen Boundary Only — Zero accidental reveals when clicking browser tabs'
+                        : (position.triggerDistance ?? 4) <= 5
+                        ? `${position.triggerDistance ?? 4}px Standard Responsive Edge — Balanced for most screens`
+                        : `${position.triggerDistance ?? 4}px Wide Hotspot — Easy activation without exact edge aim`}
+                    </div>
+                  </div>
+                  <span className="number-pill-badge">{position.triggerDistance ?? 4} px</span>
+                </div>
+                <div className="thick-slider-wrapper">
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    step="1"
+                    value={position.triggerDistance ?? 4}
+                    onChange={(e) => updateSettings({ position: { triggerDistance: parseInt(e.target.value, 10) } })}
+                    className="thick-slider-input"
+                  />
+                </div>
+                <div className="trigger-sub-pills">
+                  {[
+                    { label: '1px (Edge Only)', val: 1 },
+                    { label: '4px (Standard)', val: 4 },
+                    { label: '8px (Comfort)', val: 8 },
+                    { label: '16px (Relaxed)', val: 16 },
+                  ].map((chip) => (
+                    <button
+                      key={chip.val}
+                      type="button"
+                      className={`trigger-sub-chip ${(position.triggerDistance ?? 4) === chip.val ? 'active' : ''}`}
+                      onClick={() => updateSettings({ position: { triggerDistance: chip.val } })}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Slider 2: Hotspot Width (% of edge) */}
+              <div className="card-hairline-row" style={{ flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+                <div className="flex-between">
+                  <div>
+                    <div className="row-main-label">Hotspot Width (% of Screen Edge)</div>
+                    <div className="row-sub-label">
+                      How wide the active trigger zone spans along the monitor border
+                    </div>
+                  </div>
+                  <span className="number-pill-badge">{position.triggerWidthPct ?? 60} %</span>
+                </div>
+                <div className="thick-slider-wrapper">
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={position.triggerWidthPct ?? 60}
+                    onChange={(e) => updateSettings({ position: { triggerSpan: 'custom', triggerWidthPct: parseInt(e.target.value, 10) } })}
+                    className="thick-slider-input"
+                  />
+                </div>
+                <div className="trigger-sub-pills">
+                  {[
+                    { label: '35% (Compact)', val: 35 },
+                    { label: '50% (Half Edge)', val: 50 },
+                    { label: '60% (Balanced)', val: 60 },
+                    { label: '80% (Wide)', val: 80 },
+                    { label: '100% (Full)', val: 100 },
+                  ].map((chip) => (
+                    <button
+                      key={chip.val}
+                      type="button"
+                      className={`trigger-sub-chip ${(position.triggerWidthPct ?? 60) === chip.val ? 'active' : ''}`}
+                      onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerWidthPct: chip.val } })}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Slider 3: Horizontal Alignment / Offset */}
+              <div className="card-hairline-row" style={{ flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+                <div className="flex-between">
+                  <div>
+                    <div className="row-main-label">Hotspot Horizontal Alignment (Offset)</div>
+                    <div className="row-sub-label">
+                      Shift the hotspot position along the edge (0% = Left / Top, 50% = Center, 100% = Right / Bottom)
+                    </div>
+                  </div>
+                  <span className="number-pill-badge">
+                    {(position.triggerOffsetPct ?? 50) === 0 ? 'Left (0%)' : (position.triggerOffsetPct ?? 50) === 50 ? 'Center (50%)' : (position.triggerOffsetPct ?? 50) === 100 ? 'Right (100%)' : `${position.triggerOffsetPct ?? 50}%`}
+                  </span>
+                </div>
+                <div className="thick-slider-wrapper">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={position.triggerOffsetPct ?? 50}
+                    onChange={(e) => updateSettings({ position: { triggerSpan: 'custom', triggerOffsetPct: parseInt(e.target.value, 10) } })}
+                    className="thick-slider-input"
+                  />
+                </div>
+                <div className="trigger-sub-pills">
+                  {[
+                    { label: 'Left (0%)', val: 0 },
+                    { label: 'Center (50%)', val: 50 },
+                    { label: 'Right (100%)', val: 100 },
+                  ].map((chip) => (
+                    <button
+                      key={chip.val}
+                      type="button"
+                      className={`trigger-sub-chip ${(position.triggerOffsetPct ?? 50) === chip.val ? 'active' : ''}`}
+                      onClick={() => updateSettings({ position: { triggerSpan: 'custom', triggerOffsetPct: chip.val } })}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Option 4: Hover Dwell Delay */}
+              <div className="card-hairline-row flex-between">
+                <div>
+                  <div className="row-main-label">Hover Dwell Delay (Accidental Brush-By Shield)</div>
+                  <div className="row-sub-label">
+                    Requires cursor to linger in hotspot before revealing. Prevents accidental dock reveals when sweeping mouse across screen.
+                  </div>
+                </div>
+                <div className="segment-pill-group">
+                  {[
+                    { label: 'Instant (0ms)', val: 0 },
+                    { label: 'Quick (100ms)', val: 100 },
+                    { label: 'Balanced (200ms)', val: 200 },
+                    { label: 'Deliberate (350ms)', val: 350 },
+                  ].map((item) => {
+                    const isSelected = (position.triggerDelayMs ?? 0) === item.val;
+                    return (
+                      <button
+                        key={item.val}
+                        type="button"
+                        className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
+                        onClick={() => updateSettings({ position: { triggerDelayMs: item.val } })}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* Section 3: Window Behavior & Input Card (Collapsible Dropdown Section) */}
             {(() => {
               const isBehaviorOpen = !collapsedSections['window-behavior'];
               return (
@@ -3213,72 +3590,7 @@ export default function SettingsApp() {
                         </div>
                       </div>
 
-                      {/* Row 4: Edge Reveal Distance */}
-                      <div className="card-hairline-row flex-between">
-                        <div className="row-with-icon">
-                          <div className="inner-icon-badge">
-                            <Compass size={15} />
-                          </div>
-                          <div>
-                            <div className="row-main-label">Edge Reveal Distance</div>
-                            <div className="row-sub-label">Only reveal dock when mouse hits the screen boundary</div>
-                          </div>
-                        </div>
-                        <div className="segment-pill-group">
-                          {[
-                            { label: 'Edge Only (1px)', val: 1 },
-                            { label: 'Near Edge (4px)', val: 4 },
-                            { label: 'Relaxed (8px)', val: 8 },
-                          ].map((item) => {
-                            const isSelected = (position.triggerDistance ?? 1) === item.val;
-                            return (
-                              <button
-                                key={item.val}
-                                type="button"
-                                className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
-                                onClick={() => updateSettings({ position: { triggerDistance: item.val } })}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Row 4b: Edge Trigger Area */}
-                      <div className="card-hairline-row flex-between">
-                        <div className="row-with-icon">
-                          <div className="inner-icon-badge">
-                            <Target size={15} />
-                          </div>
-                          <div>
-                            <div className="row-main-label">Edge Trigger Area</div>
-                            <div className="row-sub-label">Limit hover detection zone along the screen edge to eliminate false triggers</div>
-                          </div>
-                        </div>
-                        <div className="segment-pill-group">
-                          {[
-                            { label: 'Full Edge', val: 'full', title: 'Detect across the entire screen edge' },
-                            { label: 'Center Zone', val: 'center', title: 'Only trigger when cursor is near the center' },
-                            { label: 'Compact Hotspot', val: 'compact', title: 'Tight center hotspot for maximum false-trigger avoidance' },
-                          ].map((item) => {
-                            const isSelected = (position.triggerSpan || 'full') === item.val;
-                            return (
-                              <button
-                                key={item.val}
-                                type="button"
-                                className={`segment-pill-btn ${isSelected ? 'active' : ''}`}
-                                onClick={() => updateSettings({ position: { triggerSpan: item.val } })}
-                                title={item.title}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Row 5: Dynamic Island "Peek-on-Track-Change" */}
+                      {/* Row 4: Dynamic Island "Peek-on-Track-Change" */}
                       <div className="card-hairline-row flex-between">
                         <div className="row-with-icon">
                           <div className="inner-icon-badge">

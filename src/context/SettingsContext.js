@@ -13,8 +13,11 @@ export const DEFAULT_SETTINGS = {
     sidebarWidth: 340,
     islandWidth: 1180,
     islandSize: 320,
-    triggerDistance: 1,
+    triggerDistance: 4,
     triggerSpan: 'full',
+    triggerWidthPct: 60,
+    triggerOffsetPct: 50,
+    triggerDelayMs: 0,
     targetDisplay: 'all',
   },
   layout: {

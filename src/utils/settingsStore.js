@@ -24,8 +24,11 @@ const DEFAULT_SETTINGS = {
     sidebarWidth: 340,         // Left/Right sidebar width in px
     islandWidth: 1180,         // Legacy width in floating island mode
     islandSize: 320,           // Square Island dimension in px
-    triggerDistance: 1,        // Distance in px to trigger dock reveal (1 = only when reaching the edge)
-    triggerSpan: 'full',       // 'full' | 'center' | 'compact'
+    triggerDistance: 4,        // Distance in px to trigger dock reveal (1 = absolute edge only, 4 = standard, 15 = relaxed)
+    triggerSpan: 'full',       // 'full' | 'center' | 'compact' | 'dock' | 'left' | 'right' | 'custom'
+    triggerWidthPct: 60,       // Width in % of edge when using custom span (10% - 100%)
+    triggerOffsetPct: 50,      // Offset/alignment in % (0% = Left, 50% = Center, 100% = Right)
+    triggerDelayMs: 0,         // Dwell delay in ms required before reveal (0ms = instant, 150ms = brush shield)
     targetDisplay: 'all',      // 'all' | 'primary' | 'cursor' | displayId
   },
   layout: {

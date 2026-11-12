@@ -707,6 +707,7 @@ function createWindow() {
     let mouseY = 0;
     let mouseX = 0;
     let lastCursorDisplayId = null;
+    let triggerZoneEnterTime = 0;
     setInterval(() => {
       try {
         const settings = settingsStore.loadSettings();
@@ -738,8 +739,11 @@ function createWindow() {
 
         const mode = settings.position?.mode || 'top';
         const rawTriggerDist = settings.position?.triggerDistance;
-        const triggerDist = Math.max(10, typeof rawTriggerDist === 'number' ? Math.max(rawTriggerDist, 10) : 12);
+        const triggerDist = typeof rawTriggerDist === 'number' && rawTriggerDist >= 1 ? Math.min(60, Math.round(rawTriggerDist)) : 4;
         const triggerSpan = settings.position?.triggerSpan || 'full';
+        const triggerWidthPct = typeof settings.position?.triggerWidthPct === 'number' ? settings.position.triggerWidthPct : 60;
+        const triggerOffsetPct = typeof settings.position?.triggerOffsetPct === 'number' ? settings.position.triggerOffsetPct : 50;
+        const triggerDelayMs = typeof settings.position?.triggerDelayMs === 'number' ? settings.position.triggerDelayMs : 0;
 
         let isInsideAnyDock = false;
         let isAnyTriggerZone = false;
@@ -759,18 +763,32 @@ function createWindow() {
               mouseY <= curBounds.y + curBounds.height;
 
             let inSpan = true;
-            if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.08;
-              const maxY = curBounds.y + curBounds.height * 0.92;
-              inSpan = mouseY >= minY && mouseY <= maxY;
-            } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.18;
-              const maxY = curBounds.y + curBounds.height * 0.82;
-              inSpan = mouseY >= minY && mouseY <= maxY;
+            if (triggerSpan === 'compact') {
+              const spanH = curBounds.height * 0.35;
+              const minY = curBounds.y + (curBounds.height - spanH) / 2;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else if (triggerSpan === 'center') {
+              const spanH = curBounds.height * 0.60;
+              const minY = curBounds.y + (curBounds.height - spanH) / 2;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else if (triggerSpan === 'left') {
+              const spanH = curBounds.height * 0.35;
+              inSpan = mouseY >= curBounds.y && mouseY <= (curBounds.y + spanH);
+            } else if (triggerSpan === 'right') {
+              const spanH = curBounds.height * 0.35;
+              inSpan = mouseY >= (curBounds.y + curBounds.height - spanH) && mouseY <= (curBounds.y + curBounds.height);
+            } else if (triggerSpan === 'custom') {
+              const heightFrac = Math.max(10, Math.min(100, triggerWidthPct)) / 100;
+              const offsetFrac = Math.max(0, Math.min(100, triggerOffsetPct)) / 100;
+              const spanH = curBounds.height * heightFrac;
+              const minY = curBounds.y + (curBounds.height - spanH) * offsetFrac;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else {
+              inSpan = true; // 'full'
             }
 
             triggerThis =
-              mouseX >= (curBounds.x - 6) &&
+              mouseX >= (curBounds.x - 4) &&
               mouseX <= curBounds.x + triggerDist &&
               inSpan;
           } else if (mode === 'right') {
@@ -782,19 +800,33 @@ function createWindow() {
               mouseY <= curBounds.y + curBounds.height;
 
             let inSpan = true;
-            if (triggerSpan === 'center') {
-              const minY = curBounds.y + curBounds.height * 0.08;
-              const maxY = curBounds.y + curBounds.height * 0.92;
-              inSpan = mouseY >= minY && mouseY <= maxY;
-            } else if (triggerSpan === 'compact') {
-              const minY = curBounds.y + curBounds.height * 0.18;
-              const maxY = curBounds.y + curBounds.height * 0.82;
-              inSpan = mouseY >= minY && mouseY <= maxY;
+            if (triggerSpan === 'compact') {
+              const spanH = curBounds.height * 0.35;
+              const minY = curBounds.y + (curBounds.height - spanH) / 2;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else if (triggerSpan === 'center') {
+              const spanH = curBounds.height * 0.60;
+              const minY = curBounds.y + (curBounds.height - spanH) / 2;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else if (triggerSpan === 'left') {
+              const spanH = curBounds.height * 0.35;
+              inSpan = mouseY >= curBounds.y && mouseY <= (curBounds.y + spanH);
+            } else if (triggerSpan === 'right') {
+              const spanH = curBounds.height * 0.35;
+              inSpan = mouseY >= (curBounds.y + curBounds.height - spanH) && mouseY <= (curBounds.y + curBounds.height);
+            } else if (triggerSpan === 'custom') {
+              const heightFrac = Math.max(10, Math.min(100, triggerWidthPct)) / 100;
+              const offsetFrac = Math.max(0, Math.min(100, triggerOffsetPct)) / 100;
+              const spanH = curBounds.height * heightFrac;
+              const minY = curBounds.y + (curBounds.height - spanH) * offsetFrac;
+              inSpan = mouseY >= minY && mouseY <= (minY + spanH);
+            } else {
+              inSpan = true; // 'full'
             }
 
             triggerThis =
               mouseX >= curBounds.x + curBounds.width - triggerDist &&
-              mouseX <= (curBounds.x + curBounds.width + 6) &&
+              mouseX <= (curBounds.x + curBounds.width + 4) &&
               inSpan;
           } else {
             // top mode: strictly check mouseY >= curBounds.y to prevent multi-monitor vertical bleed
@@ -806,26 +838,34 @@ function createWindow() {
               mouseY <= b.y + b.height;
 
             let inSpan = true;
-            if (settings.position?.style === 'island') {
-              if (triggerSpan === 'compact') {
-                inSpan = mouseX >= (b.x - 80) && mouseX <= (b.x + b.width + 80);
-              } else if (triggerSpan === 'center') {
-                inSpan = mouseX >= (b.x - 140) && mouseX <= (b.x + b.width + 140);
-              }
+            if (triggerSpan === 'dock') {
+              inSpan = mouseX >= (b.x - 20) && mouseX <= (b.x + b.width + 20);
+            } else if (triggerSpan === 'compact') {
+              const spanW = curBounds.width * 0.35;
+              const minX = curBounds.x + (curBounds.width - spanW) / 2;
+              inSpan = mouseX >= minX && mouseX <= (minX + spanW);
+            } else if (triggerSpan === 'center') {
+              const spanW = curBounds.width * 0.60;
+              const minX = curBounds.x + (curBounds.width - spanW) / 2;
+              inSpan = mouseX >= minX && mouseX <= (minX + spanW);
+            } else if (triggerSpan === 'left') {
+              const spanW = curBounds.width * 0.35;
+              inSpan = mouseX >= curBounds.x && mouseX <= (curBounds.x + spanW);
+            } else if (triggerSpan === 'right') {
+              const spanW = curBounds.width * 0.35;
+              inSpan = mouseX >= (curBounds.x + curBounds.width - spanW) && mouseX <= (curBounds.x + curBounds.width);
+            } else if (triggerSpan === 'custom') {
+              const widthFrac = Math.max(10, Math.min(100, triggerWidthPct)) / 100;
+              const offsetFrac = Math.max(0, Math.min(100, triggerOffsetPct)) / 100;
+              const spanW = curBounds.width * widthFrac;
+              const minX = curBounds.x + (curBounds.width - spanW) * offsetFrac;
+              inSpan = mouseX >= minX && mouseX <= (minX + spanW);
             } else {
-              if (triggerSpan === 'center') {
-                const minX = curBounds.x + curBounds.width * 0.08;
-                const maxX = curBounds.x + curBounds.width * 0.92;
-                inSpan = mouseX >= minX && mouseX <= maxX;
-              } else if (triggerSpan === 'compact') {
-                const minX = curBounds.x + curBounds.width * 0.18;
-                const maxX = curBounds.x + curBounds.width * 0.82;
-                inSpan = mouseX >= minX && mouseX <= maxX;
-              }
+              inSpan = true; // 'full'
             }
 
             triggerThis =
-              mouseY >= (curBounds.y - 6) &&
+              mouseY >= (curBounds.y - 4) &&
               mouseY <= curBounds.y + triggerDist &&
               inSpan;
           }
@@ -836,21 +876,30 @@ function createWindow() {
 
         if (typeof mouseX === 'number' && typeof mouseY === 'number' && !isNaN(mouseX) && !isNaN(mouseY)) {
           if (isAnyTriggerZone) {
-            initialLaunchPending = false;
-            showGraceUntil = 0;
-            cancelHide();
-            if (!isVisible) {
-              showDock();
+            if (triggerZoneEnterTime === 0) {
+              triggerZoneEnterTime = Date.now();
             }
-          } else if (isInsideAnyDock) {
-            initialLaunchPending = false;
-            showGraceUntil = 0;
-            cancelHide();
+            const dwellPassed = (Date.now() - triggerZoneEnterTime) >= triggerDelayMs;
+            if (dwellPassed) {
+              initialLaunchPending = false;
+              showGraceUntil = 0;
+              cancelHide();
+              if (!isVisible) {
+                showDock();
+              }
+            }
           } else {
-            if (initialLaunchPending) return;
-            if (Date.now() < showGraceUntil) return;
-            if (isVisible) {
-              performHide();
+            triggerZoneEnterTime = 0;
+            if (isInsideAnyDock) {
+              initialLaunchPending = false;
+              showGraceUntil = 0;
+              cancelHide();
+            } else {
+              if (initialLaunchPending) return;
+              if (Date.now() < showGraceUntil) return;
+              if (isVisible) {
+                performHide();
+              }
             }
           }
         }
