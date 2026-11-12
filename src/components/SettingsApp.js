@@ -1896,25 +1896,19 @@ export default function SettingsApp() {
                 <div className="bento-two-columns" style={{ marginTop: '16px' }}>
                   {/* Font Family Dropdown + Upload Action */}
                   <div className="bento-control-pad compact" style={{ gridColumn: 'span 2' }}>
-                    <div className="bento-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="bento-header-row">
                       <span className="bento-label">Karaoke Font Family</span>
-                      <button
-                        type="button"
-                        className="font-upload-action-btn"
-                        onClick={() => fontFileInputRef.current?.click()}
-                        title="Upload custom font (.ttf, .otf, .woff, .woff2)"
-                      >
-                        <Upload size={12} />
-                        <span>Upload Font</span>
-                      </button>
+                      {theming.customFont?.name && (
+                        <span className="tabular-num-pill" style={{ color: '#10b981' }}>★ Custom Font Active</span>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
                       <select
-                        className="studio-select-dropdown full-width"
+                        className="studio-select-dropdown"
                         value={theming.lyricsFontFamily || 'system-ui'}
                         onChange={(e) => updateThemingWithHistory({ lyricsFontFamily: e.target.value })}
-                        style={{ flex: 1 }}
+                        style={{ flex: 1, minWidth: 0 }}
                       >
                         {theming.customFont?.name && (
                           <option value={`'${theming.customFont.name}', sans-serif`}>
@@ -1932,13 +1926,23 @@ export default function SettingsApp() {
                         <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
                       </select>
 
+                      <button
+                        type="button"
+                        className="font-upload-action-btn"
+                        onClick={() => fontFileInputRef.current?.click()}
+                        title="Upload custom font (.ttf, .otf, .woff, .woff2)"
+                      >
+                        <Upload size={13} />
+                        <span>Upload Font</span>
+                      </button>
+
                       {theming.customFont?.name && (
                         <button
                           type="button"
                           className="card-action-btn ghost icon-only"
                           onClick={handleRemoveCustomFont}
                           title={`Remove custom font "${theming.customFont.name}"`}
-                          style={{ color: '#ef4444', height: '36px', width: '36px' }}
+                          style={{ color: '#ef4444', height: '36px', width: '36px', flexShrink: 0, borderRadius: '8px' }}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -1972,7 +1976,7 @@ export default function SettingsApp() {
                       <span className="bento-label">Font Weight</span>
                       <span className="tabular-num-pill">{theming.lyricsFontWeight ?? 700}</span>
                     </div>
-                    <div className="segmented-pill-tray mini" style={{ margin: '4px 0 0' }}>
+                    <div className="segmented-pill-tray three-cols mini" style={{ margin: '4px 0 0' }}>
                       {[300, 400, 500, 600, 700, 900].map((wt) => (
                         <button
                           key={wt}
