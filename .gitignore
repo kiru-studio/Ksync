@@ -97,3 +97,7 @@ jspm_packages/
 # .NET Build outputs
 smtc-bridge/bin/
 smtc-bridge/obj/
+
+# Scratch & local testing
+scratch/
+
