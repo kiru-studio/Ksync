@@ -2342,6 +2342,27 @@ export default function SettingsApp() {
                         </div>
                       </div>
 
+                      {/* Album Art Size */}
+                      <div className="bento-control-pad compact" style={{ marginBottom: '14px' }}>
+                        <div className="bento-header-row">
+                          <span className="bento-label">Album Art Size</span>
+                          <span className="tabular-num-pill">{theming.artSize ?? 110}px</span>
+                        </div>
+                        <div className="thick-slider-wrapper">
+                          <input
+                            type="range"
+                            min="60"
+                            max="200"
+                            step="2"
+                            value={theming.artSize ?? 110}
+                            onChange={(e) =>
+                              updateThemingWithHistory({ artSize: parseInt(e.target.value, 10) })
+                            }
+                            className="thick-slider-input"
+                          />
+                        </div>
+                      </div>
+
                       {/* Artwork Corner Radius */}
                       <div className="bento-control-pad compact">
                         <div className="bento-header-row">

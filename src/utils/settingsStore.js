@@ -120,6 +120,7 @@ const DEFAULT_SETTINGS = {
     lyricsWordHighlight: false,
 
     // Section 6: Player Components
+    artSize: 110,
     artCornerRadius: 10,
     artShadowIntensity: 60,
     artHoverZoom: true,

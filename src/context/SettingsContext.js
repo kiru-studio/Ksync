@@ -109,6 +109,7 @@ export const DEFAULT_SETTINGS = {
     lyricsWordHighlight: false,
 
     // Section 6: Player Components
+    artSize: 110,
     artCornerRadius: 10,
     artShadowIntensity: 60,
     artHoverZoom: true,
@@ -486,6 +487,7 @@ export function SettingsProvider({ children }) {
     }
 
     // 5. Component Overrides & Motion
+    root.style.setProperty('--art-size', `${theming.artSize ?? 110}px`);
     root.style.setProperty('--art-corner-radius', `${theming.artCornerRadius ?? 10}px`);
     root.style.setProperty('--art-hover-scale', theming.artHoverZoom !== false ? '1.05' : '1.0');
     root.style.setProperty('--progress-height', `${theming.progressThickness ?? 4}px`);

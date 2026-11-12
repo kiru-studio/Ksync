@@ -333,17 +333,18 @@ button:focus:not(:focus-visible),
 /* Album Art with Ambient Tint & Glow (Items 2 & 16) */
 .art-wrapper {
   position: relative;
-  width: clamp(76px, 7.5vw, 118px);
-  height: clamp(76px, 7.5vw, 118px);
-  min-width: clamp(76px, 7.5vw, 118px);
-  max-height: calc(100% - 16px);
+  width: min(var(--art-size, 110px), calc(100% - 12px));
+  height: min(var(--art-size, 110px), calc(100% - 12px));
+  min-width: min(var(--art-size, 110px), calc(100% - 12px));
+  max-height: calc(100% - 12px);
+  aspect-ratio: 1 / 1;
   border-radius: var(--art-corner-radius, 10px);
   overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.60), 0 0 24px var(--accent-soft);
   flex-shrink: 0;
   cursor: pointer;
-  transition: border-radius 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, transform 0.25s ease;
+  transition: border-radius 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, transform 0.25s ease, width 0.15s ease, height 0.15s ease;
   user-select: none;
 }
 
@@ -1990,9 +1991,9 @@ button:focus:not(:focus-visible),
   }
 
   .art-wrapper {
-    width: clamp(74px, 7vw, 98px);
-    height: clamp(74px, 7vw, 98px);
-    min-width: clamp(74px, 7vw, 98px);
+    width: min(var(--art-size, 110px), calc(100% - 12px));
+    height: min(var(--art-size, 110px), calc(100% - 12px));
+    min-width: min(var(--art-size, 110px), calc(100% - 12px));
   }
 }
 
@@ -2023,9 +2024,9 @@ button:focus:not(:focus-visible),
   }
 
   .art-wrapper {
-    width: 72px;
-    height: 72px;
-    min-width: 72px;
+    width: min(var(--art-size, 110px), calc(100% - 12px));
+    height: min(var(--art-size, 110px), calc(100% - 12px));
+    min-width: min(var(--art-size, 110px), calc(100% - 12px));
   }
 
   .now-playing-compact {
@@ -2035,10 +2036,10 @@ button:focus:not(:focus-visible),
 
 @media (max-height: 205px) {
   .art-wrapper {
-    max-height: calc(100% - 14px);
-    width: clamp(68px, 6.8vw, 94px);
-    height: clamp(68px, 6.8vw, 94px);
-    min-width: clamp(68px, 6.8vw, 94px);
+    max-height: calc(100% - 12px);
+    width: min(var(--art-size, 110px), calc(100% - 12px));
+    height: min(var(--art-size, 110px), calc(100% - 12px));
+    min-width: min(var(--art-size, 110px), calc(100% - 12px));
   }
 
   .panel-left,
@@ -2065,9 +2066,9 @@ button:focus:not(:focus-visible),
 @media (max-height: 175px) {
   .art-wrapper {
     max-height: calc(100% - 10px);
-    width: 62px;
-    height: 62px;
-    min-width: 62px;
+    width: min(var(--art-size, 110px), calc(100% - 10px));
+    height: min(var(--art-size, 110px), calc(100% - 10px));
+    min-width: min(var(--art-size, 110px), calc(100% - 10px));
   }
 
   .track-text .track-title {

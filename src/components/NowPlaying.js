@@ -13,6 +13,7 @@ import {
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
 import CircularAudioVisualizer from './CircularAudioVisualizer';
+import { useSettings } from '../context/SettingsContext';
 
 const FALLBACK_ARTWORK = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&auto=format&fit=crop&q=80';
 
@@ -43,6 +44,14 @@ const NowPlaying = ({
   onRepeat,
   onDeviceChange,
 }) => {
+  let theming = {};
+  try {
+    const settingsCtx = useSettings();
+    if (settingsCtx?.settings?.theming) {
+      theming = settingsCtx.settings.theming;
+    }
+  } catch (_) {}
+
   const [showDevices, setShowDevices] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
@@ -324,8 +333,8 @@ const NowPlaying = ({
             isPlaying={isPlaying}
             progress={progress}
             bpm={trackBpm}
-            discRadius={48}
-            size={180}
+            discRadius={Math.round((theming.artSize ?? 110) / 2)}
+            size={Math.max(180, Math.round((theming.artSize ?? 110) * 1.6))}
           />
         )}
         {/* Propagating Harmonic Wave Ripples */}
