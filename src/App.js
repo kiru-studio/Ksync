@@ -57,7 +57,13 @@ function App() {
     return !!settings?.audio?.lastSystemMuted;
   });
 
+  const lastUserSystemVolumeTimeRef = useRef(0);
+  const lastUserSpotifyVolumeTimeRef = useRef(0);
+
   const updateSystemVolumeState = useCallback((vol, isMuted) => {
+    if (Date.now() - lastUserSystemVolumeTimeRef.current < 2500) {
+      return;
+    }
     if (typeof vol === 'number') {
       setSystemVolume(vol);
       try { localStorage.setItem('ksync_last_system_volume', String(vol)); } catch (_) {}
@@ -69,6 +75,9 @@ function App() {
   }, []);
 
   const updateSpotifyVolumeState = useCallback((vol) => {
+    if (Date.now() - lastUserSpotifyVolumeTimeRef.current < 2500) {
+      return;
+    }
     if (typeof vol === 'number') {
       setVolume(vol);
       try { localStorage.setItem('ksync_last_volume', String(vol)); } catch (_) {}
@@ -758,7 +767,11 @@ function App() {
   };
 
   const handleVolumeChange = async (newVolume) => {
-    updateSpotifyVolumeState(newVolume);
+    lastUserSpotifyVolumeTimeRef.current = Date.now();
+    if (typeof newVolume === 'number') {
+      setVolume(newVolume);
+      try { localStorage.setItem('ksync_last_volume', String(newVolume)); } catch (_) {}
+    }
     try {
       await SpotifyService.setVolume(newVolume);
     } catch (error) {
@@ -767,7 +780,11 @@ function App() {
   };
 
   const handleSystemVolumeChange = async (newVolume) => {
-    updateSystemVolumeState(newVolume);
+    lastUserSystemVolumeTimeRef.current = Date.now();
+    if (typeof newVolume === 'number') {
+      setSystemVolume(newVolume);
+      try { localStorage.setItem('ksync_last_system_volume', String(newVolume)); } catch (_) {}
+    }
     if (window.electronAPI && window.electronAPI.setSystemVolume) {
       try {
         await window.electronAPI.setSystemVolume(newVolume);

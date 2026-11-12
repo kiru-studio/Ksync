@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -9,6 +9,9 @@ import {
   Repeat1,
   Monitor,
   Heart,
+  Volume1,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import MarqueeText from './MarqueeText';
 import SpotifyService from '../services/SpotifyService';
@@ -51,6 +54,160 @@ const NowPlaying = ({
       theming = settingsCtx.settings.theming;
     }
   } catch (_) {}
+
+  // 1. Spotify In-App Volume Control State & Handlers
+  const [localVolume, setLocalVolume] = useState(() => {
+    if (typeof volume === 'number' && volume >= 0) return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevVolume, setPrevVolume] = useState(() => {
+    if (typeof volume === 'number' && volume > 0) return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved)) && Number(saved) > 0) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [isSpotifyHovered, setIsSpotifyHovered] = useState(false);
+  const [isSpotifyDragging, setIsSpotifyDragging] = useState(false);
+  const isSpotifyHoveredRef = useRef(false);
+  const isSpotifyDraggingRef = useRef(false);
+  const lastSpotifyInteractionRef = useRef(0);
+  const spotifyTrackRef = useRef(null);
+  const throttleTimerRef = useRef(null);
+  const pendingVolRef = useRef(null);
+
+  // Sync external volume prop only when not actively interacting
+  useEffect(() => {
+    if (!isSpotifyDraggingRef.current && Date.now() - lastSpotifyInteractionRef.current >= 2000 && typeof volume === 'number') {
+      setLocalVolume(volume);
+    }
+  }, [volume]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
+    };
+  }, []);
+
+  const dispatchVolume = useCallback((newVol, immediate = false) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
+    lastSpotifyInteractionRef.current = Date.now();
+    pendingVolRef.current = clamped;
+
+    // Immediate optimistic local UI update (0ms visual latency)
+    setLocalVolume(clamped);
+    try {
+      localStorage.setItem('ksync_last_volume', String(clamped));
+    } catch (_) {}
+
+    if (immediate) {
+      if (throttleTimerRef.current) {
+        clearTimeout(throttleTimerRef.current);
+        throttleTimerRef.current = null;
+      }
+      if (onVolumeChange) onVolumeChange(clamped);
+      return;
+    }
+
+    if (!throttleTimerRef.current) {
+      throttleTimerRef.current = setTimeout(() => {
+        throttleTimerRef.current = null;
+        if (onVolumeChange && pendingVolRef.current !== null) {
+          onVolumeChange(pendingVolRef.current);
+        }
+      }, 40);
+    }
+  }, [onVolumeChange]);
+
+  const handleSpotifyPointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsSpotifyDragging(true);
+    isSpotifyDraggingRef.current = true;
+    lastSpotifyInteractionRef.current = Date.now();
+
+    const calcVol = (clientX) => {
+      if (!spotifyTrackRef.current) return localVolume;
+      const rect = spotifyTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      return Math.round((clickX / rect.width) * 100);
+    };
+
+    const newVol = calcVol(e.clientX);
+    dispatchVolume(newVol, true);
+
+    const onPointerMove = (me) => {
+      dispatchVolume(calcVol(me.clientX), false);
+    };
+
+    const onPointerUp = (ue) => {
+      setIsSpotifyDragging(false);
+      isSpotifyDraggingRef.current = false;
+      lastSpotifyInteractionRef.current = Date.now();
+      dispatchVolume(calcVol(ue.clientX), true);
+      if (!isSpotifyHoveredRef.current) {
+        if (document.activeElement && spotifyTrackRef.current?.contains(document.activeElement)) {
+          document.activeElement.blur();
+        }
+      }
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleSpotifyEnter = () => {
+    isSpotifyHoveredRef.current = true;
+    setIsSpotifyHovered(true);
+  };
+
+  const handleSpotifyLeave = (e) => {
+    isSpotifyHoveredRef.current = false;
+    setIsSpotifyHovered(false);
+    if (!isSpotifyDraggingRef.current) {
+      if (e?.currentTarget?.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    }
+  };
+
+  const handleWheelVolume = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY < 0 ? 4 : -4;
+    dispatchVolume((localVolume || 50) + delta, true);
+  };
+
+  const handleVolumeKeyDown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      dispatchVolume(Math.min(100, (localVolume || 50) + 5), true);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      dispatchVolume(Math.max(0, (localVolume || 50) - 5), true);
+    }
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    if (localVolume > 0) {
+      setPrevVolume(localVolume);
+      dispatchVolume(0, true);
+    } else {
+      dispatchVolume(prevVolume > 0 ? prevVolume : 50, true);
+    }
+  };
+
+  const showSpotifyVolume = isSpotifyHovered || isSpotifyDragging;
+  const isMutedOrZero = localVolume === 0;
 
   const [showDevices, setShowDevices] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -439,6 +596,57 @@ const NowPlaying = ({
                 )}
               </div>
             )}
+
+            {/* Spotify In-App Volume Control */}
+            <div
+              className="volume-compact-wrap relative flex items-center"
+              onMouseEnter={handleSpotifyEnter}
+              onMouseLeave={handleSpotifyLeave}
+            >
+              <button
+                type="button"
+                className={`icon-mini-btn ${isMutedOrZero ? 'muted text-white/40' : ''}`}
+                onClick={toggleMute}
+                onWheel={handleWheelVolume}
+                title={isMutedOrZero ? "Unmute Spotify" : `Spotify Volume: ${localVolume}% (Scroll to adjust, click to mute)`}
+                aria-label={isMutedOrZero ? "Unmute Spotify" : "Mute Spotify"}
+              >
+                {isMutedOrZero ? (
+                  <VolumeX size={16} />
+                ) : localVolume < 50 ? (
+                  <Volume1 size={16} color="var(--accent,#1db954)" />
+                ) : (
+                  <Volume2 size={16} color="var(--accent,#1db954)" />
+                )}
+              </button>
+
+              <div
+                ref={spotifyTrackRef}
+                className={`volume-slider-bar ${showSpotifyVolume ? 'expanded' : ''}`}
+                onPointerDown={handleSpotifyPointerDown}
+                onWheel={handleWheelVolume}
+                onKeyDown={handleVolumeKeyDown}
+                tabIndex={0}
+                role="slider"
+                aria-label="Spotify volume slider"
+                aria-valuenow={localVolume}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div className="vol-track">
+                  <div className="vol-fill bg-[var(--accent,#1db954)]" style={{ width: `${localVolume}%` }} />
+                  <div className="vol-thumb" style={{ left: `${localVolume}%` }} />
+                </div>
+                {showSpotifyVolume && (
+                  <div 
+                    className="volume-hover-tooltip absolute -top-6 -translate-x-1/2 bg-[rgba(10,12,18,0.95)] text-white font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/20 pointer-events-none z-30 shadow-lg whitespace-nowrap"
+                    style={{ left: `${localVolume}%` }}
+                  >
+                    {localVolume}%
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

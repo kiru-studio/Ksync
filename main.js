@@ -102,7 +102,9 @@ function normalizePlayerState(body) {
     progress: (body.progress_ms || 0) / 1000,
     progressMs: body.progress_ms || 0,
     isPlaying: !!body.is_playing,
-    volume: body.device?.volume_percent ?? 50,
+    volume: (cachedSpotifyVolume !== null && (Date.now() - lastSetSpotifyVolumeTime < 2500))
+      ? cachedSpotifyVolume
+      : (body.device?.volume_percent ?? 50),
     contextUri: body.context?.uri,
     serverTimestamp: Date.now(),
     shuffleState: !!body.shuffle_state,
@@ -353,7 +355,8 @@ let cachedSpotifyVolume = typeof initialSettings.audio?.lastSpotifyVolume === 'n
   : null;
 let hasReceivedRealSystemVolume = false;
 let pendingSystemVolumeResolvers = [];
-let lastSetVolumeTime = 0;
+let lastSetSpotifyVolumeTime = 0;
+let lastSetSystemVolumeTime = 0;
 
 function startSmtcSidecar() {
   if (config.playbackBackend !== 'smtc') return;
@@ -389,7 +392,7 @@ function startSmtcSidecar() {
       try {
         const state = JSON.parse(line);
         if (state.type === 'systemVolume') {
-          if (Date.now() - lastSetVolumeTime < 800) {
+          if (Date.now() - lastSetSystemVolumeTime < 2500) {
             // Suppress echo bounce during active user adjustments
             return;
           }
@@ -414,7 +417,7 @@ function startSmtcSidecar() {
             });
           } catch (_) {}
         } else if (state.type === 'spotifyVolume' && typeof state.volume === 'number' && state.volume >= 0) {
-          if (Date.now() - lastSetVolumeTime < 800) {
+          if (Date.now() - lastSetSpotifyVolumeTime < 2500) {
             // Suppress echo bounce during active user adjustments
             return;
           }
@@ -1398,7 +1401,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('spotify-set-volume', async (_, volume) => {
     const clamped = Math.max(0, Math.min(100, Math.round(volume)));
     cachedSpotifyVolume = clamped;
-    lastSetVolumeTime = Date.now();
+    lastSetSpotifyVolumeTime = Date.now();
 
     // 1. Instantly control local Spotify desktop audio session via native Windows WASAPI (0ms hardware latency)
     if (smtcProcess && smtcProcess.stdin) {
@@ -1417,7 +1420,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
         } catch (err) {
           console.warn('[main] Spotify Web API setVolume warning:', err.message);
         }
-      }, 250);
+      }, 200);
     }
 
     return { ok: true, volume: clamped };
@@ -1571,7 +1574,7 @@ async function resolveContextTitle(tokenStore, spotifyConfig, contextUri) {
   ipcMain.handle('set-system-volume', async (_, volume) => {
     const clamped = Math.max(0, Math.min(100, Math.round(volume)));
     cachedSystemVolume = clamped;
-    lastSetVolumeTime = Date.now();
+    lastSetSystemVolumeTime = Date.now();
     if (smtcProcess && smtcProcess.stdin) {
       sendSmtcCommand({ cmd: 'setSystemVolume', volume: clamped });
     }

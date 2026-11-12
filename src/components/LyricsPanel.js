@@ -170,8 +170,10 @@ const LyricsPanel = ({
     isDraggingRef.current = false;
     setIsDragging(false);
     if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current);
-    isInteractingRef.current = false;
-    setIsInteracting(false);
+    interactionTimerRef.current = setTimeout(() => {
+      isInteractingRef.current = false;
+      setIsInteracting(false);
+    }, 1500);
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }

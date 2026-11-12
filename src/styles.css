@@ -723,6 +723,8 @@ button:focus:not(:focus-visible),
   cursor: pointer;
   margin-left: 0;
   pointer-events: none;
+  height: 24px;
+  position: relative;
 }
 
 .volume-slider-bar.expanded,
@@ -732,6 +734,7 @@ button:focus:not(:focus-visible),
   opacity: 1;
   margin-left: 6px;
   pointer-events: auto;
+  overflow: visible;
 }
 
 .vol-track {

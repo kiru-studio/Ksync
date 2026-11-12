@@ -130,6 +130,127 @@ export default function SidebarDock({
   const globalRafId = useRef(null);
   const latestSysVolRef = useRef(systemVolume ?? 50);
 
+  // Spotify In-App Volume state & handlers
+  const [localSpotifyVolume, setLocalSpotifyVolume] = useState(() => {
+    if (typeof volume === 'number' && volume >= 0) return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved))) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [prevSpotifyVolume, setPrevSpotifyVolume] = useState(() => {
+    if (typeof volume === 'number' && volume > 0) return volume;
+    try {
+      const saved = localStorage.getItem('ksync_last_volume');
+      if (saved !== null && !isNaN(Number(saved)) && Number(saved) > 0) return Number(saved);
+    } catch (_) {}
+    return 50;
+  });
+  const [isSpotifyHovered, setIsSpotifyHovered] = useState(false);
+  const [isSpotifyDragging, setIsSpotifyDragging] = useState(false);
+  const isSpotifyHoveredRef = useRef(false);
+  const isSpotifyDraggingRef = useRef(false);
+  const lastSpotifyInteractionRef = useRef(0);
+  const spotifyTrackRef = useRef(null);
+  const spotifyThrottleTimerRef = useRef(null);
+  const pendingSpotifyVolRef = useRef(null);
+
+  // Sync external volume prop only when not actively interacting
+  useEffect(() => {
+    if (!isSpotifyDraggingRef.current && Date.now() - lastSpotifyInteractionRef.current >= 2000 && typeof volume === 'number') {
+      setLocalSpotifyVolume(volume);
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    return () => {
+      if (spotifyThrottleTimerRef.current) clearTimeout(spotifyThrottleTimerRef.current);
+    };
+  }, []);
+
+  const dispatchSpotifyVolume = useCallback((newVol, immediate = false) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(newVol)));
+    lastSpotifyInteractionRef.current = Date.now();
+    pendingSpotifyVolRef.current = clamped;
+    setLocalSpotifyVolume(clamped);
+    try {
+      localStorage.setItem('ksync_last_volume', String(clamped));
+    } catch (_) {}
+
+    if (immediate) {
+      if (spotifyThrottleTimerRef.current) {
+        clearTimeout(spotifyThrottleTimerRef.current);
+        spotifyThrottleTimerRef.current = null;
+      }
+      if (onVolumeChange) onVolumeChange(clamped);
+      return;
+    }
+
+    if (!spotifyThrottleTimerRef.current) {
+      spotifyThrottleTimerRef.current = setTimeout(() => {
+        spotifyThrottleTimerRef.current = null;
+        if (onVolumeChange && pendingSpotifyVolRef.current !== null) {
+          onVolumeChange(pendingSpotifyVolRef.current);
+        }
+      }, 40);
+    }
+  }, [onVolumeChange]);
+
+  const handleSpotifyPointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsSpotifyDragging(true);
+    isSpotifyDraggingRef.current = true;
+    lastSpotifyInteractionRef.current = Date.now();
+
+    const calcVol = (clientX) => {
+      if (!spotifyTrackRef.current) return localSpotifyVolume;
+      const rect = spotifyTrackRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      return Math.round((clickX / rect.width) * 100);
+    };
+
+    const newVol = calcVol(e.clientX);
+    dispatchSpotifyVolume(newVol, true);
+
+    const onPointerMove = (me) => {
+      dispatchSpotifyVolume(calcVol(me.clientX), false);
+    };
+
+    const onPointerUp = (ue) => {
+      setIsSpotifyDragging(false);
+      isSpotifyDraggingRef.current = false;
+      lastSpotifyInteractionRef.current = Date.now();
+      dispatchSpotifyVolume(calcVol(ue.clientX), true);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleWheelSpotifyVolume = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY < 0 ? 4 : -4;
+    dispatchSpotifyVolume((localSpotifyVolume || 50) + delta, true);
+  };
+
+  const toggleSpotifyMute = (e) => {
+    e.stopPropagation();
+    if (localSpotifyVolume > 0) {
+      setPrevSpotifyVolume(localSpotifyVolume);
+      dispatchSpotifyVolume(0, true);
+    } else {
+      dispatchSpotifyVolume(prevSpotifyVolume > 0 ? prevSpotifyVolume : 50, true);
+    }
+  };
+
+  const showSidebarSpotifyVol = isSpotifyHovered || isSpotifyDragging;
+  const isSpotifyMutedOrZero = localSpotifyVolume === 0;
+
   // Circle rotating artwork state (toggle via click, sync with localStorage and top dock)
   const [isCircleArt, setIsCircleArt] = useState(() => {
     try {
@@ -924,6 +1045,54 @@ export default function SidebarDock({
                 )}
               </div>
             )}
+
+            {/* Spotify In-App Volume Control */}
+            <div
+              className="sidebar-volume-wrap relative flex items-center"
+              onMouseEnter={() => {
+                isSpotifyHoveredRef.current = true;
+                setIsSpotifyHovered(true);
+              }}
+              onMouseLeave={() => {
+                isSpotifyHoveredRef.current = false;
+                setIsSpotifyHovered(false);
+              }}
+            >
+              <button
+                type="button"
+                className={`sidebar-action-btn ${isSpotifyMutedOrZero ? 'muted text-white/40' : ''}`}
+                onClick={toggleSpotifyMute}
+                onWheel={handleWheelSpotifyVolume}
+                title={isSpotifyMutedOrZero ? 'Unmute Spotify' : `Spotify Volume: ${localSpotifyVolume}% (Scroll to adjust, click to mute)`}
+                aria-label={isSpotifyMutedOrZero ? 'Unmute Spotify' : 'Mute Spotify'}
+              >
+                {isSpotifyMutedOrZero ? (
+                  <VolumeX size={18} />
+                ) : localSpotifyVolume < 50 ? (
+                  <Volume1 size={18} color="var(--accent, #1db954)" />
+                ) : (
+                  <Volume2 size={18} color="var(--accent, #1db954)" />
+                )}
+              </button>
+
+              <div
+                ref={spotifyTrackRef}
+                className={`sidebar-volume-slider ${showSidebarSpotifyVol ? 'expanded' : ''}`}
+                onPointerDown={handleSpotifyPointerDown}
+                onWheel={handleWheelSpotifyVolume}
+                tabIndex={0}
+                role="slider"
+                aria-label="Spotify volume slider"
+                aria-valuenow={localSpotifyVolume}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div className="sidebar-vol-track">
+                  <div className="sidebar-vol-fill" style={{ width: `${localSpotifyVolume}%` }} />
+                  <div className="sidebar-vol-thumb" style={{ left: `${localSpotifyVolume}%` }} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
