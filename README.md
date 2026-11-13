@@ -22,8 +22,8 @@ Get the latest release for **Windows 10 / 11 (64-bit)**:
 
 | Edition | Direct Download | Notes |
 | :--- | :--- | :--- |
-| **Installer** | [**`ksync-Setup-2.5.2.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.2/ksync-Setup-2.5.2.exe) | Recommended. NSIS installer with auto-update support & Start menu integration. |
-| **Portable** | [**`ksync-2.5.2.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.2/ksync-2.5.2.exe) | Single standalone executable. Run anywhere without installing. |
+| **Installer** | [**`ksync-Setup-2.5.3.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.3/ksync-Setup-2.5.3.exe) | Recommended. NSIS installer with auto-update support & Start menu integration. |
+| **Portable** | [**`ksync-2.5.3.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.3/ksync-2.5.3.exe) | Single standalone executable. Run anywhere without installing. |
 
 > Check the [GitHub Releases](https://github.com/kiru-studio/Ksync/releases) page for release notes and cryptographic checksums (`SHA256SUMS.txt`).
 
