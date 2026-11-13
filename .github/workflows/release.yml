@@ -50,7 +50,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if (Test-Path "RELEASE_NOTES.md") {
-            gh release edit ${{ github.ref_name }} --draft=false --latest --notes-file RELEASE_NOTES.md --title "v2.5.3 — Interactive Edge Trigger Configurator, In-App Volume & Studio Polish"
+            gh release edit ${{ github.ref_name }} --draft=false --latest --notes-file RELEASE_NOTES.md --title "${{ github.ref_name }} — Interactive Edge Trigger Configurator, In-App Volume & Studio Polish"
           } else {
             gh release edit ${{ github.ref_name }} --draft=false --latest
           }

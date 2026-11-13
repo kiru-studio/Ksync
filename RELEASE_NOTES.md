@@ -1,10 +1,10 @@
-## 🎵 ksync v2.5.3 — Interactive Edge Trigger Configurator, In-App Volume & Studio Polish
+## 🎵 ksync v2.5.4 — Interactive Edge Trigger Configurator, In-App Volume & Studio Polish
 
-Welcome to the official **v2.5.3** release of **ksync** by [kiru studio](https://github.com/kiru-studio)!
+Welcome to the official **v2.5.4** release of **ksync** by [kiru studio](https://github.com/kiru-studio)!
 
 ---
 
-### 🌟 What's New & Fixed in v2.5.3
+### 🌟 What's New & Fixed in v2.5.4
 
 #### 1. 🎯 Interactive Edge Trigger Area Configurator
 - **Live Cinematic Screen Simulation**: Real-time visual stage simulating monitor edges (Top, Left, Right) with live hotspot rendering, depth indicators, and trigger tag tracking.
@@ -40,8 +40,8 @@ Welcome to the official **v2.5.3** release of **ksync** by [kiru studio](https:/
 
 | File | Type | Description |
 | :--- | :--- | :--- |
-| [**`ksync-Setup-2.5.3.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.3/ksync-Setup-2.5.3.exe) | **Windows Installer** | Recommended NSIS installer with automatic Start Menu shortcuts and background update checking. |
-| [**`ksync-2.5.3.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.3/ksync-2.5.3.exe) | **Portable Standalone** | Self-contained executable. No installation required—just download and double-click to run. |
+| [**`ksync-Setup-2.5.4.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.4/ksync-Setup-2.5.4.exe) | **Windows Installer** | Recommended NSIS installer with automatic Start Menu shortcuts and background update checking. |
+| [**`ksync-2.5.4.exe`**](https://github.com/kiru-studio/Ksync/releases/download/v2.5.4/ksync-2.5.4.exe) | **Portable Standalone** | Self-contained executable. No installation required—just download and double-click to run. |
 
 > **Windows SmartScreen Note**: As an independent open-source project without a costly enterprise EV code-signing certificate, Windows SmartScreen may show an alert on first launch. Click *"More info"* → *"Run anyway"* to run the app safely.
 

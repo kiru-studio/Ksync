@@ -1,6 +1,6 @@
 {
   "name": "ksync",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "description": "A Spotify dock with auto-hide and lyrics display",
   "main": "main.js",
   "scripts": {

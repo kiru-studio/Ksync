@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 const SettingsContext = createContext(null);
 
 export const DEFAULT_SETTINGS = {
-  version: '2.5.3',
+  version: '2.5.4',
   position: {
     mode: 'top',
     style: 'full',
@@ -801,7 +801,7 @@ export function SettingsProvider({ children }) {
       const targetPreset = allPresets.find((p) => p.id === presetId) || settings.theming;
       const payload = {
         app: 'ksync',
-        version: '2.5.3',
+        version: '2.5.4',
         exportedAt: new Date().toISOString(),
         theme: targetPreset,
       };
